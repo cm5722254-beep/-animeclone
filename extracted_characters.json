@@ -1,12 +1,12 @@
 [
   {
-    "id": "voxcpm:hang_phleung_char_3_female.mp3",
-    "filename": "hang_phleung_char_3_female.mp3",
+    "id": "voxcpm:hang_phleung_char_2_male.mp3",
+    "filename": "hang_phleung_char_2_male.mp3",
     "label": "👑 តួឯកប្រុស (វីរនារីហង្សភ្លើង)",
     "role_key": "male_lead",
     "gender": "male",
     "is_curated": true,
-    "words": "នែ៎ ក្រែងលោកជាគ្រូរបស់ខ្ញុំទេ? លោកនិយាយឲ្យច្បាស់សិនមក ម៉េចក៏ខ្ញុំក្លាយទៅជាហ្វុងអ៊ូអញ្ចឹង?"
+    "words": "ដោយសារតែមានគ្រូអាថ៌កំបាំង មូ ជីងឆឹង យុទ្ធសិល្ប៍រីកចម្រើនយ៉ាងលឿន ក្លាយទៅជានារីខ្លាំងពូកែ ដែលល្បីល្បាញពេញយានទូ"
   },
   {
     "id": "voxcpm:hang_phleung_char_6_female.mp3",
@@ -16,6 +16,15 @@
     "gender": "female",
     "is_curated": true,
     "words": "អយ្យ៉ា នោះគឺព្រោះតែទៅពិនិត្យជំងឺនៅផ្ទះមីងលី មីងលីជាអ្នកប្រាប់ខ្ញុំ គាត់ធ្វើការនៅផ្ទះរបស់ម្ចាស់ក្រុង រអ៊ូរទាំប្រាប់ខ្ញុំរហូត"
+  },
+  {
+    "id": "voxcpm:hang_phleung_char_3_female.mp3",
+    "filename": "hang_phleung_char_3_female.mp3",
+    "label": "🌸 តួអង្គនារី (ហ្វុងអ៊ូ)",
+    "role_key": "hang_phleung_3",
+    "gender": "female",
+    "is_curated": true,
+    "words": "នែ៎ ក្រែងលោកជាគ្រូរបស់ខ្ញុំទេ? លោកនិយាយឲ្យច្បាស់សិនមក ម៉េចក៏ខ្ញុំក្លាយទៅជាហ្វុងអ៊ូអញ្ចឹង?"
   },
   {
     "id": "voxcpm:hang_phleung_char_7_male.mp3",
@@ -43,15 +52,6 @@
     "gender": "male",
     "is_curated": true,
     "words": "ទាហានទាំងអស់ស្តាប់បញ្ជា ការពារបន្ទាយឱ្យរឹងមាំ!"
-  },
-  {
-    "id": "voxcpm:hang_phleung_char_2_male.mp3",
-    "filename": "hang_phleung_char_2_male.mp3",
-    "label": "🎙️ អ្នករៀបរាប់រឿង",
-    "role_key": "hang_phleung_2",
-    "gender": "male",
-    "is_curated": true,
-    "words": "ដោយសារតែមានគ្រូអាថ៌កំបាំង មូ ជីងឆឹង យុទ្ធសិល្ប៍រីកចម្រើនយ៉ាងលឿន ក្លាយទៅជានារីខ្លាំងពូកែ ដែលល្បីល្បាញពេញយានទូ"
   },
   {
     "id": "voxcpm:hang_phleung_char_4_male.mp3",
