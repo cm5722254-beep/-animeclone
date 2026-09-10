@@ -593,8 +593,19 @@ class KhmerDubber:
 
             ref_voice = reference_audio_path
             if not ref_voice:
-                if (voice_id == 'movie-live-clone' or casting_safety_mode == 'live_movie_clone') and auto_voice_map.get(seg.get('speaker_id')):
-                    ref_voice = auto_voice_map[seg['speaker_id']]
+                is_female = seg.get('gender') == 'female' or ('female' in (seg.get('speaker_name') or '').lower()) or ('ស្រី' in (seg.get('speaker_name') or ''))
+                role = seg.get('speaker_role')
+                sid = seg.get('speaker_id')
+
+                # 1. Main Leads: strictly use hang_phleung_char_2_male & hang_phleung_char_6_female
+                if role == 'male_lead' or sid in ['speaker_1', 'lead_male'] or (not is_female and sid in ['speaker_1', 'speaker_0']):
+                    ref_voice = os.path.join(samples_dir, 'hang_phleung_char_2_male.mp3')
+                elif role == 'female_lead' or sid in ['speaker_2', 'lead_female'] or (is_female and sid in ['speaker_1', 'speaker_2']):
+                    ref_voice = os.path.join(samples_dir, 'hang_phleung_char_6_female.mp3')
+                # 2. All other secondary characters: CLONE DIRECTLY FROM THE ORIGINAL MOVIE VOCAL SNIPPET USING VOXCPM2!
+                elif auto_voice_map.get(sid):
+                    ref_voice = auto_voice_map[sid]
+                    print(f"🎯 [Movie Live Clone] Secondary character {sid} ({char_name}) using movie sample: {ref_voice}")
                 else:
                     ref_voice = self.resolve_curated_role_voice(seg, casting_safety_mode, user_voice_map)
 
