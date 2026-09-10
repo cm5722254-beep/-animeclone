@@ -1090,9 +1090,6 @@ async function loadExtractedMovieCharacters() {
 
     extractedMovieCharacters = data.characters;
 
-    // Render Quick Cast Bar at the top of the Studio
-    renderQuickCastBar(extractedMovieCharacters);
-
     // 1. Update Vault Grid in Character Lab
     const vaultGrid = document.getElementById('charactersVaultGrid');
     const vaultBadge = document.getElementById('vaultCountBadge');
