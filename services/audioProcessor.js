@@ -37,22 +37,23 @@ async function extractAudioSegment(inputPath, startTimeSec, durationSec, outputP
 
 /**
  * Mix new dubbed vocals with the original audio:
- * - Cancels center-channel original foreign speech (vocal suppression via stereotools mlev)
+ * - Cancels center-channel original foreign speech (vocal suppression via stereotools mlev + vocal EQ notch)
  * - Preserves low bass (kick, cello, sub) and wide stereo background music (BGM) at full normal richness
- * - Smoothly ducks BGM during Khmer dubbed speech (broadcast sidechain ducking)
- * - Boosts dubbed Khmer human voice to crystal-clear studio loudness
+ * - Deeply ducks original audio during Khmer speech (broadcast sidechain ducking ratio 16)
+ * - Boosts dubbed Khmer human voice to crystal-clear studio loudness (vocalGain 2.2)
+ * - Pads vocal track with apad so full movie duration is preserved 100%
  */
-async function mixVocalsWithOriginal(originalAudioPath, dubbedAudioPath, outputPath, vocalGain = 1.6, bgmGain = 0.85) {
-  // 1. Separate bass (drums, bassline) and stereo sides (orchestra, reverb, guzheng, swords, ambience)
-  // 2. Suppress center Chinese speech while keeping stereo BGM and bass at full normal volume
-  // 3. Sidechain compression gently ducks BGM during Khmer voice activity, restoring 100% normal BGM in pauses
+async function mixVocalsWithOriginal(originalAudioPath, dubbedAudioPath, outputPath, vocalGain = 2.2, bgmGain = 0.85) {
+  const totalDuration = await getMediaDuration(originalAudioPath);
+  const padDur = Math.max(1, Math.ceil(totalDuration));
+
   const advancedBgmFilter = 
+    `[0:a]apad=whole_dur=${padDur},volume=${vocalGain},alimiter=limit=0.95[khmer_vox];` +
     `[1:a]asplit=2[low_b][mid_high];` +
-    `[low_b]lowpass=f=240,volume=${bgmGain}[bass];` +
-    `[mid_high]stereotools=mlev=0.015625:slev=1.35,highpass=f=240,volume=${bgmGain}[bgm_sides];` +
+    `[low_b]lowpass=f=260,volume=${bgmGain}[bass];` +
+    `[mid_high]stereotools=mlev=0.015625:slev=1.35,highpass=f=240,equalizer=f=1100:width_type=o:w=2.2:g=-16,volume=${bgmGain}[bgm_sides];` +
     `[bass][bgm_sides]amix=inputs=2:dropout_transition=0[clean_bgm];` +
-    `[clean_bgm][0:a]sidechaincompress=threshold=0.04:ratio=4:attack=15:release=250[ducked_bgm];` +
-    `[0:a]volume=${vocalGain}[khmer_vox];` +
+    `[clean_bgm][khmer_vox]sidechaincompress=threshold=0.015:ratio=16:attack=10:release=250[ducked_bgm];` +
     `[khmer_vox][ducked_bgm]amix=inputs=2:duration=longest:dropout_transition=0:normalize=0`;
 
   const cmd = `ffmpeg -nostdin -y -i "${dubbedAudioPath}" -i "${originalAudioPath}" -filter_complex "${advancedBgmFilter}" -c:a libmp3lame -b:a 192k "${outputPath}"`;
@@ -64,9 +65,9 @@ async function mixVocalsWithOriginal(originalAudioPath, dubbedAudioPath, outputP
     // If input audio is mono or stereotools fails, use center-pan / frequency ducking fallback:
     console.warn('Advanced BGM filter fallback to adaptive ducking:', err.message);
     const fallbackFilter = 
-      `[1:a]pan=stereo|c0=c0-c1|c1=c1-c0,volume=${bgmGain}[bgm_clean];` +
-      `[bgm_clean][0:a]sidechaincompress=threshold=0.04:ratio=4:attack=15:release=250[ducked_bgm];` +
-      `[0:a]volume=${vocalGain}[khmer_vox];` +
+      `[0:a]apad=whole_dur=${padDur},volume=${vocalGain},alimiter=limit=0.95[khmer_vox];` +
+      `[1:a]pan=stereo|c0=c0-c1|c1=c1-c0,equalizer=f=1100:width_type=o:w=2.2:g=-16,volume=${bgmGain}[bgm_clean];` +
+      `[bgm_clean][khmer_vox]sidechaincompress=threshold=0.015:ratio=16:attack=10:release=250[ducked_bgm];` +
       `[khmer_vox][ducked_bgm]amix=inputs=2:duration=longest:dropout_transition=0:normalize=0`;
     const fallbackCmd = `ffmpeg -nostdin -y -i "${dubbedAudioPath}" -i "${originalAudioPath}" -filter_complex "${fallbackFilter}" -c:a libmp3lame -b:a 192k "${outputPath}"`;
     try {
@@ -75,9 +76,9 @@ async function mixVocalsWithOriginal(originalAudioPath, dubbedAudioPath, outputP
     } catch (err2) {
       console.warn('Stereo-pan fallback failed, using volume ducking:', err2.message);
       const simpleFilter = 
-        `[1:a]volume=${bgmGain * 0.75}[bgm_clean];` +
-        `[bgm_clean][0:a]sidechaincompress=threshold=0.04:ratio=4:attack=15:release=250[ducked_bgm];` +
-        `[0:a]volume=${vocalGain}[khmer_vox];` +
+        `[0:a]apad=whole_dur=${padDur},volume=${vocalGain},alimiter=limit=0.95[khmer_vox];` +
+        `[1:a]volume=${bgmGain * 0.7}[bgm_clean];` +
+        `[bgm_clean][khmer_vox]sidechaincompress=threshold=0.015:ratio=16:attack=10:release=250[ducked_bgm];` +
         `[khmer_vox][ducked_bgm]amix=inputs=2:duration=longest:dropout_transition=0:normalize=0`;
       const simpleCmd = `ffmpeg -nostdin -y -i "${dubbedAudioPath}" -i "${originalAudioPath}" -filter_complex "${simpleFilter}" -c:a libmp3lame -b:a 192k "${outputPath}"`;
       await runCommand(simpleCmd);
@@ -92,7 +93,8 @@ async function mixVocalsWithOriginal(originalAudioPath, dubbedAudioPath, outputP
 async function mergeVideoAudio(videoPath, audioPath, outputVideoPath) {
   // -c:v copy preserves video stream without re-encoding, extremely fast!
   // -movflags +faststart makes video streamable and playable across all browsers and devices!
-  const cmd = `ffmpeg -nostdin -y -i "${videoPath}" -i "${audioPath}" -c:v copy -c:a aac -b:a 192k -map 0:v:0 -map 1:a:0 -movflags +faststart -shortest "${outputVideoPath}"`;
+  // NO -shortest: preserves the complete original video duration 100%!
+  const cmd = `ffmpeg -nostdin -y -i "${videoPath}" -i "${audioPath}" -c:v copy -c:a aac -b:a 192k -map 0:v:0 -map 1:a:0 -movflags +faststart "${outputVideoPath}"`;
   await runCommand(cmd);
   return outputVideoPath;
 }
@@ -180,11 +182,14 @@ async function burnSubtitlesToVideo(videoPath, srtPath, outputVideoPath, options
  */
 async function remixAudioWithEffects(originalAudioPath, dubbedAudioPath, outputPath, options = {}) {
   const {
-    vocalGain = 1.6,
+    vocalGain = 2.2,
     bgmGain = 0.85,
     vocalSuppression = 'medium', // 'mild', 'medium', 'strong'
     reverbPreset = 'none'         // 'none', 'room', 'imperial', 'cave'
   } = options;
+
+  const totalDuration = await getMediaDuration(originalAudioPath);
+  const padDur = Math.max(1, Math.ceil(totalDuration));
 
   let mlevVal = 0.015625;
   let slevVal = 1.35;
@@ -206,12 +211,12 @@ async function remixAudioWithEffects(originalAudioPath, dubbedAudioPath, outputP
   }
 
   const complexFilter = 
+    `[0:a]apad=whole_dur=${padDur},volume=${vocalGain}${reverbFilter},alimiter=limit=0.95[vox];` +
     `[1:a]asplit=2[low_b][mid_high];` +
-    `[low_b]lowpass=f=240,volume=${bgmGain}[bass];` +
-    `[mid_high]stereotools=mlev=${mlevVal}:slev=${slevVal},highpass=f=240,volume=${bgmGain}[bgm_sides];` +
+    `[low_b]lowpass=f=260,volume=${bgmGain}[bass];` +
+    `[mid_high]stereotools=mlev=${mlevVal}:slev=${slevVal},highpass=f=240,equalizer=f=1100:width_type=o:w=2.2:g=-16,volume=${bgmGain}[bgm_sides];` +
     `[bass][bgm_sides]amix=inputs=2:dropout_transition=0[clean_bgm];` +
-    `[clean_bgm][0:a]sidechaincompress=threshold=0.04:ratio=4:attack=15:release=250[ducked_bgm];` +
-    `[0:a]volume=${vocalGain}${reverbFilter}[vox];` +
+    `[clean_bgm][vox]sidechaincompress=threshold=0.015:ratio=16:attack=10:release=250[ducked_bgm];` +
     `[vox][ducked_bgm]amix=inputs=2:duration=longest:dropout_transition=0:normalize=0`;
 
   const cmd = `ffmpeg -nostdin -y -i "${dubbedAudioPath}" -i "${originalAudioPath}" -filter_complex "${complexFilter}" -c:a libmp3lame -b:a 192k "${outputPath}"`;
@@ -222,9 +227,9 @@ async function remixAudioWithEffects(originalAudioPath, dubbedAudioPath, outputP
   } catch (err) {
     console.warn('Remix fallback:', err.message);
     const fallbackFilter = 
+      `[0:a]apad=whole_dur=${padDur},volume=${vocalGain}${reverbFilter},alimiter=limit=0.95[vox];` +
       `[1:a]volume=${bgmGain}[bgm_clean];` +
-      `[bgm_clean][0:a]sidechaincompress=threshold=0.04:ratio=4:attack=15:release=250[ducked_bgm];` +
-      `[0:a]volume=${vocalGain}${reverbFilter}[vox];` +
+      `[bgm_clean][vox]sidechaincompress=threshold=0.015:ratio=16:attack=10:release=250[ducked_bgm];` +
       `[vox][ducked_bgm]amix=inputs=2:duration=longest:dropout_transition=0:normalize=0`;
     const fallbackCmd = `ffmpeg -nostdin -y -i "${dubbedAudioPath}" -i "${originalAudioPath}" -filter_complex "${fallbackFilter}" -c:a libmp3lame -b:a 192k "${outputPath}"`;
     await runCommand(fallbackCmd);

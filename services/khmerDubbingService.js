@@ -185,10 +185,10 @@ class KhmerDubbingService {
     if (!apiKey) return [];
 
     const candidateModels = [
+      'gemini-2.5-flash',
       'gemini-3.5-flash-lite',
+      'gemini-2.5-flash-lite',
       'gemini-3.6-flash',
-      'gemini-3.5-flash',
-      'gemini-3.7-flash',
       'gemini-flash-latest'
     ];
 
@@ -520,20 +520,26 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
       subTracks.push(subTrackPath);
     }
 
+    const rawMixPath = path.join(tempDir, `raw_mix_${Date.now()}.wav`);
     if (subTracks.length === 1) {
-      if (fs.existsSync(outputAudioPath)) fs.unlinkSync(outputAudioPath);
-      fs.renameSync(subTracks[0], outputAudioPath);
+      if (fs.existsSync(rawMixPath)) fs.unlinkSync(rawMixPath);
+      fs.renameSync(subTracks[0], rawMixPath);
     } else {
       const inputs = subTracks.map(p => `-i "${p}"`).join(' ');
       const amixInputs = subTracks.map((_, idx) => `[${idx}:a]`).join('');
       const filterComplex = `${amixInputs}amix=inputs=${subTracks.length}:dropout_transition=0:normalize=0[out]`;
-      await runCmd(`ffmpeg -y ${inputs} -filter_complex "${filterComplex}" -map "[out]" "${outputAudioPath}"`);
+      await runCmd(`ffmpeg -y ${inputs} -filter_complex "${filterComplex}" -map "[out]" "${rawMixPath}"`);
 
       // Clean up subtracks
       subTracks.forEach(p => {
         try { if (fs.existsSync(p)) fs.unlinkSync(p); } catch (e) {}
       });
     }
+
+    // Pad dialogue track with silence to precisely match full video duration
+    const padDuration = Math.max(1, Math.ceil(totalDuration));
+    await runCmd(`ffmpeg -y -i "${rawMixPath}" -af "apad=whole_dur=${padDuration}" -t ${padDuration} -ar 44100 -ac 2 "${outputAudioPath}"`);
+    try { if (fs.existsSync(rawMixPath)) fs.unlinkSync(rawMixPath); } catch (e) {}
 
     return outputAudioPath;
   }
@@ -729,7 +735,7 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
 
     // 5. Mix with background music (canceling original foreign speech while preserving rich background music)
     const dubbedAudioPath = path.join(outputDir, `dubbed_master_${Date.now()}.mp3`);
-    await audioProcessor.mixVocalsWithOriginal(extractedAudioPath, masterDialoguePath, dubbedAudioPath, 1.4, 0.85);
+    await audioProcessor.mixVocalsWithOriginal(extractedAudioPath, masterDialoguePath, dubbedAudioPath, 2.2, 0.85);
 
     onProgress(97, 'កំពុងបញ្ចូលសំឡេង Dubbing គ្រប់តួអង្គចូលក្នុងវីដេអូដើម (Final Video Remux)...');
 

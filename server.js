@@ -489,22 +489,46 @@ app.post('/api/dubbing/assemble-custom', async (req, res) => {
       await audioProcessor.extractAudio(inputVideoPath, extractedAudioPath);
     }
 
-    const mappedSegments = segments.map(seg => {
+    const mappedSegments = [];
+    for (let i = 0; i < segments.length; i++) {
+      const seg = segments[i];
       let audioPath = null;
       if (seg.audioUrl) {
         const basename = path.basename(seg.audioUrl);
         const p = path.join(OUTPUTS_DIR, basename);
         if (fs.existsSync(p)) audioPath = p;
       }
-      return {
-        ...seg,
-        audioPath,
-        start_time: parseFloat(seg.start_time) || 0
-      };
-    }).filter(s => s.audioPath);
+
+      // If user hasn't manually recorded or generated this line, auto-synthesize it in Khmer so ZERO lines are dropped!
+      if (!audioPath && (seg.khmer_translation || seg.chinese_text)) {
+        const textToSpeak = (seg.khmer_translation || seg.chinese_text || '').trim();
+        if (textToSpeak) {
+          const autoLinePath = path.join(OUTPUTS_DIR, `auto_studio_line_${i}_${Date.now()}.wav`);
+          try {
+            const isFemale = seg.gender === 'female' || (seg.speaker_name && seg.speaker_name.includes('ស្រី'));
+            const fallbackVoice = isFemale ? 'km-KH-SreymomNeural' : 'km-KH-PisethNeural';
+            await khmerDubber.synthesizeKhmerSpeech(textToSpeak, autoLinePath, fallbackVoice);
+            if (fs.existsSync(autoLinePath) && fs.statSync(autoLinePath).size > 1000) {
+              audioPath = autoLinePath;
+            }
+          } catch (autoErr) {
+            console.warn(`Auto-synthesize line ${i} notice:`, autoErr.message);
+          }
+        }
+      }
+
+      if (audioPath) {
+        mappedSegments.push({
+          ...seg,
+          audioPath,
+          start_time: parseFloat(seg.start_time) || 0,
+          end_time: parseFloat(seg.end_time) || ((parseFloat(seg.start_time) || 0) + 2.5)
+        });
+      }
+    }
 
     if (mappedSegments.length === 0) {
-      return res.status(400).json({ error: 'មិនទាន់មានសំឡេងសម្រាប់តួអង្គណាមួយនៅឡើយទេ! សូម Record ឬ Generate សំឡេងយ៉ាងហោចណាស់មួយឃ្លា។' });
+      return res.status(400).json({ error: 'មិនមានឃ្លាសន្ទនាសម្រាប់ដំណើរការ dubbing ឡើយ!' });
     }
 
     // Assemble timeline audio
@@ -513,7 +537,7 @@ app.post('/api/dubbing/assemble-custom', async (req, res) => {
 
     // Mix with original (center vocal cancellation & sidechain ducking, preserving rich normal BGM)
     const dubbedAudioPath = path.join(OUTPUTS_DIR, `custom_dubbed_master_${Date.now()}.mp3`);
-    await audioProcessor.mixVocalsWithOriginal(extractedAudioPath, masterDialoguePath, dubbedAudioPath, 1.4, 0.85);
+    await audioProcessor.mixVocalsWithOriginal(extractedAudioPath, masterDialoguePath, dubbedAudioPath, 2.2, 0.85);
 
     // Merge with video
     const videoExt = path.extname(inputVideoPath);
