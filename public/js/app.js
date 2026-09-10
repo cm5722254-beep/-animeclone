@@ -863,9 +863,8 @@ function renderDialogueLines(segments) {
         </label>
 
         <select class="btn-tool line-voice-select" id="voice-select-${idx}" title="ជ្រើសរើសសំឡេងតួអង្គសម្រាប់ឃ្លានេះ" style="max-width:180px; height:32px; padding:2px 6px; font-size:0.78rem;">
-          <option value="auto">🎭 ផ្គូផ្គងស្វ័យប្រវត្តិ (តាមភេទ)</option>
-          <option value="km-KH-PisethNeural" ${(!isFemale && defaultVoiceId !== 'km-KH-SreymomNeural') ? 'selected' : ''}>🎙️ សំឡេងប្រុសកុនខ្មែរ</option>
-          <option value="km-KH-SreymomNeural" ${(isFemale || defaultVoiceId === 'km-KH-SreymomNeural') ? 'selected' : ''}>🌸 សំឡេងស្រីកុនខ្មែរ</option>
+          <option value="movie-live-clone" selected>🎯 Clone ពីរឿងដើម</option>
+          <option value="voxcpm-voice-actor">🎬 ១៣ សំឡេងរឿង</option>
         </select>
 
         <button class="btn-tool btn-ai-gen" id="ai-btn-${idx}" title="ឱ្យ AI សំយោគនិយាយឃ្លានេះ">
