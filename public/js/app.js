@@ -863,19 +863,9 @@ function renderDialogueLines(segments) {
         </label>
 
         <select class="btn-tool line-voice-select" id="voice-select-${idx}" title="ជ្រើសរើសសំឡេងតួអង្គសម្រាប់ឃ្លានេះ" style="max-width:180px; height:32px; padding:2px 6px; font-size:0.78rem;">
-          <option value="auto">🎭 ផ្គូផ្គងស្វ័យប្រវត្តិ</option>
-          <optgroup label="🎬 តួអង្គចម្បងទាំង ១៣">
-            ${extractedMovieCharacters.filter(c => c.is_curated).map(c => `
-              <option value="${c.id}" ${c.id === defaultVoiceId ? 'selected' : ''}>${c.label}</option>
-            `).join('')}
-          </optgroup>
-          ${extractedMovieCharacters.some(c => !c.is_curated) ? `
-            <optgroup label="✨ តួអង្គផ្សេងទៀត">
-              ${extractedMovieCharacters.filter(c => !c.is_curated).map(c => `
-                <option value="${c.id}" ${c.id === defaultVoiceId ? 'selected' : ''}>${c.gender === 'female' ? '🌸' : '🎙️'} ${c.label}</option>
-              `).join('')}
-            </optgroup>
-          ` : ''}
+          <option value="auto">🎭 ផ្គូផ្គងស្វ័យប្រវត្តិ (តាមភេទ)</option>
+          <option value="km-KH-PisethNeural" ${(!isFemale && defaultVoiceId !== 'km-KH-SreymomNeural') ? 'selected' : ''}>🎙️ សំឡេងប្រុសកុនខ្មែរ</option>
+          <option value="km-KH-SreymomNeural" ${(isFemale || defaultVoiceId === 'km-KH-SreymomNeural') ? 'selected' : ''}>🌸 សំឡេងស្រីកុនខ្មែរ</option>
         </select>
 
         <button class="btn-tool btn-ai-gen" id="ai-btn-${idx}" title="ឱ្យ AI សំយោគនិយាយឃ្លានេះ">
@@ -1125,32 +1115,7 @@ async function loadExtractedMovieCharacters() {
       `).join('');
     }
 
-    // 2. Populate Dropdowns in Auto Dubbing & Manual Studio
-    const targets = ['voiceChoice', 'manualVoiceChoice'];
-    targets.forEach(selectId => {
-      const select = document.getElementById(selectId);
-      if (!select) return;
-
-      const existingGroup = select.querySelector('optgroup[data-type="extracted-characters"]');
-      if (existingGroup) existingGroup.remove();
-
-      const nonCurated = extractedMovieCharacters.filter(c => !c.is_curated);
-      if (nonCurated.length > 0) {
-        const group = document.createElement('optgroup');
-        group.label = `👥 តួអង្គបន្ទាប់បន្សំផ្សេងទៀត (${nonCurated.length} តួអង្គ)`;
-        group.setAttribute('data-type', 'extracted-characters');
-
-        nonCurated.forEach(char => {
-          const opt = document.createElement('option');
-          opt.value = char.id;
-          const icon = char.gender === 'female' ? '🌸' : '🎙️';
-          opt.textContent = `${icon} ${char.label} (${char.filename})`;
-          group.appendChild(opt);
-        });
-
-        select.appendChild(group);
-      }
-    });
+    // 2. Dropdowns are kept clean with strictly the 2 top options (Male & Female Pure Khmer)
   } catch (err) {
     console.warn('Could not load extracted characters:', err.message);
   }

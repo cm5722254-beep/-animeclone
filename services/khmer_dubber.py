@@ -152,21 +152,17 @@ class KhmerDubber:
             if os.path.exists(def_ref):
                 reference_audio_path = def_ref
 
-        # 1. Zero-Shot Voice Cloning via VoxCPM2 (13 Curated Movie Characters OR Live Movie Clone)
-        is_clone_request = (
-            voice_id in ['voxcpm-voice-actor', 'movie-live-clone', 'single_voice'] or
-            (voice_id and str(voice_id).startswith('voxcpm:')) or
-            (reference_audio_path and os.path.exists(reference_audio_path))
-        )
-        is_explicit_native = (
-            voice_id in ['builtin-neural', 'builtin', 'local-neural', 'edge-tts'] or
-            (voice_id and str(voice_id).startswith('km-KH-'))
-        )
-
-        if is_clone_request and not is_explicit_native and os.getenv('VOXCPM_API_URL'):
+        # 1. Zero-Shot Voice Cloning via VoxCPM2 (48kHz Hi-Fi) if server URL is configured
+        if os.getenv('VOXCPM_API_URL'):
             try:
-                print(f"🎙️ Generating Zero-Shot Voice Clone via VoxCPM2 ({os.getenv('VOXCPM_API_URL')}) with ref: {reference_audio_path or 'none'}... [Emotion: {emotion}]")
-                await self.synthesize_with_voxcpm(text, output_path, reference_audio_path)
+                ref_to_use = reference_audio_path
+                if not ref_to_use or not os.path.exists(ref_to_use):
+                    ref_to_use = os.path.join(samples_dir, 'vp_character_1_female.mp3' if is_female else 'vp_character_20_female.mp3')
+                    if not os.path.exists(ref_to_use):
+                        ref_to_use = os.path.join(samples_dir, 'main_lead_female.mp3' if is_female else 'main_lead_male.mp3')
+
+                print(f"🎙️ Generating Zero-Shot Voice Clone via VoxCPM2 ({os.getenv('VOXCPM_API_URL')}) with ref: {ref_to_use or 'none'}... [Emotion: {emotion}]")
+                await self.synthesize_with_voxcpm(text, output_path, ref_to_use if (ref_to_use and os.path.exists(ref_to_use)) else None)
                 if os.path.exists(output_path) and os.path.getsize(output_path) > 1000:
                     print(f"✅ VoxCPM2 48kHz Voice Clone generated successfully: {output_path}")
                     return output_path
