@@ -157,7 +157,7 @@ class KhmerDubber:
             try:
                 ref_to_use = reference_audio_path
                 if not ref_to_use or not os.path.exists(ref_to_use):
-                    ref_to_use = os.path.join(samples_dir, 'vp_character_1_female.mp3' if is_female else 'vp_character_20_female.mp3')
+                    ref_to_use = os.path.join(samples_dir, 'hang_phleung_char_3_female.mp3' if is_female else 'hang_phleung_char_7_male.mp3')
                     if not os.path.exists(ref_to_use):
                         ref_to_use = os.path.join(samples_dir, 'main_lead_female.mp3' if is_female else 'main_lead_male.mp3')
 
@@ -174,8 +174,13 @@ class KhmerDubber:
 
     def resolve_curated_role_voice(self, seg: dict, casting_safety_mode: str = 'safe_curated', user_role_map: dict = None) -> str:
         samples_dir = os.path.join(os.path.dirname(__file__), '..', 'samples')
-        male_lead = os.path.join(samples_dir, 'vp_character_20_female.mp3')
-        female_lead = os.path.join(samples_dir, 'vp_character_1_female.mp3')
+        male_lead = os.path.join(samples_dir, 'hang_phleung_char_7_male.mp3')
+        if not os.path.exists(male_lead):
+            male_lead = os.path.join(samples_dir, 'main_lead_male.mp3')
+
+        female_lead = os.path.join(samples_dir, 'hang_phleung_char_3_female.mp3')
+        if not os.path.exists(female_lead):
+            female_lead = os.path.join(samples_dir, 'main_lead_female.mp3')
 
         user_role_map = user_role_map or {}
         if user_role_map.get(seg.get('speaker_id')):
@@ -190,18 +195,18 @@ class KhmerDubber:
         role_map = {
             'male_lead': male_lead,
             'female_lead': female_lead,
-            'servant_female': os.path.join(samples_dir, 'vp_character_2_male.mp3'),
-            'fierce_female': os.path.join(samples_dir, 'vp_character_6_female.mp3'),
-            'fierce_male': os.path.join(samples_dir, 'vp_character_7_male.mp3'),
-            'villager': os.path.join(samples_dir, 'vp_character_9_male.mp3'),
-            'general': os.path.join(samples_dir, 'vp_character_10_male.mp3'),
-            'crowd': os.path.join(samples_dir, 'vp_character_12_male.mp3'),
-            'villain_female': os.path.join(samples_dir, 'vp_character_14_female.mp3'),
-            'old_uncle': os.path.join(samples_dir, 'vp_character_16_male.mp3'),
-            'governor': os.path.join(samples_dir, 'vp_character_17_male.mp3'),
-            'elder': os.path.join(samples_dir, 'vp_character_19_male.mp3'),
+            'servant_female': os.path.join(samples_dir, 'hang_phleung_char_5_female.mp3'),
+            'fierce_female': os.path.join(samples_dir, 'hang_phleung_char_6_female.mp3'),
+            'fierce_male': os.path.join(samples_dir, 'hang_phleung_char_8_male.mp3'),
+            'villager': os.path.join(samples_dir, 'hang_phleung_char_4_male.mp3'),
+            'general': os.path.join(samples_dir, 'hang_phleung_char_8_male.mp3'),
+            'crowd': os.path.join(samples_dir, 'hang_phleung_char_2_male.mp3'),
+            'villain_female': os.path.join(samples_dir, 'hang_phleung_char_6_female.mp3'),
+            'old_uncle': os.path.join(samples_dir, 'hang_phleung_char_1_male.mp3'),
+            'governor': os.path.join(samples_dir, 'hang_phleung_char_8_male.mp3'),
+            'elder': os.path.join(samples_dir, 'hang_phleung_char_1_male.mp3'),
             'old_woman': os.path.join(samples_dir, 'vp_character_21_female.mp3'),
-            'child': os.path.join(samples_dir, 'vp_character_1_female.mp3')
+            'child': os.path.join(samples_dir, 'hang_phleung_char_5_female.mp3')
         }
 
         role = seg.get('speaker_role')
