@@ -29,6 +29,10 @@ from services.khmer_dubber import KhmerDubber
 app = FastAPI(title="AI Voice Clone & Dubbing Studio (ZH -> KM)")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BIN_DIR = os.path.join(BASE_DIR, 'bin')
+if os.path.exists(BIN_DIR) and BIN_DIR not in os.environ.get('PATH', ''):
+    os.environ['PATH'] = BIN_DIR + os.pathsep + os.environ.get('PATH', '')
+
 UPLOADS_DIR = os.path.join(BASE_DIR, 'uploads')
 OUTPUTS_DIR = os.path.join(BASE_DIR, 'outputs')
 SAMPLES_DIR = os.path.join(BASE_DIR, 'samples')

@@ -2,6 +2,12 @@ import os
 import subprocess
 import math
 
+# Automatically ensure bundled FFmpeg bin/ directory is in PATH
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BIN_DIR = os.path.join(BASE_DIR, 'bin')
+if os.path.exists(BIN_DIR) and BIN_DIR not in os.environ.get('PATH', ''):
+    os.environ['PATH'] = BIN_DIR + os.pathsep + os.environ.get('PATH', '')
+
 def run_command(cmd: str):
     """Run shell command synchronously using subprocess."""
     process = subprocess.run(cmd, shell=True, capture_output=True, text=True)
