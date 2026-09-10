@@ -157,7 +157,7 @@ class KhmerDubber:
             try:
                 ref_to_use = reference_audio_path
                 if not ref_to_use or not os.path.exists(ref_to_use):
-                    ref_to_use = os.path.join(samples_dir, 'hang_phleung_char_3_female.mp3' if is_female else 'hang_phleung_char_7_male.mp3')
+                    ref_to_use = os.path.join(samples_dir, 'hang_phleung_char_6_female.mp3' if is_female else 'hang_phleung_char_3_female.mp3')
                     if not os.path.exists(ref_to_use):
                         ref_to_use = os.path.join(samples_dir, 'main_lead_female.mp3' if is_female else 'main_lead_male.mp3')
 
@@ -174,11 +174,11 @@ class KhmerDubber:
 
     def resolve_curated_role_voice(self, seg: dict, casting_safety_mode: str = 'safe_curated', user_role_map: dict = None) -> str:
         samples_dir = os.path.join(os.path.dirname(__file__), '..', 'samples')
-        male_lead = os.path.join(samples_dir, 'hang_phleung_char_7_male.mp3')
+        male_lead = os.path.join(samples_dir, 'hang_phleung_char_3_female.mp3')
         if not os.path.exists(male_lead):
             male_lead = os.path.join(samples_dir, 'main_lead_male.mp3')
 
-        female_lead = os.path.join(samples_dir, 'hang_phleung_char_3_female.mp3')
+        female_lead = os.path.join(samples_dir, 'hang_phleung_char_6_female.mp3')
         if not os.path.exists(female_lead):
             female_lead = os.path.join(samples_dir, 'main_lead_female.mp3')
 
