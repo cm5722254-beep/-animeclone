@@ -136,16 +136,44 @@ class KhmerDubber:
             target_pitch = f"{base_pitch_val + 10:+d}Hz"
             target_rate = "+10%"
 
-        # Optional VoxCPM2 experimental clone (only if user explicitly forces it via environment flag)
-        if voice_id in ['voxcpm-experimental'] and os.getenv('VOXCPM_API_URL') and os.getenv('USE_VOXCPM_EXPERIMENTAL') == 'true':
-            try:
-                print(f"Generating Zero-Shot Cloned Voice via VoxCPM2 with ref: {reference_audio_path or 'none'}... [Emotion: {emotion}]")
-                await self.synthesize_with_voxcpm(text, output_path, reference_audio_path)
-                return output_path
-            except Exception as vox_err:
-                print(f"VoxCPM notice, fallback to 100% Pure Khmer Neural Dubbing: {vox_err}")
+        # Preset reference audio mapping for 13 curated characters
+        samples_dir = os.path.join(os.path.dirname(__file__), '..', 'samples')
+        if voice_id and str(voice_id).startswith('voxcpm:'):
+            sample_name = str(voice_id).replace('voxcpm:', '')
+            cand1 = os.path.join(samples_dir, sample_name)
+            cand2 = os.path.join(samples_dir, f"{sample_name}.mp3")
+            if os.path.exists(cand1):
+                reference_audio_path = cand1
+            elif os.path.exists(cand2):
+                reference_audio_path = cand2
 
-        # Primary 100% Pure Authentic Cambodian Khmer Neural Actor Engine
+        if not reference_audio_path or not os.path.exists(reference_audio_path):
+            def_ref = os.path.join(samples_dir, 'main_lead_female.mp3' if is_female else 'main_lead_male.mp3')
+            if os.path.exists(def_ref):
+                reference_audio_path = def_ref
+
+        # 1. Zero-Shot Voice Cloning via VoxCPM2 (13 Curated Movie Characters OR Live Movie Clone)
+        is_clone_request = (
+            voice_id in ['voxcpm-voice-actor', 'movie-live-clone', 'single_voice'] or
+            (voice_id and str(voice_id).startswith('voxcpm:')) or
+            (reference_audio_path and os.path.exists(reference_audio_path))
+        )
+        is_explicit_native = (
+            voice_id in ['builtin-neural', 'builtin', 'local-neural', 'edge-tts'] or
+            (voice_id and str(voice_id).startswith('km-KH-'))
+        )
+
+        if is_clone_request and not is_explicit_native and os.getenv('VOXCPM_API_URL'):
+            try:
+                print(f"🎙️ Generating Zero-Shot Voice Clone via VoxCPM2 ({os.getenv('VOXCPM_API_URL')}) with ref: {reference_audio_path or 'none'}... [Emotion: {emotion}]")
+                await self.synthesize_with_voxcpm(text, output_path, reference_audio_path)
+                if os.path.exists(output_path) and os.path.getsize(output_path) > 1000:
+                    print(f"✅ VoxCPM2 48kHz Voice Clone generated successfully: {output_path}")
+                    return output_path
+            except Exception as vox_err:
+                print(f"⚠️ VoxCPM2 API notice, falling back to 100% pure Khmer neural voice: {vox_err}")
+
+        # 2. Primary 100% Pure Authentic Cambodian Khmer Theatrical Neural Engine
         return await self.synthesize_khmer_speech(text, output_path, target_voice, pitch=target_pitch, rate=target_rate)
 
     def resolve_curated_role_voice(self, seg: dict, casting_safety_mode: str = 'safe_curated', user_role_map: dict = None) -> str:

@@ -323,7 +323,7 @@ function initDubbingActions() {
     const sourceLang = document.getElementById('sourceLang').value;
     const targetLang = document.getElementById('targetLang').value;
     const speakerCount = parseInt(document.getElementById('speakerCount').value, 10);
-    const voiceId = document.getElementById('voiceChoice') ? document.getElementById('voiceChoice').value : 'builtin-neural';
+    const voiceId = document.getElementById('voiceChoice') ? document.getElementById('voiceChoice').value : 'voxcpm-voice-actor';
     const scope = document.getElementById('dubbingScope') ? document.getElementById('dubbingScope').value : 'full';
     const castingSafetyMode = document.getElementById('castingSafetyMode') ? document.getElementById('castingSafetyMode').value : 'safe_curated';
 
@@ -1038,7 +1038,7 @@ async function handleGenerateLineAI(idx, btn, card) {
   try {
     const lineVoiceSelect = card.querySelector(`#voice-select-${idx}`);
     const selectedLineVoice = (lineVoiceSelect && lineVoiceSelect.value !== 'auto') ? lineVoiceSelect.value : null;
-    const voiceId = selectedLineVoice || (document.getElementById('manualVoiceChoice')?.value || 'builtin-neural');
+    const voiceId = selectedLineVoice || (document.getElementById('manualVoiceChoice')?.value || 'voxcpm-voice-actor');
 
     const res = await fetch('/api/dubbing/generate-line', {
       method: 'POST',
