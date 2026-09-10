@@ -544,6 +544,42 @@ async def character_speak(body: CharacterSpeakRequest):
         'filename': out_name
     }
 
+def get_lan_addresses(port: int):
+    import socket
+    addresses = []
+    try:
+        host_name = socket.gethostname()
+        for ip in socket.gethostbyname_ex(host_name)[2]:
+            if not ip.startswith('127.'):
+                addresses.append({'interface': 'LAN', 'ip': ip, 'url': f'http://{ip}:{port}'})
+    except Exception:
+        pass
+    return addresses
+
+@app.get('/api/characters/extracted')
+def get_extracted_characters():
+    json_path = os.path.join(BASE_DIR, 'extracted_characters.json')
+    if os.path.exists(json_path):
+        try:
+            with open(json_path, 'r', encoding='utf-8') as f:
+                chars = json.load(f)
+            augmented = [{**c, 'previewUrl': f"/media/samples/{c.get('filename', '')}"} for c in chars]
+            return {'success': True, 'count': len(augmented), 'characters': augmented}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+    return {'success': True, 'count': 0, 'characters': []}
+
+@app.get('/api/system/network-info')
+def get_network_info():
+    port = int(os.getenv('PORT', 3000))
+    lan_addrs = get_lan_addresses(port)
+    return {
+        'port': port,
+        'localUrl': f"http://localhost:{port}",
+        'lanAddresses': lan_addrs,
+        'primaryLanUrl': lan_addrs[0]['url'] if lan_addrs else f"http://localhost:{port}"
+    }
+
 # --- Static File Mounts ---
 app.mount('/media/outputs', StaticFiles(directory=OUTPUTS_DIR), name='outputs')
 app.mount('/media/samples', StaticFiles(directory=SAMPLES_DIR), name='samples')

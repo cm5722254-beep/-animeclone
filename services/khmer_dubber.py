@@ -67,9 +67,10 @@ class KhmerDubber:
             if os.path.exists(def_ref):
                 reference_audio_path = def_ref
 
-        # Edge-TTS direct pick
-        if voice_id and voice_id.startswith('km-KH-'):
-            return await self.synthesize_khmer_speech(text, output_path, voice_id)
+        # Built-in Tool Neural Voices (100% inside tool, NO Google Colab needed, ultra fast)
+        if voice_id in ['builtin-neural', 'builtin', 'local-neural', 'edge-auto', 'edge-tts'] or (voice_id and voice_id.startswith('km-KH-')):
+            chosen_voice = voice_id if (voice_id and voice_id.startswith('km-KH-')) else ('km-KH-SreymomNeural' if is_female else 'km-KH-PisethNeural')
+            return await self.synthesize_khmer_speech(text, output_path, chosen_voice)
 
         # 1. Try VoxCPM2 Zero-Shot Voice Cloning if configured
         if os.getenv('VOXCPM_API_URL'):
