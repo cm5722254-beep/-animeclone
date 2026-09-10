@@ -236,16 +236,20 @@ function handleFileUpload(file) {
       return;
     }
 
-    if (xhr.status >= 200 && xhr.status < 300 && data.success) {
-      currentUploadedFile = data.file;
-      originalMediaUrl = data.file.url;
-      fileSizeEl.textContent = `${totalMB} MB • រួចរាល់`;
+    if (xhr.status >= 200 && xhr.status < 300 && (data.success || data.filename)) {
+      currentUploadedFile = data.file || data;
+      originalMediaUrl = (data.file && data.file.url) || data.url || `/media/uploads/${currentUploadedFile.filename}`;
+      fileSizeEl.textContent = `${totalMB} MB • រួចរាល់ ✓`;
       startBtn.disabled = false;
 
       // Load original video in player
       const player = document.getElementById('studioVideoPlayer');
-      player.src = originalMediaUrl;
-      document.getElementById('emptyPlayerState').classList.add('hidden');
+      if (player && originalMediaUrl) {
+        player.src = originalMediaUrl;
+        player.load();
+      }
+      const emptyState = document.getElementById('emptyPlayerState');
+      if (emptyState) emptyState.classList.add('hidden');
     } else {
       alert('Upload បរាជ័យ: ' + (data.error || 'កំហុសមិនស្គាល់'));
       previewCard.classList.add('hidden');

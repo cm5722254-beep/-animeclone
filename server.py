@@ -130,14 +130,24 @@ async def upload_file(mediaFile: UploadFile = File(...)):
 
     file_size = os.path.getsize(dest_path)
     file_type = 'video' if any(dest_filename.lower().endswith(ext) for ext in ['.mp4', '.mkv', '.avi', '.mov', '.webm']) else 'audio'
+    file_url = f"/media/uploads/{dest_filename}"
 
-    return {
-        'success': True,
+    file_info = {
         'filename': dest_filename,
         'originalName': mediaFile.filename,
         'size': file_size,
         'type': file_type,
-        'url': f"/media/uploads/{dest_filename}"
+        'url': file_url
+    }
+
+    return {
+        'success': True,
+        'file': file_info,
+        'filename': dest_filename,
+        'originalName': mediaFile.filename,
+        'size': file_size,
+        'type': file_type,
+        'url': file_url
     }
 
 @app.get('/api/files')
