@@ -18,31 +18,34 @@ class KhmerDubber:
         return output_path
 
     async def synthesize_with_voxcpm(self, text: str, output_path: str, reference_audio_path: str = None):
-        """Synthesize using VoxCPM2 Zero-Shot Voice Cloning API."""
+        """Synthesize using VoxCPM2 Zero-Shot Voice Cloning API without blocking FastAPI event loop."""
         voxcpm_url = os.getenv('VOXCPM_API_URL')
         if not voxcpm_url:
             raise ValueError('VOXCPM_API_URL not configured')
 
-        files = {}
-        data = {'text': text}
-        ref_file = None
-        try:
-            if reference_audio_path and os.path.exists(reference_audio_path):
-                ref_file = open(reference_audio_path, 'rb')
-                files['reference_audio'] = (os.path.basename(reference_audio_path), ref_file, 'audio/mpeg')
+        def _do_sync_post():
+            files = {}
+            data = {'text': text}
+            ref_file = None
+            try:
+                if reference_audio_path and os.path.exists(reference_audio_path):
+                    ref_file = open(reference_audio_path, 'rb')
+                    files['reference_audio'] = (os.path.basename(reference_audio_path), ref_file, 'audio/mpeg')
 
-            response = requests.post(f"{voxcpm_url}/api/clone-and-speak", data=data, files=files if files else None, timeout=180, stream=True)
-            if response.status_code != 200:
-                raise RuntimeError(f"VoxCPM2 HTTP Error: {response.status_code} - {response.text[:100]}")
+                response = requests.post(f"{voxcpm_url}/api/clone-and-speak", data=data, files=files if files else None, timeout=300, stream=True)
+                if response.status_code != 200:
+                    raise RuntimeError(f"VoxCPM2 HTTP Error: {response.status_code} - {response.text[:100]}")
 
-            with open(output_path, 'wb') as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    if chunk:
-                        f.write(chunk)
-            return output_path
-        finally:
-            if ref_file:
-                ref_file.close()
+                with open(output_path, 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
+                return output_path
+            finally:
+                if ref_file:
+                    ref_file.close()
+
+        return await asyncio.to_thread(_do_sync_post)
 
     async def synthesize_realistic_speech(self, text: str, output_path: str, voice_id: str = 'voxcpm-voice-actor', reference_audio_path: str = None, options: dict = None):
         """Synthesize realistic speech via VoxCPM2, ElevenLabs, or Edge-TTS with emotional acting delivery."""
