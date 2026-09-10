@@ -1,0 +1,119 @@
+[
+  {
+    "id": "voxcpm:vp_character_20_female.mp3",
+    "filename": "vp_character_20_female.mp3",
+    "label": "👑 តួឯកប្រុស",
+    "role_key": "male_lead",
+    "gender": "male",
+    "is_curated": true,
+    "words": "លោក ពិត ជា មិន ស្គាល់ យើង មែន ពេល ចូល គាល់ ព្រះ អង្គ ក្នុង វាំង ការ ដុក ឈប់ ធ្លាប់ បាន ឃើញ ព្រះ រាជបុត្រ សៀវយ៉ាវ ពិត មែន តែ កាល នោះ ពួក គេ បាំង ដោយ វាំងនន ទើប ខ្ញុំ ចាំ មុខ ទ្រង់ មិន បាន តែ បុរស ម្នាក់ នេះ ហាក់ ដូចជា មាន"
+  },
+  {
+    "id": "voxcpm:vp_character_1_female.mp3",
+    "filename": "vp_character_1_female.mp3",
+    "label": "🌸 តួឯកស្រី",
+    "role_key": "female_lead",
+    "gender": "female",
+    "is_curated": true,
+    "words": "ខ្ញុំ សុំ ខ្ចី សិទ្ធិ របស់ លោក ជីសិន"
+  },
+  {
+    "id": "voxcpm:vp_character_2_male.mp3",
+    "filename": "vp_character_2_male.mp3",
+    "label": "🍵 អ្នកបម្រើតួឯកស្រី",
+    "role_key": "servant_female",
+    "gender": "male",
+    "is_curated": true,
+    "words": "អុះ ត្រូវ ហើយ ខ្ញុំ បាល់ ផ្សព្វផ្សាយ ដំណឹង ជូន អ្នកនាង ហើយ"
+  },
+  {
+    "id": "voxcpm:vp_character_6_female.mp3",
+    "filename": "vp_character_6_female.mp3",
+    "label": "⚡ តួស្រីកាច",
+    "role_key": "fierce_female",
+    "gender": "female",
+    "is_curated": true,
+    "words": "មិនប្រញាប់ជួយខ្ញុំមកលឿនឡើងមក? ល្អណាស់ ចាំជាគូស្នេហ៍ថោកទាបមែន ហ៊ានញ៉ែនាំគ្នាមកគេផងហេ?"
+  },
+  {
+    "id": "voxcpm:vp_character_7_male.mp3",
+    "filename": "vp_character_7_male.mp3",
+    "label": "⚔️ តួប្រុសកាច",
+    "role_key": "fierce_male",
+    "gender": "male",
+    "is_curated": true,
+    "words": "ស្រីថោកទាបឯងនេះ លួចមានប្រុសថ្មីនៅក្រោយខ្នងយើង បិទមាត់ឆ្កែរបស់លោកទៅ កុំយកលេសស្មោកគ្រោកខ្លួនឯងមកលក់មុខ!"
+  },
+  {
+    "id": "voxcpm:vp_character_9_male.mp3",
+    "filename": "vp_character_9_male.mp3",
+    "label": "🌾 អ្នកភូមិ",
+    "role_key": "villager",
+    "gender": "male",
+    "is_curated": true,
+    "words": "ថុច ទីប នេះ ទៅ ថុច ចេញ ថុច ចេញ ថុច ចេញ"
+  },
+  {
+    "id": "voxcpm:vp_character_10_male.mp3",
+    "filename": "vp_character_10_male.mp3",
+    "label": "🛡️ មេទ័ព",
+    "role_key": "general",
+    "gender": "male",
+    "is_curated": true,
+    "words": "ទូលបង្គំ មក យឺតយាវ សូម ព្រះ រាជបុត្រ ព្រះ រាជទាន ទោស ក្រោក ឡើង"
+  },
+  {
+    "id": "voxcpm:vp_character_12_male.mp3",
+    "filename": "vp_character_12_male.mp3",
+    "label": "👥 មហាជន",
+    "role_key": "crowd",
+    "gender": "male",
+    "is_curated": true,
+    "words": "សមជាអ្នកប្រាជ្ញណាស់ ពិតជាប្រាជ្ញណាស់ ពិតមែន"
+  },
+  {
+    "id": "voxcpm:vp_character_14_female.mp3",
+    "filename": "vp_character_14_female.mp3",
+    "label": "🐍 តួកាច",
+    "role_key": "villain_female",
+    "gender": "female",
+    "is_curated": true,
+    "words": "នាងបោកប្រាស់មែនហើយ ច្បាស់ជាមានគេតាំងទុកឲ្យយូរហើយ"
+  },
+  {
+    "id": "voxcpm:vp_character_16_male.mp3",
+    "filename": "vp_character_16_male.mp3",
+    "label": "👴 តួអ៊ំចាស់",
+    "role_key": "old_uncle",
+    "gender": "male",
+    "is_curated": true,
+    "words": "កាត ទៅ ក្រែងលោ គេ រត់ បាត់"
+  },
+  {
+    "id": "voxcpm:vp_character_17_male.mp3",
+    "filename": "vp_character_17_male.mp3",
+    "label": "📜 តួចាហ្វាយខេត្ត",
+    "role_key": "governor",
+    "gender": "male",
+    "is_curated": true,
+    "words": "ទី នេះ ត្រូវ គង ជាប់ ព័ទ្ធ ជាប់ អស់ ហើយ ពួក ចោរ ព្រៃ ថោកទាប ឯង ឃើញ ចាវ៉ាយ ខេត្ត ហើយ ធាក់ ដំលូត ទៅ គង់ ទៀត អ្ហេ ទម្លាក់ អាវុធ ចុះ ឲ្យ អស់ ភ្លាម ទៅ ទើប ឯង យើង ទុក សាកសព ពេញ ឱ្យ"
+  },
+  {
+    "id": "voxcpm:vp_character_19_male.mp3",
+    "filename": "vp_character_19_male.mp3",
+    "label": "📿 ព្រឹទ្ធាចារ្យ",
+    "role_key": "elder",
+    "gender": "male",
+    "is_curated": true,
+    "words": "នេះ យើង ស្តាប់ ច្រឡំ មែន ទេ មុន នេះ នាង និយាយ ថា ម៉េច ? ទីនេះ មាន កន្លែង នាង ត្រូវ និយាយ ពី អំកាល យ៉ាន់ហ្វាន"
+  },
+  {
+    "id": "voxcpm:vp_character_21_female.mp3",
+    "filename": "vp_character_21_female.mp3",
+    "label": "👵 យាយចាស់",
+    "role_key": "old_woman",
+    "gender": "female",
+    "is_curated": true,
+    "words": "ត្រូវហើយ តើលោកជាអ្នកណា?"
+  }
+]

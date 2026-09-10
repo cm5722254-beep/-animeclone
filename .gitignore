@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Environment variables & secrets (CRITICAL: Never commit API keys)
+.env
+.env.local
+.env.*.local
+
+# Media Uploads & Outputs (Large video/audio files)
+uploads/*
+!uploads/.gitkeep
+outputs/*
+!outputs/.gitkeep
+
+# Temporary & Scratch scripts
+scratch_*.js
+*.tmp
+*.log
+
+# OS & IDE files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
