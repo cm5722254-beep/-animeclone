@@ -204,7 +204,8 @@ class KhmerDubber:
             'old_uncle': os.path.join(samples_dir, 'vp_character_16_male.mp3'),
             'governor': os.path.join(samples_dir, 'vp_character_17_male.mp3'),
             'elder': os.path.join(samples_dir, 'vp_character_19_male.mp3'),
-            'old_woman': os.path.join(samples_dir, 'vp_character_21_female.mp3')
+            'old_woman': os.path.join(samples_dir, 'vp_character_21_female.mp3'),
+            'child': os.path.join(samples_dir, 'vp_character_1_female.mp3')
         }
 
         role = seg.get('speaker_role')
@@ -212,6 +213,7 @@ class KhmerDubber:
             return role_map[role]
 
         name = ((seg.get('speaker_name') or '') + ' ' + (seg.get('khmer_translation') or '')).lower()
+        if 'ក្មេង' in name or 'កុមារ' in name or 'child' in name: return role_map['child']
         if 'អ្នកបម្រើ' in name or 'maid' in name or 'servant' in name: return role_map['servant_female']
         if 'ស្រីកាច' in name or 'ថោកទាប' in name or 'ស្រីចង្រៃ' in name: return role_map['fierce_female']
         if 'ប្រុសកាច' in name: return role_map['fierce_male']
@@ -219,7 +221,7 @@ class KhmerDubber:
         if 'មេទ័ព' in name or 'មន្ត្រី' in name: return role_map['general']
         if 'មហាជន' in name: return role_map['crowd']
         if 'តួកាច' in name: return role_map['villain_female']
-        if 'អ៊ំចាស់' in name: return role_map['old_uncle']
+        if 'អ៊ំចាស់' in name or 'តា' in name: return role_map['old_uncle']
         if 'ចៅហ្វាយខេត្ត' in name: return role_map['governor']
         if 'ព្រឹទ្ធាចារ្យ' in name or 'គ្រូ' in name: return role_map['elder']
         if 'យាយ' in name: return role_map['old_woman']
@@ -252,8 +254,21 @@ class KhmerDubber:
             "- All lines must be translated into authentic, natural Cambodian theatrical dubbing Khmer (ភាសាកុនបុរាណនិយាយខ្មែរ).\n\n"
             "Instructions:\n"
             "1. Speech Recognition (ASR): Transcribe each spoken Chinese line.\n"
-            "2. Diarization: Identify speakers and classify 'speaker_role' into one of:\n"
-            "   'male_lead', 'female_lead', 'servant_female', 'fierce_female', 'fierce_male', 'villager', 'general', 'crowd', 'villain_female', 'old_uncle', 'governor', 'elder', 'old_woman'.\n"
+            "2. Speaker Diarization & Age/Gender Recognition (ស្កេនចាប់សំឡេង ស្រី, ប្រុស, ក្មេង, ចាស់):\n"
+            "   Carefully analyze acoustic pitch, vocal maturity, and dialogue context to classify 'gender' and 'speaker_role' into one of:\n"
+            "   - 'child': កុមារ / សំឡេងក្មេងប្រុសស្រី\n"
+            "   - 'male_lead': តួឯកប្រុសពេញវ័យ\n"
+            "   - 'female_lead': តួឯកស្រីពេញវ័យ\n"
+            "   - 'servant_female': អ្នកបម្រើស្រី / យុវតី\n"
+            "   - 'fierce_male': តួប្រុសកាច\n"
+            "   - 'fierce_female': តួស្រីកាច\n"
+            "   - 'general': មេទ័ព / មន្ត្រីយោធា\n"
+            "   - 'villager': អ្នកភូមិ\n"
+            "   - 'governor': ចៅហ្វាយខេត្ត / មន្ត្រីធំ\n"
+            "   - 'old_uncle': តួអ៊ំចាស់ / តា\n"
+            "   - 'elder': ព្រឹទ្ធាចារ្យ / តាគ្រូចាស់\n"
+            "   - 'old_woman': យាយចាស់ / ម្តាយចាស់\n"
+            "   - 'crowd': មហាជន\n"
             "3. Theatrical Khmer Dubbing: Translate each line into authentic, highly dramatic, poetic, and cinematic Khmer matching Cambodian movie dubbing style. Infuse passionate emotion, dramatic interjections ('ឱ!', 'ឯង!', 'ឈប់ភ្លាម!', 'ហ៊ឺ...', 'ហេតុអ្វី?', 'ព្រះអើយ!', 'មិនអាចទេ!'), and acting punctuation (!, ?, ..., ~).\n"
             "4. Accurate Timestamps: Relative start_time and end_time (in seconds, float or mm:ss).\n\n"
             "Output format: Return a JSON array enclosed in ```json ... ``` code block:\n"
@@ -261,7 +276,7 @@ class KhmerDubber:
             "[\n"
             "  {\n"
             "    \"speaker_id\": \"speaker_1\",\n"
-            "    \"speaker_name\": \"Male Lead / Hero\",\n"
+            "    \"speaker_name\": \"តួឯកប្រុស\",\n"
             "    \"speaker_role\": \"male_lead\",\n"
             "    \"gender\": \"male\",\n"
             "    \"start_time\": 1.2,\n"

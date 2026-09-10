@@ -799,6 +799,23 @@ function renderDialogueLines(segments) {
     const endSec = (parseFloat(seg.end_time) || 0).toFixed(1);
     const isFemale = seg.gender === 'female' || (seg.speaker_name && seg.speaker_name.includes('ស្រី'));
 
+    // Intelligent Age & Gender Detection Badge (ស្រី, ប្រុស, ក្មេង, ចាស់)
+    let roleIcon = isFemale ? '🌸' : '🎙️';
+    let roleName = seg.speaker_name || (isFemale ? 'តួស្រី' : 'តួប្រុស');
+    const roleKey = seg.speaker_role || '';
+    if (roleKey === 'child' || roleName.includes('ក្មេង') || roleName.includes('កុមារ')) {
+      roleIcon = '🧒';
+      if (!roleName.includes('កុមារ') && !roleName.includes('ក្មេង')) roleName = `កុមារ (${roleName})`;
+    } else if (roleKey === 'old_woman' || roleName.includes('យាយ')) {
+      roleIcon = '👵';
+    } else if (roleKey === 'old_uncle' || roleKey === 'elder' || roleName.includes('អ៊ំ') || roleName.includes('តា') || roleName.includes('ព្រឹទ្ធាចារ្យ')) {
+      roleIcon = '👴';
+    } else if (roleKey === 'general' || roleName.includes('មេទ័ព')) {
+      roleIcon = '🛡️';
+    } else if (roleKey === 'fierce_female' || roleKey === 'fierce_male' || roleName.includes('កាច')) {
+      roleIcon = '⚡';
+    }
+
     // Determine smart default voice according to the strict curated rule:
     // If recognized curated role, select it; else fallback STRICTLY to Male Lead or Female Lead!
     let defaultVoiceId = 'auto';
@@ -816,9 +833,9 @@ function renderDialogueLines(segments) {
 
     card.innerHTML = `
       <div class="line-card-header">
-        <span class="speaker-badge ${isFemale ? 'female' : ''}">
-          <i data-lucide="${isFemale ? 'user-check' : 'user'}"></i>
-          <span>${seg.speaker_name || seg.speaker_id}</span>
+        <span class="speaker-badge ${isFemale ? 'female' : ''}" title="ស្កេនសម្គាល់សំឡេង: ${roleName}">
+          <span style="font-size:1.05rem; margin-right:4px;">${roleIcon}</span>
+          <span>${roleName}</span>
         </span>
         <button class="time-btn" data-time="${startSec}" title="ចុចដើម្បីចាក់វីដេអូនៅវិនាទីនេះ">
           <i data-lucide="play-circle"></i>
