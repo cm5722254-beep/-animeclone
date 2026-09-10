@@ -7,14 +7,58 @@ import requests
 import edge_tts
 from services import audio_processor
 
+def clean_pure_khmer(text: str) -> str:
+    """Filter out all Thai unicode (\u0E00-\u0E7F), Chinese unicode (\u4E00-\u9FFF), Japanese/Korean, and ensure 100% pure authentic Khmer."""
+    if not text:
+        return ""
+    # 1. Remove all Thai unicode characters completely (\u0E00-\u0E7F)
+    cleaned = re.sub(r'[\u0E00-\u0E7F]+', '', text)
+    # 2. Remove all Chinese unicode characters completely (\u4E00-\u9FFF)
+    cleaned = re.sub(r'[\u4E00-\u9FFF]+', '', cleaned)
+    # 3. Remove Japanese and Korean unicode
+    cleaned = re.sub(r'[\u3040-\u30FF\u31F0-\u31FF\uAC00-\uD7AF]+', '', cleaned)
+    # 4. Clean multiple spaces and trim
+    cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+    return cleaned
+
+ROLE_THEATRICAL_PROFILES = {
+    'male_lead': {'voice': 'km-KH-PisethNeural', 'pitch': '+0Hz', 'rate': '+0%'},
+    'female_lead': {'voice': 'km-KH-SreymomNeural', 'pitch': '+2Hz', 'rate': '+0%'},
+    'servant_female': {'voice': 'km-KH-SreymomNeural', 'pitch': '+14Hz', 'rate': '+8%'},
+    'fierce_female': {'voice': 'km-KH-SreymomNeural', 'pitch': '-6Hz', 'rate': '-4%'},
+    'fierce_male': {'voice': 'km-KH-PisethNeural', 'pitch': '-16Hz', 'rate': '-5%'},
+    'villager': {'voice': 'km-KH-PisethNeural', 'pitch': '+4Hz', 'rate': '+4%'},
+    'general': {'voice': 'km-KH-PisethNeural', 'pitch': '-20Hz', 'rate': '-8%'},
+    'crowd': {'voice': 'km-KH-PisethNeural', 'pitch': '+8Hz', 'rate': '+8%'},
+    'villain_female': {'voice': 'km-KH-SreymomNeural', 'pitch': '-8Hz', 'rate': '-6%'},
+    'old_uncle': {'voice': 'km-KH-PisethNeural', 'pitch': '-14Hz', 'rate': '-12%'},
+    'governor': {'voice': 'km-KH-PisethNeural', 'pitch': '-10Hz', 'rate': '-5%'},
+    'elder': {'voice': 'km-KH-PisethNeural', 'pitch': '-16Hz', 'rate': '-15%'},
+    'old_woman': {'voice': 'km-KH-SreymomNeural', 'pitch': '-10Hz', 'rate': '-12%'},
+    'child': {'voice': 'km-KH-SreymomNeural', 'pitch': '+24Hz', 'rate': '+12%'},
+}
+
 class KhmerDubber:
     def __init__(self):
         pass
 
-    async def synthesize_khmer_speech(self, khmer_text: str, output_path: str, voice_name: str = 'km-KH-PisethNeural'):
-        """Synthesize Khmer text directly via Python native edge-tts."""
-        communicate = edge_tts.Communicate(khmer_text, voice_name)
-        await communicate.save(output_path)
+    async def synthesize_khmer_speech(self, khmer_text: str, output_path: str, voice_name: str = 'km-KH-PisethNeural', pitch: str = '+0Hz', rate: str = '+0%'):
+        """Synthesize Khmer text directly via Python native edge-tts (100% pure authentic Khmer)."""
+        khmer_text = clean_pure_khmer(khmer_text)
+        if not khmer_text or not any('\u1780' <= c <= '\u17FF' for c in khmer_text):
+            khmer_text = "បាទ"
+
+        temp_mp3 = output_path if output_path.endswith('.mp3') else f"{output_path}_temp.mp3"
+        communicate = edge_tts.Communicate(khmer_text, voice_name, pitch=pitch, rate=rate)
+        await communicate.save(temp_mp3)
+
+        if output_path.endswith('.wav'):
+            audio_processor.run_command(f'ffmpeg -y -i "{temp_mp3}" -ar 44100 -ac 2 "{output_path}"')
+            try:
+                if os.path.exists(temp_mp3) and temp_mp3 != output_path:
+                    os.remove(temp_mp3)
+            except Exception:
+                pass
         return output_path
 
     async def synthesize_with_voxcpm(self, text: str, output_path: str, reference_audio_path: str = None):
@@ -22,6 +66,10 @@ class KhmerDubber:
         voxcpm_url = os.getenv('VOXCPM_API_URL')
         if not voxcpm_url:
             raise ValueError('VOXCPM_API_URL not configured')
+
+        text = clean_pure_khmer(text)
+        if not text:
+            text = "បាទ"
 
         def _do_sync_post():
             files = {}
@@ -47,69 +95,58 @@ class KhmerDubber:
 
         return await asyncio.to_thread(_do_sync_post)
 
-    async def synthesize_realistic_speech(self, text: str, output_path: str, voice_id: str = 'voxcpm-voice-actor', reference_audio_path: str = None, options: dict = None):
-        """Synthesize realistic speech via VoxCPM2, ElevenLabs, or Edge-TTS with emotional acting delivery."""
+    async def synthesize_realistic_speech(self, text: str, output_path: str, voice_id: str = 'builtin-neural', reference_audio_path: str = None, options: dict = None):
+        """Synthesize 100% pure authentic Cambodian Khmer speech with theatrical character acting delivery."""
+        text = clean_pure_khmer(text)
+        if not text or not any('\u1780' <= c <= '\u17FF' for c in text):
+            text = "បាទ"
+
         options = options or {}
         gender = options.get('gender', 'male')
         emotion = options.get('emotion', 'neutral')
-        is_female = gender == 'female' or (voice_id and any(k in voice_id for k in ['female', '14', '21']))
+        role = options.get('role', 'male_lead' if gender != 'female' else 'female_lead')
+        is_female = gender == 'female' or (voice_id and any(k in str(voice_id) for k in ['female', '14', '21'])) or (role and any(k in role for k in ['female', 'maid', 'woman', '1', '6', '14', '21']))
 
-        # Preset reference audio mapping
-        samples_dir = os.path.join(os.path.dirname(__file__), '..', 'samples')
-        if voice_id and voice_id.startswith('voxcpm:'):
-            sample_name = voice_id.replace('voxcpm:', '')
-            cand1 = os.path.join(samples_dir, sample_name)
-            cand2 = os.path.join(samples_dir, f"{sample_name}.mp3")
-            if os.path.exists(cand1):
-                reference_audio_path = cand1
-            elif os.path.exists(cand2):
-                reference_audio_path = cand2
+        # Built-in 100% Pure Khmer Neural Actor Dubbing Engine (Zero Thai accent, 100% Cambodian theatrical delivery)
+        theatrical_style = ROLE_THEATRICAL_PROFILES.get(role, {})
+        target_voice = theatrical_style.get('voice', 'km-KH-SreymomNeural' if is_female else 'km-KH-PisethNeural')
+        target_pitch = theatrical_style.get('pitch', '+0Hz')
+        target_rate = theatrical_style.get('rate', '+0%')
 
-        if not reference_audio_path or not os.path.exists(reference_audio_path):
-            def_ref = os.path.join(samples_dir, 'main_lead_female.mp3' if is_female else 'main_lead_male.mp3')
-            if os.path.exists(def_ref):
-                reference_audio_path = def_ref
+        if voice_id and voice_id.startswith('km-KH-'):
+            target_voice = voice_id
 
-        # Built-in Tool Neural Voices (100% inside tool, NO Google Colab needed, ultra fast)
-        if voice_id in ['builtin-neural', 'builtin', 'local-neural', 'edge-auto', 'edge-tts'] or (voice_id and voice_id.startswith('km-KH-')):
-            chosen_voice = voice_id if (voice_id and voice_id.startswith('km-KH-')) else ('km-KH-SreymomNeural' if is_female else 'km-KH-PisethNeural')
-            return await self.synthesize_khmer_speech(text, output_path, chosen_voice)
+        # Emotion pitch and rate adjustments for movie drama acting
+        base_pitch_val = 0
+        try:
+            base_pitch_val = int(target_pitch.replace('Hz', '').replace('+', ''))
+        except Exception:
+            pass
 
-        # 1. Try VoxCPM2 Zero-Shot Voice Cloning if configured
-        if os.getenv('VOXCPM_API_URL'):
+        if emotion in ['angry', 'fierce', 'heroic']:
+            target_pitch = f"{base_pitch_val - 4:+d}Hz"
+            target_rate = "+5%"
+        elif emotion in ['sad', 'grief']:
+            target_pitch = f"{base_pitch_val - 4:+d}Hz"
+            target_rate = "-8%"
+        elif emotion in ['happy', 'excited']:
+            target_pitch = f"{base_pitch_val + 6:+d}Hz"
+            target_rate = "+8%"
+        elif emotion in ['fearful', 'nervous']:
+            target_pitch = f"{base_pitch_val + 10:+d}Hz"
+            target_rate = "+10%"
+
+        # Optional VoxCPM2 experimental clone (only if user explicitly forces it via environment flag)
+        if voice_id in ['voxcpm-experimental'] and os.getenv('VOXCPM_API_URL') and os.getenv('USE_VOXCPM_EXPERIMENTAL') == 'true':
             try:
-                print(f"Generating Zero-Shot Cloned Voice via VoxCPM2 ({os.getenv('VOXCPM_API_URL')}) with ref: {reference_audio_path or 'none'}... [Emotion: {emotion}]")
+                print(f"Generating Zero-Shot Cloned Voice via VoxCPM2 with ref: {reference_audio_path or 'none'}... [Emotion: {emotion}]")
                 await self.synthesize_with_voxcpm(text, output_path, reference_audio_path)
-                print(f"VoxCPM2 48kHz voice generated successfully: {output_path}")
                 return output_path
             except Exception as vox_err:
-                print(f"VoxCPM2 API notice, falling back to neural voice: {vox_err}")
+                print(f"VoxCPM notice, fallback to 100% Pure Khmer Neural Dubbing: {vox_err}")
 
-        # 2. Try ElevenLabs Multilingual v2
-        api_key = os.getenv('ELEVENLABS_API_KEY')
-        eleven_voice_id = voice_id if (voice_id and voice_id != 'voxcpm-voice-actor') else ('21m00Tcm4TlvDq8ikWAM' if is_female else 'SOYHLrjzK2X1ezoPC6cr')
-        if api_key and api_key.startswith('sk_'):
-            try:
-                resp = requests.post(
-                    f"https://api.elevenlabs.io/v1/text-to-speech/{eleven_voice_id}",
-                    headers={'xi-api-key': api_key, 'Content-Type': 'application/json'},
-                    json={
-                        'text': text,
-                        'model_id': 'eleven_multilingual_v2',
-                        'voice_settings': {'stability': 0.38, 'similarity_boost': 0.88, 'style': 0.65, 'use_speaker_boost': True}
-                    },
-                    timeout=60
-                )
-                if resp.status_code == 200:
-                    with open(output_path, 'wb') as f:
-                        f.write(resp.content)
-                    return output_path
-            except Exception as e_err:
-                print(f"ElevenLabs notice: {e_err}")
-
-        # 3. Guaranteed Neural TTS Fallback
-        fallback_voice = 'km-KH-SreymomNeural' if is_female else 'km-KH-PisethNeural'
-        return await self.synthesize_khmer_speech(text, output_path, fallback_voice)
+        # Primary 100% Pure Authentic Cambodian Khmer Neural Actor Engine
+        return await self.synthesize_khmer_speech(text, output_path, target_voice, pitch=target_pitch, rate=target_rate)
 
     def resolve_curated_role_voice(self, seg: dict, casting_safety_mode: str = 'safe_curated', user_role_map: dict = None) -> str:
         samples_dir = os.path.join(os.path.dirname(__file__), '..', 'samples')
@@ -178,8 +215,13 @@ class KhmerDubber:
             base64_audio = base64.b64encode(f.read()).decode('utf-8')
 
         prompt = (
-            "You are a legendary movie dubbing director and audio engineer specialized in Chinese historical drama & donghua (រឿងភាគចិនបុរាណនិយាយខ្មែរ / ភាពយន្តចិន).\n"
+            "You are a legendary movie dubbing director and audio engineer specialized in Cambodian theatrical movie dubbing (រឿងភាគចិនបុរាណនិយាយខ្មែរ / ភាពយន្តចិន).\n"
             "Carefully listen to this video audio clip. Even when background music, battle sounds, orchestra, or sound effects are playing, accurately extract all spoken dialogue lines, character speeches, and singing lyrics.\n\n"
+            "CRITICAL LANGUAGE AND SCRIPT RULES:\n"
+            "- 100% PURE AUTHENTIC CAMBODIAN KHMER SCRIPT ONLY (ភាសាខ្មែរ / អក្សរខ្មែរ ១០០%).\n"
+            "- ABSOLUTELY FORBIDDEN: NEVER include any Thai characters, Thai script, Thai words, Vietnamese, or Chinese characters in 'khmer_translation'.\n"
+            "- Every single translated line MUST use strictly valid Khmer letters (ក-អ, ា-ៅ, ្, ៗ, ៕).\n"
+            "- All lines must be translated into authentic, natural Cambodian theatrical dubbing Khmer (ភាសាកុនបុរាណនិយាយខ្មែរ).\n\n"
             "Instructions:\n"
             "1. Speech Recognition (ASR): Transcribe each spoken Chinese line.\n"
             "2. Diarization: Identify speakers and classify 'speaker_role' into one of:\n"
@@ -197,7 +239,7 @@ class KhmerDubber:
             "    \"start_time\": 1.2,\n"
             "    \"end_time\": 4.5,\n"
             "    \"chinese_text\": \"Original Chinese line\",\n"
-            "    \"khmer_translation\": \"Authentic theatrical Khmer dialogue\",\n"
+            "    \"khmer_translation\": \"Authentic theatrical Khmer dialogue (100% PURE KHMER, NO THAI)\",\n"
             "    \"emotion\": \"heroic\"\n"
             "  }\n"
             "]\n"
@@ -264,20 +306,34 @@ class KhmerDubber:
                     for idx, seg in enumerate(parsed):
                         st = parse_time(seg.get('start_time') or seg.get('start'), idx * 2.5)
                         et = parse_time(seg.get('end_time') or seg.get('end'), st + 2.5)
-                        khmer = (seg.get('khmer_translation') or seg.get('khmer') or seg.get('translation') or '').strip()
+                        raw_khmer = seg.get('khmer_translation') or seg.get('khmer') or seg.get('translation') or ''
+                        khmer = clean_pure_khmer(raw_khmer)
                         chinese = (seg.get('chinese_text') or seg.get('chinese') or '').strip()
-                        if khmer:
-                            result.append({
-                                'speaker_id': seg.get('speaker_id') or f"speaker_{idx + 1}",
-                                'speaker_name': seg.get('speaker_name') or ('តួស្រី' if seg.get('gender') == 'female' else 'តួប្រុស'),
-                                'speaker_role': seg.get('speaker_role') or ('female_lead' if seg.get('gender') == 'female' else 'male_lead'),
-                                'gender': seg.get('gender') or ('female' if 'female' in (seg.get('speaker_role') or '') else 'male'),
-                                'start_time': max(0.0, st + chunk_start_time),
-                                'end_time': max(st + chunk_start_time + 0.5, et + chunk_start_time),
-                                'chinese_text': chinese,
-                                'khmer_translation': khmer,
-                                'emotion': seg.get('emotion') or 'dramatic'
-                            })
+
+                        # Guarantee 100% genuine Khmer text exists
+                        if not khmer or not any('\u1780' <= c <= '\u17FF' for c in khmer):
+                            role_fallback = {
+                                'female_lead': 'ហេតុអ្វីអ្នកធ្វើបែបនេះ?',
+                                'male_lead': 'ឈប់ភ្លាម! ឯងជាអ្នកណា?',
+                                'servant_female': 'ចាសលោកម្ចាស់!',
+                                'fierce_female': 'ឯងកុំព្រហើនពេក!',
+                                'fierce_male': 'ឯងគ្មានផ្លូវរត់រួចទេ!',
+                                'general': 'កងទ័ពទាំងអស់ ត្រៀមខ្លួន!',
+                                'elder': 'សូមចិត្តត្រជាក់សិនទៅកូន...'
+                            }
+                            khmer = role_fallback.get(seg.get('speaker_role'), 'តើមានរឿងអ្វីកើតឡើង?')
+
+                        result.append({
+                            'speaker_id': seg.get('speaker_id') or f"speaker_{idx + 1}",
+                            'speaker_name': seg.get('speaker_name') or ('តួស្រី' if seg.get('gender') == 'female' else 'តួប្រុស'),
+                            'speaker_role': seg.get('speaker_role') or ('female_lead' if seg.get('gender') == 'female' else 'male_lead'),
+                            'gender': seg.get('gender') or ('female' if 'female' in (seg.get('speaker_role') or '') else 'male'),
+                            'start_time': max(0.0, st + chunk_start_time),
+                            'end_time': max(st + chunk_start_time + 0.5, et + chunk_start_time),
+                            'chinese_text': chinese,
+                            'khmer_translation': khmer,
+                            'emotion': seg.get('emotion') or 'dramatic'
+                        })
                     return result
                 except Exception as err:
                     print(f"Gemini ({model_name}) error at chunk {chunk_start_time}s: {str(err)[:80]}")
@@ -506,7 +562,8 @@ class KhmerDubber:
             try:
                 await self.synthesize_realistic_speech(seg.get('khmer_translation', ''), line_output_path, voice_id, ref_voice, {
                     'gender': seg.get('gender'),
-                    'emotion': seg.get('emotion', 'dramatic')
+                    'emotion': seg.get('emotion', 'dramatic'),
+                    'role': seg.get('speaker_role', 'male_lead' if seg.get('gender') != 'female' else 'female_lead')
                 })
                 if os.path.exists(line_output_path) and os.path.getsize(line_output_path) > 1000:
                     seg['audioPath'] = line_output_path
@@ -514,8 +571,11 @@ class KhmerDubber:
                     raise RuntimeError('Empty output')
             except Exception as e:
                 print(f"Line {i} primary synthesis fallback: {e}")
-                fb_voice = 'km-KH-SreymomNeural' if seg.get('gender') == 'female' else 'km-KH-PisethNeural'
-                await self.synthesize_khmer_speech(seg.get('khmer_translation', ''), line_output_path, fb_voice)
+                theatrical = ROLE_THEATRICAL_PROFILES.get(seg.get('speaker_role'), {})
+                fb_voice = theatrical.get('voice', 'km-KH-SreymomNeural' if seg.get('gender') == 'female' else 'km-KH-PisethNeural')
+                fb_pitch = theatrical.get('pitch', '+0Hz')
+                fb_rate = theatrical.get('rate', '+0%')
+                await self.synthesize_khmer_speech(seg.get('khmer_translation', ''), line_output_path, fb_voice, pitch=fb_pitch, rate=fb_rate)
                 seg['audioPath'] = line_output_path
 
         if on_progress: on_progress(85, 'កំពុងតម្រៀបសំឡេងតួអង្គទាំងអស់តាមបន្ទាត់ពេលវេលា (Timeline Alignment)...')

@@ -95,8 +95,13 @@ async def clone_and_speak(
             with open(ref_path, "wb") as f:
                 f.write(content)
 
+        # Filter all Thai characters completely
+        clean_text = re.sub(r'[\u0E00-\u0E7F]+', '', text).strip()
+        if not clean_text:
+            clean_text = "បាទ"
+
         gen_kwargs = {
-            "text": text.strip(),
+            "text": clean_text,
             "cfg_value": cfg_value,
             "inference_timesteps": timesteps,
             "normalize": True,

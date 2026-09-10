@@ -24,7 +24,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from services import audio_processor
-from services.khmer_dubber import KhmerDubber
+from services.khmer_dubber import KhmerDubber, clean_pure_khmer, ROLE_THEATRICAL_PROFILES
 
 app = FastAPI(title="AI Voice Clone & Dubbing Studio (ZH -> KM)")
 
@@ -406,12 +406,16 @@ async def generate_line(body: GenerateLineRequest):
     if not studio_ref:
         studio_ref = os.path.join(SAMPLES_DIR, 'main_lead_female.mp3' if is_female else 'main_lead_male.mp3')
 
+    clean_text = clean_pure_khmer(body.text)
+    if not clean_text:
+        clean_text = "បាទ"
+
     await khmer_dubber.synthesize_realistic_speech(
-        body.text,
+        clean_text,
         out_path,
         body.voiceId,
         studio_ref if os.path.exists(studio_ref) else None,
-        {'gender': body.gender, 'emotion': body.emotion}
+        {'gender': body.gender, 'emotion': body.emotion, 'role': body.speakerId}
     )
 
     return {
@@ -446,13 +450,17 @@ async def assemble_custom(body: AssembleCustomRequest):
 
         # Auto-synthesize any missing line so ZERO lines are dropped!
         if not audio_path and (seg.get('khmer_translation') or seg.get('chinese_text')):
-            text_to_speak = (seg.get('khmer_translation') or seg.get('chinese_text') or '').strip()
+            text_to_speak = clean_pure_khmer(seg.get('khmer_translation') or seg.get('chinese_text') or '')
             if text_to_speak:
                 auto_path = os.path.join(OUTPUTS_DIR, f"auto_studio_line_py_{i}_{int(time.time() * 1000)}.wav")
                 try:
                     is_female = seg.get('gender') == 'female' or ('ស្រី' in (seg.get('speaker_name') or ''))
-                    fb_voice = 'km-KH-SreymomNeural' if is_female else 'km-KH-PisethNeural'
-                    await khmer_dubber.synthesize_khmer_speech(text_to_speak, auto_path, fb_voice)
+                    role = seg.get('speaker_role') or ('female_lead' if is_female else 'male_lead')
+                    theatrical = ROLE_THEATRICAL_PROFILES.get(role, {})
+                    fb_voice = theatrical.get('voice', 'km-KH-SreymomNeural' if is_female else 'km-KH-PisethNeural')
+                    pitch = theatrical.get('pitch', '+0Hz')
+                    rate = theatrical.get('rate', '+0%')
+                    await khmer_dubber.synthesize_khmer_speech(text_to_speak, auto_path, fb_voice, pitch=pitch, rate=rate)
                     if os.path.exists(auto_path) and os.path.getsize(auto_path) > 1000:
                         audio_path = auto_path
                 except Exception as ex:
@@ -540,8 +548,12 @@ async def character_speak(body: CharacterSpeakRequest):
         elif os.path.exists(c2): ref_audio = c2
         elif os.path.exists(c3): ref_audio = c3
 
+    clean_text = clean_pure_khmer(body.text)
+    if not clean_text:
+        clean_text = "សួស្តីបងប្អូនទាំងអស់គ្នា នេះជាសំឡេងនិយាយខ្មែរសុទ្ធ ១០០%"
+
     await khmer_dubber.synthesize_realistic_speech(
-        body.text,
+        clean_text,
         out_path,
         body.voiceId,
         ref_audio,

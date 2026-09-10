@@ -7,6 +7,17 @@ let dubbedMediaUrl = null;
 let extractedMovieCharacters = [];
 let currentPreviewAudio = null;
 
+// 100% Pure Khmer Sanitizer (Strips Thai unicode \u0E00-\u0E7F, Chinese, and foreign scripts)
+function cleanPureKhmer(text) {
+  if (!text) return '';
+  return text
+    .replace(/[\u0E00-\u0E7F]+/g, '') // Remove all Thai characters completely
+    .replace(/[\u4E00-\u9FFF]+/g, '') // Remove all Chinese characters completely
+    .replace(/[\u3040-\u30FF\u31F0-\u31FF\uAC00-\uD7AF]+/g, '') // Remove Japanese/Korean
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 // Studio Toast System
 function showToast(message, type = 'info') {
   const container = document.getElementById('toastContainer');
@@ -312,7 +323,7 @@ function initDubbingActions() {
     const sourceLang = document.getElementById('sourceLang').value;
     const targetLang = document.getElementById('targetLang').value;
     const speakerCount = parseInt(document.getElementById('speakerCount').value, 10);
-    const voiceId = document.getElementById('voiceChoice') ? document.getElementById('voiceChoice').value : 'voxcpm-voice-actor';
+    const voiceId = document.getElementById('voiceChoice') ? document.getElementById('voiceChoice').value : 'builtin-neural';
     const scope = document.getElementById('dubbingScope') ? document.getElementById('dubbingScope').value : 'full';
     const castingSafetyMode = document.getElementById('castingSafetyMode') ? document.getElementById('castingSafetyMode').value : 'safe_curated';
 
@@ -710,7 +721,10 @@ function initManualStudio() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           filename: currentUploadedFile.filename,
-          segments: manualSegments
+          segments: manualSegments.map(s => ({
+            ...s,
+            khmer_translation: cleanPureKhmer(s.khmer_translation || '')
+          }))
         })
       });
       const data = await res.json();
@@ -816,7 +830,7 @@ function renderDialogueLines(segments) {
       <div class="original-chinese-text">🇨🇳 ${seg.chinese_text || '(មិនមានអក្សរចិន)'}</div>
 
       <div class="khmer-input-wrapper">
-        <textarea id="khmer-text-${idx}" placeholder="សរសេរពាក្យខ្មែរ...">${seg.khmer_translation || ''}</textarea>
+        <textarea id="khmer-text-${idx}" placeholder="សរសេរពាក្យខ្មែរ...">${cleanPureKhmer(seg.khmer_translation || '')}</textarea>
       </div>
 
       <div class="line-actions-toolbar">
@@ -871,7 +885,7 @@ function renderDialogueLines(segments) {
     // Event 2: Update text on edit
     const textarea = card.querySelector(`#khmer-text-${idx}`);
     textarea.addEventListener('input', () => {
-      seg.khmer_translation = textarea.value;
+      seg.khmer_translation = cleanPureKhmer(textarea.value);
     });
 
     // Event 3: Record microphone
@@ -1007,7 +1021,11 @@ async function handleUploadLineAudio(idx, file, card) {
 // Generate Line AI
 async function handleGenerateLineAI(idx, btn, card) {
   const seg = manualSegments[idx];
-  const text = seg.khmer_translation || card.querySelector(`#khmer-text-${idx}`).value.trim();
+  const inputEl = card.querySelector(`#khmer-text-${idx}`);
+  const text = cleanPureKhmer(inputEl ? inputEl.value : (seg.khmer_translation || ''));
+  if (inputEl) inputEl.value = text;
+  seg.khmer_translation = text;
+
   if (!text) {
     alert('សូមបញ្ចូលអក្សរខ្មែរសម្រាប់ឃ្លានេះជាមុនសិន!');
     return;
@@ -1020,7 +1038,7 @@ async function handleGenerateLineAI(idx, btn, card) {
   try {
     const lineVoiceSelect = card.querySelector(`#voice-select-${idx}`);
     const selectedLineVoice = (lineVoiceSelect && lineVoiceSelect.value !== 'auto') ? lineVoiceSelect.value : null;
-    const voiceId = selectedLineVoice || (document.getElementById('manualVoiceChoice')?.value || 'voxcpm-voice-actor');
+    const voiceId = selectedLineVoice || (document.getElementById('manualVoiceChoice')?.value || 'builtin-neural');
 
     const res = await fetch('/api/dubbing/generate-line', {
       method: 'POST',
