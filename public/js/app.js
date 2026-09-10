@@ -523,7 +523,37 @@ function initTranslator() {
   });
 }
 
-// 7. Settings Modal
+// 7. Settings Modal & Storage Management
+async function refreshOutputStorageStats() {
+  const sizeText = document.getElementById('outputStorageSizeText');
+  if (!sizeText) return;
+  try {
+    const res = await fetch('/api/outputs/stats');
+    const data = await res.json();
+    sizeText.textContent = `${data.formattedSize} (${data.count} ឯកសារ)`;
+  } catch (e) {
+    sizeText.textContent = 'មិនស្គាល់';
+  }
+}
+
+async function triggerClearOutputs() {
+  const confirmed = confirm('តើអ្នកពិតជាចង់សម្អាតឯកសារ Output ទាំងអស់ (វីដេអូ & សំឡេងកាត់តចាស់ៗ) ចេញពីកុំព្យូទ័រមែនទេ? សកម្មភាពនេះនឹងជួយសន្សំទំហំ Hard Disk របស់អ្នក។');
+  if (!confirmed) return;
+
+  try {
+    const res = await fetch('/api/outputs/clear', { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      showToast(`🎉 ${data.message}`, 'success');
+      refreshOutputStorageStats();
+    } else {
+      showToast('ការសម្អាតបរាជ័យ', 'error');
+    }
+  } catch (err) {
+    showToast('កំហុសសម្អាត: ' + err.message, 'error');
+  }
+}
+
 function initSettingsModal() {
   const modal = document.getElementById('settingsModal');
   const openBtn = document.getElementById('openSettingsBtn');
@@ -533,32 +563,48 @@ function initSettingsModal() {
   const elevenInput = document.getElementById('settingElevenKey');
   const geminiInput = document.getElementById('settingGeminiKey');
   const voxcpmInput = document.getElementById('settingVoxcpmUrl');
+  const headerClearBtn = document.getElementById('clearOutputsBtn');
+  const modalClearBtn = document.getElementById('modalClearOutputsBtn');
 
-  openBtn.addEventListener('click', () => modal.classList.remove('hidden'));
-  closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
-  cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
+  if (openBtn) {
+    openBtn.addEventListener('click', () => {
+      modal.classList.remove('hidden');
+      refreshOutputStorageStats();
+    });
+  }
+  if (closeBtn) closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
+  if (cancelBtn) cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
 
-  saveBtn.addEventListener('click', async () => {
-    const elevenlabsKey = elevenInput.value.trim();
-    const geminiKey = geminiInput.value.trim();
-    const voxcpmUrl = voxcpmInput ? voxcpmInput.value.trim() : '';
+  if (headerClearBtn) {
+    headerClearBtn.addEventListener('click', triggerClearOutputs);
+  }
+  if (modalClearBtn) {
+    modalClearBtn.addEventListener('click', triggerClearOutputs);
+  }
 
-    try {
-      const res = await fetch('/api/config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ elevenlabsKey, geminiKey, voxcpmUrl })
-      });
-      const data = await res.json();
-      if (data.success) {
-        alert('រក្សាទុកការកំណត់បានជោគជ័យ!');
-        modal.classList.add('hidden');
-        initConfig();
+  if (saveBtn) {
+    saveBtn.addEventListener('click', async () => {
+      const elevenlabsKey = elevenInput.value.trim();
+      const geminiKey = geminiInput.value.trim();
+      const voxcpmUrl = voxcpmInput ? voxcpmInput.value.trim() : '';
+
+      try {
+        const res = await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ elevenlabsKey, geminiKey, voxcpmUrl })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast('រក្សាទុកការកំណត់បានជោគជ័យ!', 'success');
+          modal.classList.add('hidden');
+          initConfig();
+        }
+      } catch (err) {
+        showToast('ការរក្សាទុកបរាជ័យ: ' + err.message, 'error');
       }
-    } catch (err) {
-      alert('ការរក្សាទុកបរាជ័យ: ' + err.message);
-    }
-  });
+    });
+  }
 }
 
 // ==========================================================================

@@ -7,3 +7,7 @@ requests>=2.32.0
 python-dotenv>=1.0.0
 pydantic>=2.8.0
 google-genai>=0.1.0
+demucs>=4.0.0
+numpy>=1.26.0
+scipy>=1.13.0
+

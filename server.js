@@ -159,6 +159,74 @@ app.post('/api/upload', upload.single('mediaFile'), async (req, res) => {
   }
 });
 
+// Helper for formatted bytes
+function formatBytes(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}
+
+// Get output storage statistics
+app.get('/api/outputs/stats', (req, res) => {
+  try {
+    let count = 0;
+    let totalBytes = 0;
+    if (fs.existsSync(OUTPUTS_DIR)) {
+      const files = fs.readdirSync(OUTPUTS_DIR);
+      for (const f of files) {
+        if (f === '.gitkeep') continue;
+        const p = path.join(OUTPUTS_DIR, f);
+        try {
+          const stat = fs.statSync(p);
+          if (stat.isFile()) {
+            count++;
+            totalBytes += stat.size;
+          }
+        } catch (e) {}
+      }
+    }
+    res.json({ count, totalBytes, formattedSize: formatBytes(totalBytes) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Clear outputs directory
+app.post('/api/outputs/clear', (req, res) => {
+  try {
+    let count = 0;
+    let freedBytes = 0;
+    if (fs.existsSync(OUTPUTS_DIR)) {
+      const files = fs.readdirSync(OUTPUTS_DIR);
+      for (const f of files) {
+        if (f === '.gitkeep') continue;
+        const p = path.join(OUTPUTS_DIR, f);
+        try {
+          const stat = fs.statSync(p);
+          if (stat.isFile()) {
+            const sz = stat.size;
+            fs.unlinkSync(p);
+            count++;
+            freedBytes += sz;
+          } else if (stat.isDirectory()) {
+            fs.rmSync(p, { recursive: true, force: true });
+          }
+        } catch (e) {}
+      }
+    }
+    res.json({
+      success: true,
+      count,
+      freedBytes,
+      formattedFreed: formatBytes(freedBytes),
+      message: `បានលុបឯកសារ Output សរុប ${count} ឯកសារ (សន្សំទំហំបាន ${formatBytes(freedBytes)})`
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Start Dubbing & Voice Cloning Workflow
 app.post('/api/dubbing/start', async (req, res) => {
   const {

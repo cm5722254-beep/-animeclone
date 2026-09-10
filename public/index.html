@@ -36,6 +36,10 @@
           <span class="status-dot"></span>
           <span class="badge-text" id="statusText">កំពុងត្រួតពិនិត្យប្រព័ន្ធ AI...</span>
         </div>
+        <button class="btn btn-outline-danger btn-icon" id="clearOutputsBtn" title="សម្អាតឯកសារ Output ចាស់ៗចោលដើម្បីសន្សំទំហំ Hard Disk">
+          <i data-lucide="trash-2"></i>
+          <span>សម្អាត Output</span>
+        </button>
         <button class="btn btn-secondary btn-icon" id="openSettingsBtn" title="ការកំណត់ API">
           <i data-lucide="settings"></i>
           <span>ការកំណត់</span>
@@ -881,6 +885,19 @@
               </button>
             </div>
             <span class="field-hint" style="color: #cbd5e1;">កុំព្យូទ័រ ឬទូរស័ព្ទណាក៏ដោយដែលភ្ជាប់ Wi-Fi ឬ Network ដូចគ្នា អាចបើកតំណភ្ជាប់នេះប្រើប្រាស់បានភ្លាមៗ 100%!</span>
+          </div>
+
+          <!-- Output Storage Cleanup -->
+          <div class="form-group" style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 12px; padding: 14px;">
+            <label style="color: #fca5a5; display: flex; justify-content: space-between; align-items: center;">
+              <span><i data-lucide="hard-drive"></i> ទំហំឯកសារ Output & សម្អាតទំហំថាស</span>
+              <span id="outputStorageSizeText" style="font-size: 0.85rem; color: #f87171; font-family: monospace;">កំពុងគណនា...</span>
+            </label>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin: 6px 0 10px 0;">លុបឯកសារវីដេអូ និងសំឡេងចាស់ៗក្នុងថត outputs/ ដើម្បីសន្សំទំហំ Hard Disk កុំព្យូទ័រ។</p>
+            <button class="btn btn-danger btn-sm" id="modalClearOutputsBtn" type="button">
+              <i data-lucide="trash-2"></i>
+              <span>សម្អាតឯកសារ Output ទាំងអស់</span>
+            </button>
           </div>
 
           <div class="modal-actions">

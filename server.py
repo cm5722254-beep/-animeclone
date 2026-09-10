@@ -154,6 +154,85 @@ def get_files():
     results.sort(key=lambda x: x['created'], reverse=True)
     return results
 
+def format_bytes(size_bytes: int) -> str:
+    if size_bytes < 1024:
+        return f"{size_bytes} B"
+    elif size_bytes < 1024 * 1024:
+        return f"{size_bytes / 1024:.1f} KB"
+    elif size_bytes < 1024 * 1024 * 1024:
+        return f"{size_bytes / (1024 * 1024):.1f} MB"
+    return f"{size_bytes / (1024 * 1024 * 1024):.2f} GB"
+
+@app.get('/api/outputs/stats')
+def get_outputs_stats():
+    count = 0
+    total_bytes = 0
+    if os.path.exists(OUTPUTS_DIR):
+        for f in os.listdir(OUTPUTS_DIR):
+            if f == '.gitkeep': continue
+            p = os.path.join(OUTPUTS_DIR, f)
+            if os.path.isfile(p):
+                count += 1
+                total_bytes += os.path.getsize(p)
+    return {
+        'count': count,
+        'totalBytes': total_bytes,
+        'formattedSize': format_bytes(total_bytes)
+    }
+
+@app.post('/api/outputs/clear')
+def clear_outputs():
+    deleted_count = 0
+    freed_bytes = 0
+    if os.path.exists(OUTPUTS_DIR):
+        for f in os.listdir(OUTPUTS_DIR):
+            if f == '.gitkeep': continue
+            p = os.path.join(OUTPUTS_DIR, f)
+            try:
+                if os.path.isfile(p):
+                    sz = os.path.getsize(p)
+                    os.unlink(p)
+                    deleted_count += 1
+                    freed_bytes += sz
+                elif os.path.isdir(p):
+                    shutil.rmtree(p, ignore_errors=True)
+            except Exception as e:
+                print(f"Error clearing output {f}: {e}")
+    return {
+        'success': True,
+        'count': deleted_count,
+        'freedBytes': freed_bytes,
+        'formattedFreed': format_bytes(freed_bytes),
+        'message': f"បានលុបឯកសារ Output សរុប {deleted_count} ឯកសារ (សន្សំទំហំបាន {format_bytes(freed_bytes)})"
+    }
+
+class SeparateRequest(BaseModel):
+    filename: str
+    preferAi: Optional[bool] = True
+
+@app.post('/api/audio/separate')
+async def separate_audio_track(body: SeparateRequest):
+    input_path = os.path.join(UPLOADS_DIR, body.filename)
+    if not os.path.exists(input_path):
+        root_path = os.path.join(BASE_DIR, body.filename)
+        if os.path.exists(root_path): input_path = root_path
+    if not os.path.exists(input_path):
+        raise HTTPException(status_code=404, detail="File not found")
+
+    audio_ext = os.path.splitext(body.filename)[0] + '.mp3'
+    extracted_audio = os.path.join(OUTPUTS_DIR, f"audio_{audio_ext}")
+    if not os.path.exists(extracted_audio):
+        audio_processor.extract_audio(input_path, extracted_audio)
+
+    from services import vocal_separator
+    result = vocal_separator.separate_vocals_and_bgm(extracted_audio, OUTPUTS_DIR, body.preferAi)
+    return {
+        'success': True,
+        'engine': result['engine'],
+        'vocalsUrl': f"/media/outputs/{os.path.basename(result['vocalsPath'])}",
+        'bgmUrl': f"/media/outputs/{os.path.basename(result['bgmPath'])}"
+    }
+
 @app.post('/api/dubbing/start')
 async def start_dubbing(body: DubbingStartRequest, background_tasks: BackgroundTasks):
     input_path = os.path.join(UPLOADS_DIR, body.filename)
