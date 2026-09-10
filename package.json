@@ -4,8 +4,10 @@
   "description": "Chinese to Khmer AI Voice Cloning and Video Dubbing Studio",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch-path=server.js --watch-path=services server.js"
+    "start": ".venv\\Scripts\\python.exe server.py",
+    "start:python": ".venv\\Scripts\\python.exe server.py",
+    "start:node": "node server.js",
+    "dev": ".venv\\Scripts\\python.exe server.py"
   },
   "dependencies": {
     "axios": "^1.7.9",

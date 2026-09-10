@@ -22,3 +22,9 @@ scratch_*.js
 Thumbs.db
 .vscode/
 .idea/
+
+# Python Virtualenv & Caches
+.venv/
+__pycache__/
+*.pyc
+
