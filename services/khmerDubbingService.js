@@ -441,28 +441,76 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
   }
 
   /**
-   * Assemble all synthesized character lines onto the master timeline using FFmpeg
+   * Assemble all synthesized character lines onto master timeline with Smart Lip-Sync & Anti-Collision
+   * Solves:
+   * 1. Overlapping speech ("និយាយជាន់គ្នា"): Ensures each speaker finishes before next speaker begins.
+   * 2. Timing/Pace ("និយាយទាន់ / និយាយយឺត"): Adjusts tempo (atempo) so Khmer syllables match screen window.
    */
   async assembleTimelineAudio(segments, totalDuration, outputAudioPath) {
     const valid = segments.filter(s => s.audioPath && fs.existsSync(s.audioPath));
     if (valid.length === 0) {
-      // Create silence if no lines
       await runCmd(`ffmpeg -y -f lavfi -i anullsrc=r=44100:cl=stereo -t ${Math.max(5, totalDuration)} "${outputAudioPath}"`);
       return outputAudioPath;
     }
 
-    // To prevent Windows cmdline length limits, process in batches of 15
+    // 1. Sort chronologically
+    valid.sort((a, b) => a.start_time - b.start_time);
+
+    // 2. Anti-Collision & Lip-Sync Speed Adjustment
+    const tempDir = path.dirname(outputAudioPath);
+    for (let i = 0; i < valid.length; i++) {
+      const seg = valid[i];
+      const audioDuration = await audioProcessor.getMediaDuration(seg.audioPath);
+      seg.duration = audioDuration;
+
+      // Available window before the next speaker starts
+      let maxAllowedDuration = (seg.end_time - seg.start_time) + 0.35;
+      if (i < valid.length - 1) {
+        const nextSeg = valid[i + 1];
+        const gapToNext = nextSeg.start_time - seg.start_time;
+        if (gapToNext > 0.6) {
+          maxAllowedDuration = Math.min(maxAllowedDuration, gapToNext - 0.15); // leave 150ms breath pause
+        }
+      }
+
+      // If speech duration exceeds allowed window, speed it up naturally (up to 1.35x) to fit mouth movement
+      if (audioDuration > maxAllowedDuration && maxAllowedDuration >= 1.0) {
+        const speedRatio = audioDuration / maxAllowedDuration;
+        const clampedSpeed = Math.min(1.35, Math.max(1.05, speedRatio));
+        const stretchedPath = path.join(tempDir, `fitted_${i}_${Date.now()}.wav`);
+        try {
+          await audioProcessor.tuneAudioPitchAndSpeed(seg.audioPath, stretchedPath, clampedSpeed, 0);
+          if (fs.existsSync(stretchedPath) && fs.statSync(stretchedPath).size > 1000) {
+            seg.audioPath = stretchedPath;
+            seg.duration = await audioProcessor.getMediaDuration(stretchedPath);
+          }
+        } catch (te) {
+          console.warn(`Time stretch notice on line ${i}:`, te.message);
+        }
+      }
+
+      // Guarantee ZERO speech overlap with the next character
+      if (i < valid.length - 1) {
+        const nextSeg = valid[i + 1];
+        const currentEnd = seg.start_time + seg.duration;
+        if (currentEnd > nextSeg.start_time) {
+          // Nudge next speaker slightly so they never speak simultaneously
+          nextSeg.start_time = currentEnd + 0.15;
+        }
+      }
+    }
+
+    // 3. Assemble onto timeline in batches
     const batchSize = 15;
     const subTracks = [];
-    const tempDir = path.dirname(outputAudioPath);
 
     for (let b = 0; b < valid.length; b += batchSize) {
       const batch = valid.slice(b, b + batchSize);
-      const subTrackPath = path.join(tempDir, `subtrack_${b}.wav`);
+      const subTrackPath = path.join(tempDir, `subtrack_${b}_${Date.now()}.wav`);
       
       const inputs = batch.map(s => `-i "${s.audioPath}"`).join(' ');
       const filterParts = batch.map((s, idx) => {
-        const delayMs = Math.round(s.start_time * 1000);
+        const delayMs = Math.round(Math.max(0, s.start_time) * 1000);
         return `[${idx}:a]adelay=${delayMs}|${delayMs}[a${idx}]`;
       }).join(';');
       const amixInputs = batch.map((_, idx) => `[a${idx}]`).join('');
@@ -654,9 +702,20 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
           gender: seg.gender,
           emotion: seg.emotion || 'dramatic'
         });
-        seg.audioPath = lineOutputPath;
+        if (fs.existsSync(lineOutputPath) && fs.statSync(lineOutputPath).size > 1000) {
+          seg.audioPath = lineOutputPath;
+        } else {
+          throw new Error('Generated file empty');
+        }
       } catch (err) {
-        console.warn(`Line ${i} synthesis failed:`, err.message);
+        console.warn(`Line ${i} primary synthesis failed, activating guaranteed Neural TTS fallback:`, err.message);
+        try {
+          const fallbackVoice = seg.gender === 'female' ? 'km-KH-SreymomNeural' : 'km-KH-PisethNeural';
+          await this.synthesizeKhmerSpeech(seg.khmer_translation, lineOutputPath, fallbackVoice);
+          seg.audioPath = lineOutputPath;
+        } catch (fbErr) {
+          console.error(`Line ${i} secondary fallback error:`, fbErr.message);
+        }
       }
     }
 
