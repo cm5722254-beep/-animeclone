@@ -207,6 +207,42 @@ function initUpload() {
     player.src = '';
     document.getElementById('emptyPlayerState').classList.remove('hidden');
   });
+
+  // Quick Load "រឿង៖ វីរនារីហង្សភ្លើង _ ភាគទី 01.mp4"
+  const quickLoadBtn = document.getElementById('quickLoadHangPhleungBtn');
+  if (quickLoadBtn) {
+    quickLoadBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const fileNameEl = document.getElementById('previewFileName');
+      const fileSizeEl = document.getElementById('previewFileSize');
+
+      currentUploadedFile = {
+        filename: 'video_hang_phleung_ep01.mp4',
+        originalName: 'រឿង៖ វីរនារីហង្សភ្លើង _ ភាគទី 01.mp4',
+        size: 143085600,
+        type: 'video',
+        url: '/media/uploads/video_hang_phleung_ep01.mp4',
+        duration: 1293
+      };
+      originalMediaUrl = '/media/uploads/video_hang_phleung_ep01.mp4';
+
+      fileNameEl.textContent = 'រឿង៖ វីរនារីហង្សភ្លើង _ ភាគទី 01.mp4';
+      fileSizeEl.textContent = '136.5 MB • 21:33 • វីដេអូស្រាប់ក្នុង Tool ✓';
+      dropzoneInner.classList.add('hidden');
+      previewCard.classList.remove('hidden');
+      startBtn.disabled = false;
+
+      const player = document.getElementById('studioVideoPlayer');
+      if (player) {
+        player.src = originalMediaUrl;
+        player.load();
+      }
+      const emptyState = document.getElementById('emptyPlayerState');
+      if (emptyState) emptyState.classList.add('hidden');
+
+      showToast('🎬 បានផ្ទុកវីដេអូ "រឿង៖ វីរនារីហង្សភ្លើង _ ភាគទី 01" រួចរាល់ អាចចុច Dubbing ភ្លាមៗ!', 'success');
+    });
+  }
 }
 
 function handleFileUpload(file) {
@@ -1096,19 +1132,36 @@ async function loadExtractedMovieCharacters() {
     if (vaultBadge) vaultBadge.textContent = `${extractedMovieCharacters.length} តួអង្គ`;
 
     if (vaultGrid) {
-      vaultGrid.innerHTML = extractedMovieCharacters.map(char => `
+      vaultGrid.innerHTML = extractedMovieCharacters.map(char => {
+        const isMaleLead = char.filename === 'hang_phleung_char_2_male.mp3';
+        const isFemaleLead = char.filename === 'hang_phleung_char_6_female.mp3';
+        const isFromHangPhleung = char.filename && char.filename.startsWith('hang_phleung_');
+
+        let badgeHtml = '';
+        if (isMaleLead) {
+          badgeHtml = '<span style="font-size:0.7rem; background:rgba(59,130,246,0.25); color:#60a5fa; border:1px solid rgba(59,130,246,0.4); padding:2px 6px; border-radius:4px; margin-left:4px;">👑 តួឯកប្រុស (សំឡេងពិត)</span>';
+        } else if (isFemaleLead) {
+          badgeHtml = '<span style="font-size:0.7rem; background:rgba(236,72,153,0.25); color:#f472b6; border:1px solid rgba(236,72,153,0.4); padding:2px 6px; border-radius:4px; margin-left:4px;">🌸 តួឯកស្រី (សំឡេងពិត)</span>';
+        } else if (isFromHangPhleung) {
+          badgeHtml = '<span style="font-size:0.7rem; background:rgba(234,179,8,0.25); color:#facc15; border:1px solid rgba(234,179,8,0.4); padding:2px 6px; border-radius:4px; margin-left:4px;">🔥 ដកស្រង់ពីរឿងពិត</span>';
+        } else if (char.is_curated) {
+          badgeHtml = '<span style="font-size:0.7rem; background:rgba(99,102,241,0.2); color:var(--primary); padding:2px 6px; border-radius:4px; margin-left:4px;">⭐ គំរូសាច់រឿង</span>';
+        }
+
+        return `
         <div class="char-vault-card ${char.gender}">
           <div class="char-vault-top">
             <div class="char-vault-icon">${char.gender === 'female' ? '🌸' : '🎙️'}</div>
             <div class="char-vault-info">
-              <h4>${char.label} ${char.is_curated ? '<span style="font-size:0.7rem; background:rgba(99,102,241,0.2); color:var(--primary); padding:2px 6px; border-radius:4px; margin-left:4px;">⭐ តួចម្បង</span>' : ''}</h4>
+              <h4>${char.label} ${badgeHtml}</h4>
               <span>${char.gender === 'female' ? 'តួស្រី' : 'តួប្រុស'} • ${char.filename}</span>
             </div>
           </div>
           <div class="char-vault-words">"${char.words || 'សំឡេងសម្ដែងដើមក្នុងរឿង'}"</div>
           <audio controls class="char-vault-audio" preload="none" src="${char.previewUrl}"></audio>
         </div>
-      `).join('');
+      `;
+      }).join('');
     }
 
     // 2. Dropdowns are kept clean with strictly the 2 top options (Male & Female Pure Khmer)

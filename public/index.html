@@ -36,6 +36,10 @@
           <span class="status-dot"></span>
           <span class="badge-text" id="statusText">កំពុងត្រួតពិនិត្យប្រព័ន្ធ AI...</span>
         </div>
+        <div class="api-badge active" id="voxcpmStatusBadge" style="background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.35); color: #34d399;" title="ស្ថានភាពម៉ាស៊ីន GPU VoxCPM2">
+          <span class="status-dot" style="background: #10b981; box-shadow: 0 0 8px #10b981;"></span>
+          <span class="badge-text" id="voxcpmStatusText">⚡ VoxCPM2 200 OK (GPU Active)</span>
+        </div>
         <button class="btn btn-outline-danger btn-icon" id="clearOutputsBtn" title="សម្អាតឯកសារ Output ចាស់ៗចោលដើម្បីសន្សំទំហំ Hard Disk">
           <i data-lucide="trash-2"></i>
           <span>សម្អាត Output</span>
@@ -118,6 +122,14 @@
             </div>
           </div>
 
+          <!-- Quick Load Movie Sample Button -->
+          <div style="margin-top: 12px; margin-bottom: 8px;">
+            <button type="button" class="btn btn-secondary btn-sm full-width" id="quickLoadHangPhleungBtn" style="justify-content: center; background: linear-gradient(135deg, rgba(99, 102, 241, 0.18), rgba(236, 72, 153, 0.18)); border: 1px solid rgba(168, 85, 247, 0.45); color: #c084fc; padding: 10px 14px; font-size: 0.88rem; font-weight: 500; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); transition: all 0.2s ease;">
+              <i data-lucide="play-circle" style="color: #f472b6;"></i>
+              <span>🎬 ផ្ទុកវីដេអូស្រាប់៖ "រឿង៖ វីរនារីហង្សភ្លើង _ ភាគទី 01" (២១ នាទី)</span>
+            </button>
+          </div>
+
           <!-- Dubbing Options -->
           <div class="options-group">
             <div class="form-row">
@@ -141,8 +153,8 @@
             <div class="form-group">
               <label><i data-lucide="mic"></i> ជ្រើសរើសសំឡេងមនុស្សពិត</label>
               <select id="voiceChoice" class="form-input">
-                <option value="movie-live-clone" selected>🎯 Clone ពីរឿងដើម (Voice Clone ផ្ទាល់ពីរឿង 100%)</option>
-                <option value="voxcpm-voice-actor">🎬 ១៣ សំឡេងរឿង (Auto-Cast Voice Clone តាមសាច់រឿង)</option>
+                <option value="movie-live-clone" selected>🎯 Auto-Cast តួឯក (ប្រុស & ស្រី) + តួផ្សេងៗ Clone ចេញពីរឿងផ្ទាល់ (VoxCPM2)</option>
+                <option value="voxcpm-voice-actor">🎬 ១៣ សំឡេងរឿង (ប្រើសំឡេងគំរូសាច់រឿងទាំង ១៣)</option>
               </select>
             </div>
 
@@ -293,8 +305,8 @@
             <div class="form-group">
               <label><i data-lucide="mic-2"></i> ជ្រើសរើសសំឡេង AI</label>
               <select id="manualVoiceChoice" class="form-input">
-                <option value="movie-live-clone" selected>🎯 Clone ពីរឿងដើម (Voice Clone ផ្ទាល់ពីរឿង 100%)</option>
-                <option value="voxcpm-voice-actor">🎬 ១៣ សំឡេងរឿង (Auto-Cast Voice Clone តាមសាច់រឿង)</option>
+                <option value="movie-live-clone" selected>🎯 Auto-Cast តួឯក (ប្រុស & ស្រី) + តួផ្សេងៗ Clone ចេញពីរឿងផ្ទាល់ (VoxCPM2)</option>
+                <option value="voxcpm-voice-actor">🎬 ១៣ សំឡេងរឿង (ប្រើសំឡេងគំរូសាច់រឿងទាំង ១៣)</option>
               </select>
             </div>
 

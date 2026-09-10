@@ -16,6 +16,7 @@ outputs/*
 scratch_*.js
 *.tmp
 *.log
+test_*.mp3
 
 # OS & IDE files
 .DS_Store
