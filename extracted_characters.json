@@ -1,5 +1,77 @@
 [
   {
+    "id": "voxcpm:hang_phleung_char_7_male.mp3",
+    "filename": "hang_phleung_char_7_male.mp3",
+    "label": "👑 ព្រះអាទិទេព ស៊ីងជឺ (តួឯកប្រុស)",
+    "role_key": "male_lead",
+    "gender": "male",
+    "is_curated": true,
+    "words": "ទោះបីជាមេឃដួលរលំ ក៏យើងមិនឱ្យនាងរងរបួសឡើយ!"
+  },
+  {
+    "id": "voxcpm:hang_phleung_char_1_male.mp3",
+    "filename": "hang_phleung_char_1_male.mp3",
+    "label": "👴 តួអ៊ំចាស់",
+    "role_key": "hang_phleung_1",
+    "gender": "male",
+    "is_curated": true,
+    "words": "ចៃដន្យ នោះក៏ព្រោះតែបែបនេះហើយ ក៏បានឃើញជិនជូវ ក្លាយទៅជាព្រលឹងមួយសន្ធិតនៅក្នុងចិញ្ចៀននោះ គឺក្រោយពេលដែលឆ្លងកាត់គ្រោះបរាជ័យហើយ"
+  },
+  {
+    "id": "voxcpm:hang_phleung_char_8_male.mp3",
+    "filename": "hang_phleung_char_8_male.mp3",
+    "label": "🛡️ មេទ័ពវិញ្ញាណ (តួប្រុស)",
+    "role_key": "general",
+    "gender": "male",
+    "is_curated": true,
+    "words": "ទាហានទាំងអស់ស្តាប់បញ្ជា ការពារបន្ទាយឱ្យរឹងមាំ!"
+  },
+  {
+    "id": "voxcpm:hang_phleung_char_2_male.mp3",
+    "filename": "hang_phleung_char_2_male.mp3",
+    "label": "🎙️ អ្នករៀបរាប់រឿង",
+    "role_key": "hang_phleung_2",
+    "gender": "male",
+    "is_curated": true,
+    "words": "ដោយសារតែមានគ្រូអាថ៌កំបាំង មូ ជីងឆឹង យុទ្ធសិល្ប៍រីកចម្រើនយ៉ាងលឿន ក្លាយទៅជានារីខ្លាំងពូកែ ដែលល្បីល្បាញពេញយានទូ"
+  },
+  {
+    "id": "voxcpm:hang_phleung_char_3_female.mp3",
+    "filename": "hang_phleung_char_3_female.mp3",
+    "label": "🌸 តួឯកស្រី (ហ្វុងអ៊ូ)",
+    "role_key": "hang_phleung_3",
+    "gender": "female",
+    "is_curated": true,
+    "words": "នែ៎ ក្រែងលោកជាគ្រូរបស់ខ្ញុំទេ? លោកនិយាយឲ្យច្បាស់សិនមក ម៉េចក៏ខ្ញុំក្លាយទៅជាហ្វុងអ៊ូអញ្ចឹង?"
+  },
+  {
+    "id": "voxcpm:hang_phleung_char_4_male.mp3",
+    "filename": "hang_phleung_char_4_male.mp3",
+    "label": "🎙️ អ្នករៀបរាប់សាច់រឿង",
+    "role_key": "hang_phleung_4",
+    "gender": "male",
+    "is_curated": true,
+    "words": "នៅពេលដែលមនុស្សទាំងអស់រកហ្វុងអ៊ូឃើញវិញ នារីខ្លាំងពូកែកាលពីមុនម្នាក់នេះ មិនត្រឹម"
+  },
+  {
+    "id": "voxcpm:hang_phleung_char_5_female.mp3",
+    "filename": "hang_phleung_char_5_female.mp3",
+    "label": "👧 ភីលៀង",
+    "role_key": "hang_phleung_5",
+    "gender": "female",
+    "is_curated": true,
+    "words": "អ្នកនាង ក្រែងនោះជាបង្អែមគ្រាប់ផ្លែប៉េសដែលអ្នកនាងឱ្យខ្ញុំហេ? អញ្ចឹងក៏អាចលក់បាន១០ដំឡឹងដែរ?"
+  },
+  {
+    "id": "voxcpm:hang_phleung_char_6_female.mp3",
+    "filename": "hang_phleung_char_6_female.mp3",
+    "label": "🌸 តួឯកស្រី",
+    "role_key": "hang_phleung_6",
+    "gender": "female",
+    "is_curated": true,
+    "words": "អយ្យ៉ា នោះគឺព្រោះតែទៅពិនិត្យជំងឺនៅផ្ទះមីងលី មីងលីជាអ្នកប្រាប់ខ្ញុំ គាត់ធ្វើការនៅផ្ទះរបស់ម្ចាស់ក្រុង រអ៊ូរទាំប្រាប់ខ្ញុំរហូត"
+  },
+  {
     "id": "voxcpm:vp_character_20_female.mp3",
     "filename": "vp_character_20_female.mp3",
     "label": "👑 តួឯកប្រុស",
