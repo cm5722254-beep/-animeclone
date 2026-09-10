@@ -27,7 +27,7 @@
       <div class="header-actions">
         <div class="network-badge" id="networkShareBadge" style="display: none;" title="ចុចដើម្បីចម្លង Link សម្រាប់ប្រើលើកុំព្យូទ័រផ្សេងទៀត">
           <i data-lucide="wifi"></i>
-          <span id="networkIpText">LAN: ...</span>
+          <span id="networkIpText">បណ្ដាញ LAN: ...</span>
           <button class="btn-copy-mini" id="copyNetworkIpBtn" title="ចម្លង Link">
             <i data-lucide="copy"></i>
           </button>
@@ -876,16 +876,19 @@
 
           <div class="form-group">
             <label>
-              <span>🚀 VoxCPM2 Colab API URL (ម៉ាស៊ីន GPU Free សម្រាប់ Clone សំឡេង)</span>
-              <a href="https://colab.research.google.com" target="_blank" class="external-link">បើក Google Colab <i data-lucide="external-link"></i></a>
+              <span>🚀 VoxCPM2 Kaggle / Colab API URL (ម៉ាស៊ីន GPU សម្រាប់ Clone សំឡេង)</span>
+              <div style="display: flex; gap: 8px;">
+                <a href="https://www.kaggle.com" target="_blank" class="external-link">បើក Kaggle GPU <i data-lucide="external-link"></i></a>
+                <a href="https://colab.research.google.com" target="_blank" class="external-link">បើក Colab <i data-lucide="external-link"></i></a>
+              </div>
             </label>
-            <input type="text" id="settingVoxcpmUrl" class="form-input" placeholder="https://xxxx.ngrok-free.app">
-            <span class="field-hint">តំណរភ្ជាប់ API ពី Google Colab សម្រាប់ Clone សំឡេងខ្មែរដោយផ្ទាល់ 100% ឥតគិតថ្លៃ</span>
+            <input type="text" id="settingVoxcpmUrl" class="form-input" placeholder="https://xxxx.trycloudflare.com">
+            <span class="field-hint">តំណភ្ជាប់ Public URL ពី Kaggle GPU ឬ Google Colab សម្រាប់ Clone សំឡេងខ្មែរ 48kHz Hi-Fi</span>
           </div>
 
           <div class="form-group" style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 12px; padding: 14px;">
             <label style="color: #93c5fd;">
-              <span>🌐 ប្រើប្រាស់លើកុំព្យូទ័រ និងទូរស័ព្ទផ្សេងទៀត (Multi-Computer LAN Access)</span>
+              <span>🌐 ប្រើប្រាស់រួមគ្នាលើកុំព្យូទ័រ & ទូរស័ព្ទផ្សេងៗ (បណ្ដាញ Wi-Fi / LAN)</span>
             </label>
             <div style="display: flex; gap: 8px; margin-top: 6px;">
               <input type="text" id="settingLanUrl" class="form-input" readonly style="font-family: monospace; color: #60a5fa;" value="កំពុងរកមើល Network IP...">

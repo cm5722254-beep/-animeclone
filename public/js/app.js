@@ -84,26 +84,26 @@ async function initConfig() {
     const badge = document.getElementById('apiStatusBadge');
     const statusText = document.getElementById('statusText');
 
-    if (data.hasElevenLabsKey) {
+    if (data.hasVoxcpmUrl) {
       badge.classList.add('active');
-      statusText.textContent = 'ប្រព័ន្ធសំឡេង AI: ត្រៀមរួចរាល់';
+      statusText.textContent = '⚡ ម៉ាស៊ីន AI GPU (VoxCPM2): ត្រៀមរួចរាល់';
+    } else if (data.hasElevenlabs || data.hasElevenLabsKey) {
+      badge.classList.add('active');
+      statusText.textContent = '✨ ElevenLabs AI: ត្រៀមរួចរាល់';
     } else {
-      badge.classList.remove('active');
-      statusText.textContent = 'ទម្រង់សាកល្បង Demo (ត្រូវការ API Key)';
+      badge.classList.add('active');
+      statusText.textContent = '🚀 AI ផ្ទាល់ក្នុង Tool: ត្រៀមរួចរាល់';
     }
 
-    if (data.elevenLabsKeyMasked) {
-      document.getElementById('settingElevenKey').placeholder = `បានកំណត់រួចរាល់ (${data.elevenLabsKeyMasked})`;
+    if (data.elevenLabsKeyMasked || data.hasElevenlabs) {
+      document.getElementById('settingElevenKey').placeholder = `បានកំណត់រួចរាល់`;
     }
-    if (data.geminiKeyMasked) {
-      document.getElementById('settingGeminiKey').placeholder = `បានកំណត់រួចរាល់ (${data.geminiKeyMasked})`;
+    if (data.geminiKeyMasked || data.hasGemini) {
+      document.getElementById('settingGeminiKey').placeholder = `បានកំណត់រួចរាល់`;
     }
     if (data.voxcpmUrl) {
       const voxInput = document.getElementById('settingVoxcpmUrl');
       if (voxInput) voxInput.value = data.voxcpmUrl;
-    }
-    if (data.hasVoxcpmUrl) {
-      statusText.textContent = 'ប្រព័ន្ធសំឡេង AI: VoxCPM2 GPU ត្រៀមរួចរាល់';
     }
 
     // Multi-computer LAN network detection

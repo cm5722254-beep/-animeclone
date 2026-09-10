@@ -67,13 +67,13 @@ input, select, textarea, button {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 24px;
-  background: var(--bg-surface-glass);
-  backdrop-filter: blur(16px);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
+  padding: 18px 28px;
+  background: rgba(17, 24, 39, 0.82);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-xl);
   margin-bottom: 24px;
-  box-shadow: var(--shadow-subtle);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45), 0 0 30px rgba(99, 102, 241, 0.1);
 }
 
 .logo-group {
@@ -83,28 +83,28 @@ input, select, textarea, button {
 }
 
 .logo-icon {
-  width: 48px;
-  height: 48px;
+  width: 50px;
+  height: 50px;
   border-radius: var(--radius-md);
-  background: var(--primary-gradient);
+  background: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
-  box-shadow: var(--shadow-glow);
+  box-shadow: 0 0 25px rgba(168, 85, 247, 0.45);
 }
 
 .logo-text h1 {
-  font-size: 1.4rem;
+  font-size: 1.45rem;
   font-weight: 700;
-  letter-spacing: -0.5px;
-  background: linear-gradient(to right, #ffffff, #cbd5e1);
+  letter-spacing: -0.3px;
+  background: linear-gradient(135deg, #ffffff 0%, #c7d2fe 50%, #38bdf8 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 .logo-text .subtitle {
-  font-size: 0.85rem;
+  font-size: 0.86rem;
   color: var(--text-secondary);
 }
 
@@ -476,13 +476,18 @@ input, select, textarea, button {
 }
 
 .btn-primary {
-  background: var(--primary-gradient);
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #c026d3 100%);
   color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 20px rgba(124, 58, 237, 0.35);
+  font-weight: 600;
+  letter-spacing: 0.2px;
 }
 
 .btn-primary:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-glow);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(124, 58, 237, 0.55);
+  filter: brightness(1.08);
 }
 
 .btn-secondary {
@@ -619,17 +624,25 @@ input, select, textarea, button {
   position: relative;
   width: 100%;
   aspect-ratio: 16 / 9;
-  background: #000;
-  border-radius: var(--radius-md);
+  background: #030712;
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  border: 1px solid var(--border-color);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75), 0 0 35px rgba(99, 102, 241, 0.15);
   margin-bottom: 20px;
+  transition: all 0.3s ease;
+}
+
+.player-container:hover {
+  border-color: rgba(99, 102, 241, 0.35);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), 0 0 45px rgba(99, 102, 241, 0.25);
 }
 
 #studioVideoPlayer {
   width: 100%;
   height: 100%;
   object-fit: contain;
+  background: #000;
 }
 
 .empty-player-state {
