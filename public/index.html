@@ -237,10 +237,17 @@
 
           <!-- Pipeline Stepper / Progress -->
           <div class="pipeline-progress hidden" id="pipelineProgress">
-            <div class="progress-bar-container">
-              <div class="progress-bar-fill" id="progressBarFill"></div>
+            <div class="pipeline-progress-header">
+              <div class="pipeline-status-badge">
+                <span class="live-pulse-dot"></span>
+                <span id="pipelineStatusBadgeText">កំពុងដំណើរការស្វ័យប្រវត្តិ...</span>
+              </div>
+              <div class="pipeline-percentage-huge" id="pipelinePercentDisplay">0%</div>
             </div>
-            <div class="progress-status-text" id="progressStatusText">កំពុងដំណើរការ...</div>
+            <div class="progress-bar-container glow-bar">
+              <div class="progress-bar-fill animated-shimmer" id="progressBarFill"></div>
+            </div>
+            <div class="progress-status-text" id="progressStatusText">កំពុងចាប់ផ្ដើម...</div>
             
             <div class="stepper-list">
               <div class="step-item" id="step-1">
@@ -376,10 +383,18 @@
               <span>🎬 ផ្គុំសំឡេងគ្រប់តួអង្គចូលក្នុងវីដេអូ</span>
             </button>
 
-            <!-- Export Status -->
+            <!-- Export Status with clear percentage -->
             <div class="manual-export-status hidden" id="manualExportStatus">
               <div class="export-spinner"><i data-lucide="loader-2" class="spin"></i></div>
-              <span id="manualExportText">កំពុងផ្គុំសំឡេង និងលាយភ្លេងកំដរ BGM...</span>
+              <div class="export-status-body">
+                <div class="export-status-header">
+                  <span id="manualExportText">កំពុងផ្គុំសំឡេង និងលាយភ្លេងកំដរ BGM...</span>
+                  <span class="export-percent-badge" id="manualExportPercentDisplay">0%</span>
+                </div>
+                <div class="export-progress-track">
+                  <div class="export-progress-fill animated-shimmer" id="manualExportProgressBarFill" style="width: 0%"></div>
+                </div>
+              </div>
             </div>
 
             <!-- Download Result -->
@@ -413,11 +428,43 @@
             <p>សូមបញ្ចូលវីដេអូរឿងនៅផ្ទាំងទី ១ ឬចុចប៊ូតុង "🔍 ស្កេនរកឃ្លាសន្ទនាគ្រប់តួអង្គ" ខាងលើដើម្បីស្រង់តួអង្គទាំងអស់ចេញពីរឿង</p>
           </div>
 
-          <!-- Loading state -->
+          <!-- Loading state with Prominent Percentage & Glowing Progress -->
           <div class="timeline-loading-state hidden" id="timelineLoadingState">
-            <i data-lucide="loader" class="spin large-spin"></i>
-            <h3>AI Gemini កំពុងស្តាប់ និងស្រង់ឃ្លាសន្ទនាគ្រប់តួអង្គ...</h3>
-            <p>សូមរង់ចាំបន្តិច ប្រព័ន្ធកំពុងបកប្រែជាភាសាភាពយន្តនិយាយខ្មែរ</p>
+            <div class="scan-progress-box">
+              <div class="scan-percentage-glow-card">
+                <div class="scan-percentage-ring">
+                  <div class="scan-percentage-number" id="scanPercentDisplay">0%</div>
+                  <div class="scan-percentage-caption">ដំណើរការស្កេន & បកប្រែ</div>
+                </div>
+              </div>
+
+              <div class="scan-progress-info">
+                <h3 id="scanProgressHeading">
+                  <i data-lucide="sparkles" class="icon-pulse"></i>
+                  <span>AI Gemini កំពុងស្ដាប់ និងស្រង់ឃ្លាសន្ទនាគ្រប់តួអង្គ...</span>
+                </h3>
+                <p id="scanProgressDetail" class="scan-status-detail">សូមរង់ចាំបន្តិច ប្រព័ន្ធកំពុងដកស្រង់សំឡេងចេញពីរឿងដើម...</p>
+              </div>
+
+              <div class="scan-progress-bar-track glow-bar">
+                <div class="scan-progress-bar-fill animated-shimmer" id="scanProgressBarFill" style="width: 0%"></div>
+              </div>
+
+              <div class="scan-progress-meta-row">
+                <span class="scan-meta-item" id="scanLinesCounter">
+                  <i data-lucide="message-square"></i>
+                  <span>ឃ្លារកឃើញ៖ <b id="scanLinesCountNum">0</b> ឃ្លា</span>
+                </span>
+                <span class="scan-meta-item" id="scanTimeCounter">
+                  <i data-lucide="clock"></i>
+                  <span>ដំណើរការបាន៖ <b id="scanElapsedTimer">00:00</b></span>
+                </span>
+                <span class="scan-meta-item status-live">
+                  <span class="live-pulse-dot"></span>
+                  <span>AI Real-time Scanning</span>
+                </span>
+              </div>
+            </div>
           </div>
 
           <!-- Manual Studio Toolbar -->
@@ -434,8 +481,11 @@
               </button>
             </div>
 
-            <div class="studio-progress-meter">
-              <div class="studio-progress-meter-fill" id="studioProgressMeterFill"></div>
+            <div class="studio-progress-wrapper">
+              <div class="studio-progress-meter">
+                <div class="studio-progress-meter-fill" id="studioProgressMeterFill"></div>
+              </div>
+              <span class="studio-meter-percent-badge" id="studioMeterPercent">0%</span>
             </div>
           </div>
 

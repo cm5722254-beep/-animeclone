@@ -351,7 +351,7 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
   /**
    * Extract dialogue timeline across the video with intelligent auto-seek past opening intro music
    */
-  async extractDialogueTimeline(audioPath, totalDuration, scope = 'full', onProgress = () => {}, sourceLang = 'auto') {
+  async extractDialogueTimeline(audioPath, totalDuration, scope = 'full', onProgress = () => {}, sourceLang = 'auto', isFullPipeline = true) {
     let startOffset = 0;
     let targetDuration = totalDuration;
 
@@ -384,7 +384,8 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
         if (scope !== 'full' && scope !== 'auto_dialogue_2m' && currentOffset >= maxScanDuration) {
           // If fewer than 3 lines were found (e.g. 2m intro was just theme song), auto-scan forward to find real story dialogue!
           if (allSegments.length < 3 && currentOffset < Math.min(totalDuration, 360)) {
-            onProgress(20, '២ នាទីដំបូងជាភ្លេងក្បាលរឿង (Intro Song)។ ប្រព័ន្ធកំពុងស្វែងរកឈុតសន្ទនាតួអង្គបន្ទាប់ដោយស្វ័យប្រវត្តិ...');
+            const introProgress = isFullPipeline ? 20 : 18;
+            onProgress(introProgress, '២ នាទីដំបូងជាភ្លេងក្បាលរឿង (Intro Song)។ ប្រព័ន្ធកំពុងស្វែងរកឈុតសន្ទនាតួអង្គបន្ទាប់ដោយស្វ័យប្រវត្តិ...', allSegments.length);
             currentOffset = 135; // Jump to 2:15 where real episode dialogue begins
             maxScanDuration = currentOffset + targetDuration;
             continue;
@@ -395,8 +396,12 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
         const chunkLen = Math.min(chunkSize, totalDuration - currentOffset);
         if (chunkLen <= 5) break;
 
-        const progress = Math.min(42, 15 + Math.round((currentOffset / Math.max(1, maxScanDuration)) * 25));
-        onProgress(progress, `AI Gemini កំពុងស្តាប់ និងបកប្រែពាក្យសំដីតួអង្គ (${Math.floor(currentOffset / 60)}:${String(Math.floor(currentOffset % 60)).padStart(2, '0')})...`);
+        const progress = isFullPipeline
+          ? Math.min(42, 15 + Math.round((currentOffset / Math.max(1, maxScanDuration)) * 25))
+          : Math.min(88, 12 + Math.round((currentOffset / Math.max(1, maxScanDuration)) * 74));
+
+        const timeLabel = `${Math.floor(currentOffset / 60)}:${String(Math.floor(currentOffset % 60)).padStart(2, '0')}`;
+        onProgress(progress, `AI Gemini កំពុងស្តាប់ និងបកប្រែពាក្យសំដីតួអង្គ (នាទីទី ${timeLabel})...`, allSegments.length);
 
         const chunkPath = path.join(tempDir, `chunk_${chunkIndex}.mp3`);
         await runCmd(`ffmpeg -y -ss ${currentOffset} -t ${chunkLen} -i "${audioPath}" -vn -ac 1 -ar 16000 -b:a 32k "${chunkPath}"`);
@@ -404,7 +409,8 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
         const segs = await this.transcribeChunkWithGemini(chunkPath, currentOffset, 2, sourceLang);
         if (segs.length > 0) {
           allSegments.push(...segs);
-          console.log(`Chunk at ${currentOffset}s: Found ${segs.length} dialogue lines`);
+          console.log(`Chunk at ${currentOffset}s: Found ${segs.length} dialogue lines (Total: ${allSegments.length})`);
+          onProgress(progress, `រកឃើញឃ្លាសន្ទនាសរុប ${allSegments.length} ឃ្លា (នាទីទី ${timeLabel})`, allSegments.length);
         }
 
         currentOffset += chunkLen;

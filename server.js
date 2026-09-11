@@ -416,6 +416,18 @@ app.get('/api/dubbing/status/:id', (req, res) => {
 
 // --- Manual Character Dubbing Studio Endpoints ---
 
+let activeScanProgress = {
+  active: false,
+  progress: 0,
+  message: '',
+  linesFound: 0,
+  startedAt: null
+};
+
+app.get('/api/dubbing/scan-progress', (req, res) => {
+  res.json(activeScanProgress);
+});
+
 // 1. Scan & Extract Dialogue Timeline for Manual Studio
 app.post('/api/dubbing/scan-timeline', async (req, res) => {
   try {
@@ -429,15 +441,42 @@ app.post('/api/dubbing/scan-timeline', async (req, res) => {
     }
     if (!fs.existsSync(inputPath)) return res.status(404).json({ error: 'Video file not found' });
 
+    activeScanProgress = {
+      active: true,
+      progress: 5,
+      message: 'កំពុងដកសំឡេងចេញពីវីដេអូរឿងដើម...',
+      linesFound: 0,
+      startedAt: Date.now()
+    };
+
     const audioExt = path.parse(filename).name + '.mp3';
     const extractedAudioPath = path.join(OUTPUTS_DIR, `audio_${audioExt}`);
     if (!fs.existsSync(extractedAudioPath)) {
+      activeScanProgress.progress = 8;
+      activeScanProgress.message = 'កំពុងបំប្លែងសំឡេងវីដេអូសម្រាប់វិភាគ...';
       await audioProcessor.extractAudio(inputPath, extractedAudioPath);
     }
 
+    activeScanProgress.progress = 12;
+    activeScanProgress.message = 'កំពុងគណនារយៈពេលរឿង និងរៀបចំបញ្ជីឃ្លាសន្ទនា...';
     const duration = await audioProcessor.getMediaDuration(inputPath);
-    const segments = await khmerDubber.extractDialogueTimeline(extractedAudioPath, duration, scope);
+
+    const segments = await khmerDubber.extractDialogueTimeline(
+      extractedAudioPath,
+      duration,
+      scope,
+      (progress, message, linesCount) => {
+        activeScanProgress.progress = progress;
+        activeScanProgress.message = message;
+        if (typeof linesCount === 'number') activeScanProgress.linesFound = linesCount;
+      },
+      'auto',
+      false // isFullPipeline = false
+    );
     
+    activeScanProgress.progress = 90;
+    activeScanProgress.message = 'កំពុងកាត់សំឡេងគំរូតួអង្គនីមួយៗចេញពីរឿង...';
+
     // Extract real movie voice clips for each speaker in the video
     let movieVoiceMap = {};
     try {
@@ -445,6 +484,11 @@ app.post('/api/dubbing/scan-timeline', async (req, res) => {
     } catch (ve) {
       console.warn('Movie voice samples extraction notice:', ve.message);
     }
+
+    activeScanProgress.progress = 100;
+    activeScanProgress.message = `✅ ស្កេនជោគជ័យ! រកឃើញ ${segments.length} ឃ្លាសន្ទនា`;
+    activeScanProgress.linesFound = segments.length;
+    activeScanProgress.active = false;
 
     const formatted = segments.map((s, idx) => ({
       ...s,
@@ -456,6 +500,8 @@ app.post('/api/dubbing/scan-timeline', async (req, res) => {
 
     res.json({ success: true, duration, segments: formatted });
   } catch (err) {
+    activeScanProgress.active = false;
+    activeScanProgress.message = '❌ កំហុស៖ ' + err.message;
     console.error('Scan timeline error:', err);
     res.status(500).json({ error: err.message });
   }

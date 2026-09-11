@@ -457,24 +457,42 @@ function startPolling(jobId) {
   const toggleDubbed = document.getElementById('toggleDubbed');
   const toggleOriginal = document.getElementById('toggleOriginal');
 
+  const pipelinePercentDisplay = document.getElementById('pipelinePercentDisplay');
+  const pipelineBadgeText = document.getElementById('pipelineStatusBadgeText');
+
   pollInterval = setInterval(async () => {
     try {
       const res = await fetch(`/api/dubbing/status/${jobId}`);
       const job = await res.json();
 
-      progressBarFill.style.width = `${job.progress}%`;
+      const pct = Math.max(0, Math.min(100, Math.round(job.progress || 0)));
+      progressBarFill.style.width = `${pct}%`;
       progressStatusText.textContent = job.message;
 
-      // Update steps visual
+      if (pipelinePercentDisplay) {
+        pipelinePercentDisplay.textContent = `${pct}%`;
+      }
+
+      // Update steps visual & badge text
       if (job.progress >= 20) markStepDone(1);
       if (job.progress >= 40) markStepDone(2);
       if (job.progress >= 65) markStepDone(3);
       if (job.progress >= 85) markStepDone(4);
 
+      if (pipelineBadgeText) {
+        if (pct >= 85) pipelineBadgeText.textContent = 'ដំណាក់កាលទី ៥: ផ្គុំវីដេអូ & BGM';
+        else if (pct >= 65) pipelineBadgeText.textContent = 'ដំណាក់កាលទី ៤: Clone សំឡេងខ្មែរ';
+        else if (pct >= 40) pipelineBadgeText.textContent = 'ដំណាក់កាលទី ៣: បកប្រែសាច់រឿង';
+        else if (pct >= 20) pipelineBadgeText.textContent = 'ដំណាក់កាលទី ២: ចាប់សំឡេងតួអង្គ';
+        else pipelineBadgeText.textContent = 'ដំណាក់កាលទី ១: ដកសំឡេងដើម';
+      }
+
       if (job.status === 'completed') {
         clearInterval(pollInterval);
         markStepDone(5);
         progressBarFill.style.width = '100%';
+        if (pipelinePercentDisplay) pipelinePercentDisplay.textContent = '100%';
+        if (pipelineBadgeText) pipelineBadgeText.textContent = '✅ រួចរាល់ ១០០%';
         progressStatusText.textContent = '🎉 បកប្រែ និង Clone សំឡេងជោគជ័យ!';
 
         dubbedMediaUrl = job.outputVideo || job.outputAudio;
@@ -491,6 +509,7 @@ function startPolling(jobId) {
       } else if (job.status === 'error') {
         clearInterval(pollInterval);
         progressStatusText.textContent = '❌ ' + (job.error || 'ការបញ្ជូលសំឡេងបានបរាជ័យ');
+        if (pipelineBadgeText) pipelineBadgeText.textContent = '❌ បរាជ័យ';
         document.getElementById('startDubbingBtn').disabled = false;
       }
     } catch (err) {
@@ -862,6 +881,9 @@ function initManualStudio() {
   const emptyPlayer = document.getElementById('manualPlayerEmpty');
 
   // Scan Timeline
+  let scanPollInterval = null;
+  let scanTimerInterval = null;
+
   scanBtn.addEventListener('click', async () => {
     if (!currentUploadedFile) {
       alert('សូមបញ្ចូលវីដេអូ ឬ File រឿងនៅ Tab ទី 1 ជាមុនសិន!');
@@ -880,6 +902,65 @@ function initManualStudio() {
     loadingState.classList.remove('hidden');
     linesList.classList.add('hidden');
 
+    const scanPercentDisplay = document.getElementById('scanPercentDisplay');
+    const scanProgressBarFill = document.getElementById('scanProgressBarFill');
+    const scanProgressDetail = document.getElementById('scanProgressDetail');
+    const scanLinesCountNum = document.getElementById('scanLinesCountNum');
+    const scanElapsedTimer = document.getElementById('scanElapsedTimer');
+
+    // Reset initial values
+    let currentPct = 5;
+    let targetPct = 8;
+    if (scanPercentDisplay) scanPercentDisplay.textContent = '5%';
+    if (scanProgressBarFill) scanProgressBarFill.style.width = '5%';
+    if (scanProgressDetail) scanProgressDetail.textContent = 'កំពុងដកសំឡេងចេញពីវីដេអូរឿងដើម...';
+    if (scanLinesCountNum) scanLinesCountNum.textContent = '0';
+    if (scanElapsedTimer) scanElapsedTimer.textContent = '00:00';
+
+    // Start elapsed timer
+    const scanStartTime = Date.now();
+    if (scanTimerInterval) clearInterval(scanTimerInterval);
+    scanTimerInterval = setInterval(() => {
+      const elapsedSec = Math.floor((Date.now() - scanStartTime) / 1000);
+      const m = String(Math.floor(elapsedSec / 60)).padStart(2, '0');
+      const s = String(elapsedSec % 60).padStart(2, '0');
+      if (scanElapsedTimer) scanElapsedTimer.textContent = `${m}:${s}`;
+    }, 1000);
+
+    // Smooth percentage interpolator
+    let interpolator = setInterval(() => {
+      if (currentPct < targetPct) {
+        currentPct += 1;
+        if (scanPercentDisplay) scanPercentDisplay.textContent = `${currentPct}%`;
+        if (scanProgressBarFill) scanProgressBarFill.style.width = `${currentPct}%`;
+      } else if (targetPct < 88 && currentPct === targetPct) {
+        // Subtle drift while waiting for AI chunk response
+        targetPct = Math.min(88, targetPct + 1);
+      }
+    }, 180);
+
+    // Poll backend scan progress
+    if (scanPollInterval) clearInterval(scanPollInterval);
+    scanPollInterval = setInterval(async () => {
+      try {
+        const pRes = await fetch('/api/dubbing/scan-progress');
+        if (pRes.ok) {
+          const pData = await pRes.json();
+          if (pData && pData.progress) {
+            targetPct = Math.max(targetPct, pData.progress);
+            if (pData.message && scanProgressDetail) {
+              scanProgressDetail.textContent = pData.message;
+            }
+            if (pData.linesFound !== undefined && scanLinesCountNum) {
+              scanLinesCountNum.textContent = pData.linesFound;
+            }
+          }
+        }
+      } catch (e) {
+        // silent polling ignore
+      }
+    }, 600);
+
     try {
       const res = await fetch('/api/dubbing/scan-timeline', {
         method: 'POST',
@@ -890,6 +971,20 @@ function initManualStudio() {
       if (!data.success) throw new Error(data.error || 'ស្កេនបរាជ័យ');
 
       manualSegments = data.segments || [];
+
+      // Finish to 100%
+      clearInterval(interpolator);
+      clearInterval(scanPollInterval);
+      clearInterval(scanTimerInterval);
+
+      if (scanPercentDisplay) scanPercentDisplay.textContent = '100%';
+      if (scanProgressBarFill) scanProgressBarFill.style.width = '100%';
+      if (scanProgressDetail) scanProgressDetail.textContent = `🎉 ស្កេនជោគជ័យ! រកឃើញ ${manualSegments.length} ឃ្លាសន្ទនា។`;
+      if (scanLinesCountNum) scanLinesCountNum.textContent = manualSegments.length;
+
+      // Small delay so user sees the 100% completion
+      await new Promise(r => setTimeout(r, 600));
+
       loadingState.classList.add('hidden');
       linesList.classList.remove('hidden');
 
@@ -897,7 +992,11 @@ function initManualStudio() {
       renderDialogueLines(manualSegments);
       updateManualStats();
       assembleBtn.disabled = false;
+      showToast(`🎉 ស្កេនជោគជ័យ! បានស្រង់ឃ្លាសន្ទនាសរុប ${manualSegments.length} ឃ្លា។`, 'success');
     } catch (err) {
+      clearInterval(interpolator);
+      clearInterval(scanPollInterval);
+      clearInterval(scanTimerInterval);
       alert('កំហុសស្កេនឃ្លាសន្ទនា: ' + err.message);
       loadingState.classList.add('hidden');
       emptyState.classList.remove('hidden');
@@ -931,6 +1030,24 @@ function initManualStudio() {
     exportStatus.classList.remove('hidden');
     downloadCard.classList.add('hidden');
 
+    const exportPercent = document.getElementById('manualExportPercentDisplay');
+    const exportBar = document.getElementById('manualExportProgressBarFill');
+    const exportText = document.getElementById('manualExportText');
+
+    let curExportPct = 10;
+    if (exportPercent) exportPercent.textContent = '10%';
+    if (exportBar) exportBar.style.width = '10%';
+    if (exportText) exportText.textContent = `កំពុងផ្គុំសំឡេង ${validLines.length} ឃ្លា និងលាយភ្លេងកំដរ BGM...`;
+
+    const exportTicker = setInterval(() => {
+      if (curExportPct < 92) {
+        curExportPct += Math.floor(Math.random() * 5) + 3;
+        if (curExportPct > 92) curExportPct = 92;
+        if (exportPercent) exportPercent.textContent = `${curExportPct}%`;
+        if (exportBar) exportBar.style.width = `${curExportPct}%`;
+      }
+    }, 400);
+
     try {
       const res = await fetch('/api/dubbing/assemble-custom', {
         method: 'POST',
@@ -946,6 +1063,13 @@ function initManualStudio() {
       const data = await res.json();
       if (!data.success) throw new Error(data.error || 'ផ្គុំវីដេអូបរាជ័យ');
 
+      clearInterval(exportTicker);
+      if (exportPercent) exportPercent.textContent = '100%';
+      if (exportBar) exportBar.style.width = '100%';
+      if (exportText) exportText.textContent = '✅ ផ្គុំវីដេអូរួចរាល់ ១០០%!';
+
+      await new Promise(r => setTimeout(r, 450));
+
       exportStatus.classList.add('hidden');
       downloadCard.classList.remove('hidden');
       downloadBtn.href = data.outputVideo;
@@ -954,6 +1078,7 @@ function initManualStudio() {
       videoPlayer.play();
       showToast(`🎉 ផ្គុំវីដេអូជោគជ័យ! បានបញ្ចូលសំឡេងសរុប ${data.totalLinesDubbed} ឃ្លា។`, 'success');
     } catch (err) {
+      clearInterval(exportTicker);
       showToast('កំហុសផ្គុំវីដេអូ: ' + err.message, 'error');
       exportStatus.classList.add('hidden');
     } finally {
@@ -995,6 +1120,9 @@ function updateManualStats() {
   const pct = total > 0 ? Math.round((recorded / total) * 100) : 0;
   const meterFill = document.getElementById('studioProgressMeterFill');
   if (meterFill) meterFill.style.width = `${pct}%`;
+
+  const meterPercent = document.getElementById('studioMeterPercent');
+  if (meterPercent) meterPercent.textContent = `${pct}%`;
 
   const toolbar = document.getElementById('manualToolbar');
   if (toolbar && total > 0) toolbar.classList.remove('hidden');
@@ -1441,7 +1569,8 @@ async function handleBatchGenerateAi() {
     const card = document.getElementById(`line-card-${idx}`);
     if (card) {
       const btn = card.querySelector('.btn-ai-gen');
-      batchBtn.innerHTML = `<i data-lucide="loader-2" class="spin"></i><span>AI កំពុងនិយាយ (${i + 1}/${pendingIndices.length})...</span>`;
+      const pct = Math.round((i / pendingIndices.length) * 100);
+      batchBtn.innerHTML = `<i data-lucide="loader-2" class="spin"></i><span>AI កំពុងនិយាយ ${pct}% (${i + 1}/${pendingIndices.length})...</span>`;
       if (window.lucide) lucide.createIcons();
       try {
         await handleGenerateLineAI(idx, btn, card);
@@ -1454,7 +1583,8 @@ async function handleBatchGenerateAi() {
   batchBtn.disabled = false;
   batchBtn.innerHTML = '<i data-lucide="sparkles"></i><span>⚡ AI បញ្ចូលសំឡេងទាំងអស់ស្វ័យប្រវត្តិ</span>';
   if (window.lucide) lucide.createIcons();
-  showToast('🎉 ការបង្កើតសំឡេង AI គ្រប់បន្ទាត់ត្រូវបានបញ្ចប់ជាស្ថាពរ!', 'success');
+  updateManualStats();
+  showToast('🎉 ការបង្កើតសំឡេង AI គ្រប់បន្ទាត់ត្រូវបានបញ្ចប់ជាស្ថាពរ ១០០%!', 'success');
 }
 
 // 10. Manual Studio Search Filter
