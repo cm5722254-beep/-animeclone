@@ -213,18 +213,28 @@ class KhmerDubbingService {
     };
     const langContext = langNames[sourceLang] || sourceLang;
 
-    const prompt = `You are an elite cinematic movie dubbing director and audio engineer specialized in Cambodian cinema dubbing (ស្ទូឌីយោបញ្ជូលសំឡេងភាពយន្តនិយាយខ្មែរ).
-The audio clip can be from any movie, anime, donghua, documentary, or TV series.
+    const prompt = `You are an elite master cinematic movie dubbing director and chief dialogue scriptwriter for Cambodian cinema and television (ប្រធានដឹកនាំបញ្ចូលសំឡេងភាពយន្តនិយាយខ្មែរអាជីព).
+The audio clip can be from any movie, anime, donghua (Xianxia/Wuxia), drama, or series.
 Spoken language: ${langContext}.
 
-Carefully listen to this video audio clip. Even when background music, orchestra, battle cries, explosions, or sound effects are present, accurately extract all spoken dialogue lines, character speeches, shouting, and conversations.
+Carefully listen to this video audio clip. Even when background music (BGM), battle cries, explosions, sword fighting, or sound effects are present, accurately extract all spoken dialogue lines, character speeches, shouting, whispered words, and conversations.
 
 Instructions:
 1. Speech Recognition (ASR): Accurately transcribe each spoken line in its original spoken language into "original_text".
-2. Diarization: Identify speakers and classify "speaker_role" into one of:
-   "male_lead", "female_lead", "servant_female", "fierce_female", "fierce_male", "villager", "general", "crowd", "villain_female", "old_uncle", "governor", "elder", "old_woman".
-3. Theatrical Khmer Dubbing: Translate each line into authentic, highly dramatic, poetic, and cinematic Khmer matching professional Cambodian movie dubbing style. Infuse passionate emotion, dramatic interjections ("ឱ!", "ឯង!", "ឈប់ភ្លាម!", "ហ៊ឺ...", "ហេតុអ្វី?", "ព្រះអើយ!", "មិនអាចទេ!", "ឆាប់ឡើង!"), and natural acting punctuation (!, ?, ..., ~).
-4. Accurate Timestamps: Relative start_time and end_time (in seconds, float or mm:ss).
+2. Precise Diarization & Demographics (ក្មេង, ចាស់, ប្រុស, ស្រី):
+   Identify each speaker's character type, age, and role accurately:
+   - "age_group": "child" (ក្មេង/កុមារ), "young" (យុវវ័យ), "adult" (មនុស្សពេញវ័យ), or "elderly" (មនុស្សចាស់/តា/យាយ).
+   - "speaker_role": one of "child_boy", "child_girl", "old_man", "old_woman", "male_lead", "female_lead", "warrior_general", "fierce_male", "fierce_female", "scholar_monk", "servant_female", "servant_male", "villager", "crowd".
+   - "gender": "male" or "female".
+3. Masterclass Theatrical Khmer Dubbing (ភាសាភាពយន្តនិយាយខ្មែរពិរោះបំផុត):
+   - Translate into authentic, deeply poetic, emotional, dramatic Khmer matching veteran Cambodian movie voice actors.
+   - Strictly apply authentic honorifics and period/storyline titles:
+     * រាជវាំង/បុរាណ/ក្បាច់គុន/Donghua: ទូលបង្គំ, ព្រះអង្គ, ព្រះរាជបុត្រ, ម្ចាស់ក្សត្រិយ៍, និកាយ, លោកគ្រូ, សិស្សប្អូន, មេទ័ព, ស្ទ្រីម, បងធំ...
+     * សម័យ/ទូទៅ: លោក, អ្នកនាង, បង, អូន, ពូ, មីង, តា, យាយ...
+   - Infuse theatrical acting interjections and emotional delivery ("ឱ!", "ឯង!", "ឈប់ភ្លាម!", "ហ៊ឺ...", "ហេតុអ្វី?", "ព្រះអើយ!", "មិនអាចទេ!", "ឆាប់ឡើង!").
+   - Use dramatic acting punctuation (!, ?, ..., ~) to guide realistic breath pauses.
+   - STRICT RULE: Pure Khmer script ONLY in "khmer_translation". NEVER output Thai characters, Chinese characters, or robotic literal translations.
+4. Accurate Timestamps: Relative start_time and end_time (in seconds).
 
 Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
 \`\`\`json
@@ -234,10 +244,11 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
     "speaker_name": "Male Lead / Hero",
     "speaker_role": "male_lead",
     "gender": "male",
+    "age_group": "adult",
     "start_time": 1.2,
     "end_time": 4.5,
     "original_text": "Spoken line in original language",
-    "khmer_translation": "Authentic theatrical Khmer dialogue (ពាក្យពេចន៍សម្ដែងខ្មែរ)",
+    "khmer_translation": "ពាក្យពេចន៍សម្ដែងខ្មែរយ៉ាងពិរោះ និងរស់រវើក",
     "emotion": "heroic"
   }
 ]
@@ -446,17 +457,18 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
     const defaultRef = path.join(__dirname, '../samples/main_lead_male.mp3');
 
     for (const [speakerId, lines] of Object.entries(speakerGroups)) {
-      // Find line with duration between 3 and 10 seconds for clean cloning
+      // Find line with duration between 2.5 and 10 seconds for clean cloning
       const bestLine = lines.find(l => (l.end_time - l.start_time) >= 2.5 && (l.end_time - l.start_time) <= 12) || lines[0];
       const start = Math.max(0, bestLine.start_time - 0.2);
-      const duration = Math.min(10, Math.max(3, bestLine.end_time - bestLine.start_time + 0.4));
+      const duration = Math.min(10, Math.max(2.8, bestLine.end_time - bestLine.start_time + 0.4));
       const samplePath = path.join(outputDir, `ref_voice_${speakerId}.mp3`);
 
       try {
-        await runCmd(`ffmpeg -y -ss ${start} -t ${duration} -i "${audioPath}" -vn -ar 44100 -ac 2 -b:a 192k "${samplePath}"`);
-        if (fs.existsSync(samplePath) && fs.statSync(samplePath).size > 5000) {
+        // High-fidelity speech extraction: Denoise background music & boost vocal clarity
+        await runCmd(`ffmpeg -y -ss ${start} -t ${duration} -i "${audioPath}" -vn -af "highpass=f=120,lowpass=f=7500,afftdn=nf=-22,volume=1.25" -ar 44100 -ac 2 -b:a 192k "${samplePath}"`);
+        if (fs.existsSync(samplePath) && fs.statSync(samplePath).size > 3000) {
           characterVoiceMap[speakerId] = samplePath;
-          console.log(`Extracted real movie voice sample for ${speakerId} (${bestLine.speaker_name}): ${samplePath}`);
+          console.log(`Extracted clean reference vocal for ${speakerId} (${bestLine.speaker_name}): ${samplePath}`);
         } else {
           characterVoiceMap[speakerId] = defaultRef;
         }
@@ -523,7 +535,6 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
         const nextSeg = valid[i + 1];
         const currentEnd = seg.start_time + seg.duration;
         if (currentEnd > nextSeg.start_time) {
-          // Nudge next speaker slightly so they never speak simultaneously
           nextSeg.start_time = currentEnd + 0.15;
         }
       }
@@ -535,90 +546,86 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
 
     for (let b = 0; b < valid.length; b += batchSize) {
       const batch = valid.slice(b, b + batchSize);
-      const subTrackPath = path.join(tempDir, `subtrack_${b}_${Date.now()}.wav`);
-      
-      const inputs = batch.map(s => `-i "${s.audioPath}"`).join(' ');
-      const filterParts = batch.map((s, idx) => {
-        const delayMs = Math.round(Math.max(0, s.start_time) * 1000);
-        return `[${idx}:a]adelay=${delayMs}|${delayMs}[a${idx}]`;
-      }).join(';');
-      const amixInputs = batch.map((_, idx) => `[a${idx}]`).join('');
-      const filterComplex = `${filterParts};${amixInputs}amix=inputs=${batch.length}:dropout_transition=0:normalize=0[out]`;
+      const subPath = path.join(tempDir, `subtrack_${Math.floor(b / batchSize)}_${Date.now()}.wav`);
 
-      await runCmd(`ffmpeg -y ${inputs} -filter_complex "${filterComplex}" -map "[out]" "${subTrackPath}"`);
-      subTracks.push(subTrackPath);
+      let inputs = '';
+      let filterComplex = '';
+
+      batch.forEach((seg, idx) => {
+        inputs += ` -i "${seg.audioPath}"`;
+        const delayMs = Math.max(0, Math.round(seg.start_time * 1000));
+        filterComplex += `[${idx}:a]adelay=${delayMs}|${delayMs}[a${idx}];`;
+      });
+
+      const mixInputs = batch.map((_, idx) => `[a${idx}]`).join('');
+      filterComplex += `${mixInputs}amix=inputs=${batch.length}:duration=longest:dropout_transition=0:normalize=0`;
+
+      const cmd = `ffmpeg -y ${inputs} -filter_complex "${filterComplex}" -ar 44100 -ac 2 "${subPath}"`;
+      await runCmd(cmd);
+      subTracks.push(subPath);
     }
 
-    const rawMixPath = path.join(tempDir, `raw_mix_${Date.now()}.wav`);
+    // Mix all subtracks into the final timeline
     if (subTracks.length === 1) {
-      if (fs.existsSync(rawMixPath)) fs.unlinkSync(rawMixPath);
-      fs.renameSync(subTracks[0], rawMixPath);
+      if (fs.existsSync(outputAudioPath)) fs.unlinkSync(outputAudioPath);
+      fs.renameSync(subTracks[0], outputAudioPath);
     } else {
-      const inputs = subTracks.map(p => `-i "${p}"`).join(' ');
-      const amixInputs = subTracks.map((_, idx) => `[${idx}:a]`).join('');
-      const filterComplex = `${amixInputs}amix=inputs=${subTracks.length}:dropout_transition=0:normalize=0[out]`;
-      await runCmd(`ffmpeg -y ${inputs} -filter_complex "${filterComplex}" -map "[out]" "${rawMixPath}"`);
+      let inputs = '';
+      let filterComplex = '';
+      subTracks.forEach((st, idx) => {
+        inputs += ` -i "${st}"`;
+        filterComplex += `[${idx}:a]`;
+      });
+      filterComplex += `amix=inputs=${subTracks.length}:duration=longest:dropout_transition=0:normalize=0`;
+      await runCmd(`ffmpeg -y ${inputs} -filter_complex "${filterComplex}" -ar 44100 -ac 2 "${outputAudioPath}"`);
 
-      // Clean up subtracks
-      subTracks.forEach(p => {
-        try { if (fs.existsSync(p)) fs.unlinkSync(p); } catch (e) {}
+      subTracks.forEach(st => {
+        try { if (fs.existsSync(st)) fs.unlinkSync(st); } catch (e) {}
       });
     }
-
-    // Pad dialogue track with silence to precisely match full video duration
-    const padDuration = Math.max(1, Math.ceil(totalDuration));
-    await runCmd(`ffmpeg -y -i "${rawMixPath}" -af "apad=whole_dur=${padDuration}" -t ${padDuration} -ar 44100 -ac 2 "${outputAudioPath}"`);
-    try { if (fs.existsSync(rawMixPath)) fs.unlinkSync(rawMixPath); } catch (e) {}
 
     return outputAudioPath;
   }
 
   /**
-   * Cast voice reference for a character role according to strict curated rules:
-   * Rule: Use curated 13 roles; if missing/uncertain, STRICTLY fallback ONLY to male lead or female lead.
-   * "បើខ្វះ អាចគ្នាបានតែតួឯកប្រុស និង តួឯកស្រី មិនដាក់លើតួផ្សេងបានទេ"
-   */
-  /**
    * Build dynamic distinct voice map across all detected characters in the movie.
-   * Guarantees that all 22 distinct character voices in /samples are utilized,
-   * and NO TWO CHARACTERS OF THE SAME GENDER SHARE THE SAME VOICE (កុំយកសំឡេងដដែល)!
+   * Covers all demographics: Child (ក្មេង), Elderly (ចាស់), Male (ប្រុស), Female (ស្រី)
    */
   buildDistinctSpeakerVoiceMap(segments, userRoleMap = {}) {
     const samplesDir = path.join(__dirname, '../samples');
 
-    // 13 Distinct Male Voices Pool
+    // 13 Distinct Male Voices Pool (Hero, General, Elder, Old Uncle, Fierce, Scholar, Villager, Servant)
     const maleVoicesPool = [
-      'hang_phleung_char_2_male.mp3', // 👑 តួឯកប្រុស
+      'hang_phleung_char_2_male.mp3', // 👑 តួឯកប្រុស (Heroic Lead)
       'hang_phleung_char_7_male.mp3', // 👑 តួប្រុសស្វាហាប់ / ព្រះអាទិទេព
-      'hang_phleung_char_8_male.mp3', // 🛡️ មេទ័ពវិញ្ញាណ
-      'hang_phleung_char_1_male.mp3', // 👴 តួអ៊ំចាស់
-      'hang_phleung_char_4_male.mp3', // 🎙️ អ្នករៀបរាប់សាច់រឿង
-      'vp_character_7_male.mp3',      // ⚔️ តួប្រុសកាច
-      'vp_character_9_male.mp3',      // 🌾 អ្នកភូមិ
-      'vp_character_10_male.mp3',     // 🛡️ មេទ័ពរាជវាំង
-      'vp_character_12_male.mp3',     // 👥 មហាជន / អ្នកប្រាជ្ញ
+      'hang_phleung_char_8_male.mp3', // 🛡️ មេទ័ពវិញ្ញាណ / ក្លាហាន
+      'hang_phleung_char_1_male.mp3', // 👴 តួអ៊ំចាស់ / តាចាស់ (Elderly Uncle)
+      'vp_character_19_male.mp3',     // 📿 ព្រឹទ្ធាចារ្យ / គ្រូ / តាជី (Grand Master / Monk)
       'vp_character_16_male.mp3',     // 👴 តួអ៊ំចាស់ទី២
-      'vp_character_17_male.mp3',     // 📜 តួចាហ្វាយខេត្ត
-      'vp_character_19_male.mp3',     // 📿 ព្រឹទ្ធាចារ្យ / គ្រូ
-      'vp_character_2_male.mp3'       // 🍵 អ្នកបម្រើប្រុស
+      'hang_phleung_char_4_male.mp3', // 🎙️ អ្នករៀបរាប់សាច់រឿង
+      'vp_character_7_male.mp3',      // ⚔️ តួប្រុសកាច / ចោរ / សត្រូវ (Fierce Villain)
+      'vp_character_17_male.mp3',     // 📜 តួចាហ្វាយខេត្ត / មន្ត្រី (Governor/Scholar)
+      'vp_character_10_male.mp3',     // 🛡️ មេទ័ពរាជវាំង
+      'vp_character_9_male.mp3',      // 🌾 អ្នកភូមិ (Villager)
+      'vp_character_12_male.mp3',     // 👥 មហាជន / អ្នកប្រាជ្ញ
+      'vp_character_2_male.mp3'       // 🍵 អ្នកបម្រើប្រុស (Male Servant)
     ].filter(fn => fs.existsSync(path.join(samplesDir, fn)));
 
-    // 7 Distinct Female Voices Pool
+    // 7 Distinct Female Voices Pool (Heroine, Maiden/Child, Grandma, Fierce, Villainess, Queen)
     const femaleVoicesPool = [
-      'hang_phleung_char_6_female.mp3', // 🌸 តួឯកស្រី
-      'hang_phleung_char_5_female.mp3', // 👧 ភីលៀង / តួកុមារ
-      'vp_character_1_female.mp3',      // 🌸 តួស្រីទន់ភ្លន់
-      'vp_character_6_female.mp3',      // ⚡ តួស្រីកាច
-      'vp_character_14_female.mp3',     // 🐍 តួកាចពិសពុល
-      'vp_character_20_female.mp3',     // 👑 តួស្រីចាស់ទុំ
-      'vp_character_21_female.mp3'      // 👵 យាយចាស់
+      'hang_phleung_char_6_female.mp3', // 🌸 តួឯកស្រី (Sweet Lead Heroine)
+      'hang_phleung_char_5_female.mp3', // 👧 តួកុមារ / ក្មេង / ភីលៀង (Child / Maiden)
+      'vp_character_1_female.mp3',      // 🌸 តួស្រីទន់ភ្លន់ (Gentle Female)
+      'vp_character_21_female.mp3',     // 👵 យាយចាស់ / មេដោះ (Elderly Grandma)
+      'vp_character_20_female.mp3',     // 👑 តួស្រីចាស់ទុំ / ព្រះមាតា (Queen Dowager / Matron)
+      'vp_character_6_female.mp3',      // ⚡ តួស្រីកាច (Fierce Female)
+      'vp_character_14_female.mp3'      // 🐍 តួកាចពិសពុល (Venomous Villainess)
     ].filter(fn => fs.existsSync(path.join(samplesDir, fn)));
 
     const speakerMap = {};
     const usedMale = new Set();
     const usedFemale = new Set();
 
-    // Identify unique speakers in chronological order of appearance
     const speakers = [];
     for (const seg of segments) {
       if (!speakers.includes(seg.speaker_id)) {
@@ -627,7 +634,7 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
     }
 
     for (const sid of speakers) {
-      // 1. User manual override if chosen in UI
+      // User manual override
       if (userRoleMap && userRoleMap[sid]) {
         speakerMap[sid] = path.join(samplesDir, userRoleMap[sid]);
         continue;
@@ -636,42 +643,63 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
       const firstSeg = segments.find(s => s.speaker_id === sid) || {};
       const isFemale = firstSeg.gender === 'female' || (firstSeg.speaker_name && (firstSeg.speaker_name.toLowerCase().includes('female') || firstSeg.speaker_name.includes('ស្រី')));
       const name = ((firstSeg.speaker_name || '') + ' ' + (firstSeg.khmer_translation || '')).toLowerCase();
-      const role = firstSeg.speaker_role || '';
+      const role = (firstSeg.speaker_role || '').toLowerCase();
+      const age = (firstSeg.age_group || '').toLowerCase();
 
       let assigned = null;
       if (isFemale) {
-        if (role === 'child' || name.includes('ក្មេង') || name.includes('កុមារ') || name.includes('អ្នកបម្រើ')) {
+        // Child Demographic (ក្មេងស្រី / កុមារ)
+        if (age === 'child' || role === 'child' || role === 'child_girl' || name.includes('ក្មេង') || name.includes('កុមារ') || name.includes('កូនស្រី')) {
           assigned = 'hang_phleung_char_5_female.mp3';
-        } else if (role === 'old_woman' || name.includes('យាយ')) {
+        }
+        // Elderly Demographic (យាយចាស់ / មេដោះ / ព្រះមាតាចាស់)
+        else if (age === 'elderly' || role === 'old_woman' || name.includes('យាយ') || name.includes('ចាស់') || name.includes('មេដោះ')) {
           assigned = 'vp_character_21_female.mp3';
-        } else if (role === 'fierce_female' || name.includes('ស្រីកាច') || name.includes('ថោកទាប')) {
-          assigned = 'vp_character_6_female.mp3';
-        } else if (role === 'villain_female' || name.includes('តួកាច') || name.includes('ពិសពុល')) {
+        }
+        // Royal Elder Female
+        else if (role === 'queen_dowager' || name.includes('ព្រះមាតា') || name.includes('មហេសី')) {
+          assigned = 'vp_character_20_female.mp3';
+        }
+        // Fierce / Villainess
+        else if (role === 'fierce_female' || role === 'villain_female' || name.includes('កាច') || name.includes('ពិសពុល')) {
           assigned = 'vp_character_14_female.mp3';
         }
 
-        // If not assigned by role or already taken by another character, take next distinct voice
         if (!assigned || usedFemale.has(assigned)) {
           const available = femaleVoicesPool.find(v => !usedFemale.has(v));
           assigned = available || femaleVoicesPool[usedFemale.size % femaleVoicesPool.length];
         }
         usedFemale.add(assigned);
       } else {
-        if (role === 'elder' || name.includes('ព្រឹទ្ធាចារ្យ') || name.includes('គ្រូ')) {
+        // Child Demographic (កុមារប្រុស / ក្មេងប្រុស)
+        if (age === 'child' || role === 'child' || role === 'child_boy' || name.includes('ក្មេង') || name.includes('កុមារ') || name.includes('កូនប្រុស')) {
+          assigned = 'hang_phleung_char_5_female.mp3';
+        }
+        // Elderly Demographic (តា / អ៊ំចាស់ / ព្រឹទ្ធាចារ្យ / គ្រូ)
+        else if (age === 'elderly' || role === 'old_man' || role === 'elder' || name.includes('ព្រឹទ្ធាចារ្យ') || name.includes('គ្រូ') || name.includes('តាជី')) {
           assigned = 'vp_character_19_male.mp3';
         } else if (role === 'old_uncle' || name.includes('អ៊ំ') || name.includes('តា')) {
           assigned = 'hang_phleung_char_1_male.mp3';
-        } else if (role === 'governor' || name.includes('ចៅហ្វាយខេត្ត')) {
-          assigned = 'vp_character_17_male.mp3';
-        } else if (role === 'general' || name.includes('មេទ័ព')) {
+        }
+        // General / Warrior
+        else if (role === 'warrior_general' || role === 'general' || name.includes('មេទ័ព')) {
           assigned = 'hang_phleung_char_8_male.mp3';
-        } else if (role === 'fierce_male' || name.includes('ប្រុសកាច')) {
+        }
+        // Governor / Scholar
+        else if (role === 'scholar_monk' || role === 'governor' || name.includes('ចៅហ្វាយ') || name.includes('អ្នកប្រាជ្ញ')) {
+          assigned = 'vp_character_17_male.mp3';
+        }
+        // Fierce / Villain
+        else if (role === 'fierce_male' || name.includes('ប្រុសកាច') || name.includes('សត្រូវ')) {
           assigned = 'vp_character_7_male.mp3';
+        }
+        // Villager / Servant
+        else if (role === 'servant_male' || name.includes('អ្នកបម្រើ')) {
+          assigned = 'vp_character_2_male.mp3';
         } else if (role === 'villager' || name.includes('អ្នកភូមិ')) {
           assigned = 'vp_character_9_male.mp3';
         }
 
-        // If not assigned by role or already taken by another character, take next distinct voice
         if (!assigned || usedMale.has(assigned)) {
           const available = maleVoicesPool.find(v => !usedMale.has(v));
           assigned = available || maleVoicesPool[usedMale.size % maleVoicesPool.length];
@@ -680,7 +708,7 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
       }
 
       speakerMap[sid] = path.join(samplesDir, assigned);
-      console.log(`🎭 [Auto-Distinct Cast] Character "${firstSeg.speaker_name || sid}" assigned distinct voice: ${assigned}`);
+      console.log(`🎭 [Auto-Distinct Cast] Character "${firstSeg.speaker_name || sid}" (${isFemale ? 'Female' : 'Male'}, ${age || 'adult'}) assigned distinct voice: ${assigned}`);
     }
 
     return speakerMap;
@@ -877,7 +905,7 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
 
     // 5. Mix with background music (canceling original foreign speech while preserving rich background music)
     const dubbedAudioPath = path.join(outputDir, `dubbed_master_${Date.now()}.mp3`);
-    await audioProcessor.mixVocalsWithOriginal(extractedAudioPath, masterDialoguePath, dubbedAudioPath, 2.2, 0.85);
+    await audioProcessor.mixVocalsWithOriginal(extractedAudioPath, masterDialoguePath, dubbedAudioPath, 2.4, 0.95);
 
     onProgress(97, 'កំពុងបញ្ចូលសំឡេង Dubbing គ្រប់តួអង្គចូលក្នុងវីដេអូដើម (Final Video Remux)...');
 

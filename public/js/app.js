@@ -1086,6 +1086,86 @@ function initManualStudio() {
     }
   });
 
+  // Video Timeupdate: Synchronously highlight active dialogue card during playback
+  let lastHighlightedIdx = -1;
+  videoPlayer.addEventListener('timeupdate', () => {
+    if (!manualSegments || manualSegments.length === 0) return;
+    const curTime = videoPlayer.currentTime;
+    let foundIdx = -1;
+
+    for (let i = 0; i < manualSegments.length; i++) {
+      const seg = manualSegments[i];
+      const start = parseFloat(seg.start_time) || 0;
+      const end = parseFloat(seg.end_time) || (start + 2.5);
+      if (curTime >= start && curTime <= end) {
+        foundIdx = i;
+        break;
+      }
+    }
+
+    if (foundIdx !== -1 && foundIdx !== lastHighlightedIdx) {
+      lastHighlightedIdx = foundIdx;
+      document.querySelectorAll('.line-card.is-active').forEach(c => c.classList.remove('is-active'));
+      const activeCard = document.getElementById(`line-card-${foundIdx}`);
+      if (activeCard) {
+        activeCard.classList.add('is-active');
+        activeCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+  });
+
+  // Subtitle (.SRT) Export Functionality
+  async function handleExportSrt() {
+    if (!manualSegments || manualSegments.length === 0) {
+      alert('សូមស្កេន ឬបញ្ចូលឃ្លាសន្ទនាជាមុនសិន!');
+      return;
+    }
+    try {
+      showToast('កំពុងរៀបចំឯកសារ Subtitle SRT ភាសាខ្មែរ...', 'info');
+      const res = await fetch('/api/dubbing/export-srt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          segments: manualSegments.map(s => ({
+            start_time: s.start_time,
+            end_time: s.end_time,
+            khmer: s.khmer_translation,
+            chinese: s.original_text || s.chinese_text
+          })),
+          filename: currentUploadedFile?.filename || 'movie_dubbed'
+        })
+      });
+      const data = await res.json();
+      if (data.srtContent) {
+        const blob = new Blob([data.srtContent], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = data.srtFilename || 'subtitles_khmer.srt';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        showToast(`📥 បានទាញយកឯកសារ Subtitle SRT (${data.totalLines} ឃ្លា) ជោគជ័យ!`, 'success');
+      } else {
+        throw new Error(data.error || 'Failed to export SRT');
+      }
+    } catch (err) {
+      showToast('កំហុសទាញយក SRT: ' + err.message, 'error');
+    }
+  }
+
+  const exportSrtBtn = document.getElementById('exportSrtToolbarBtn');
+  if (exportSrtBtn) exportSrtBtn.addEventListener('click', handleExportSrt);
+
+  const manualDownloadSrtBtn = document.getElementById('manualDownloadSrtBtn');
+  if (manualDownloadSrtBtn) {
+    manualDownloadSrtBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      handleExportSrt();
+    });
+  }
+
   const batchAiBtn = document.getElementById('batchGenerateAiBtn');
   if (batchAiBtn) {
     batchAiBtn.addEventListener('click', handleBatchGenerateAi);
@@ -1225,9 +1305,14 @@ function renderDialogueLines(segments) {
           <input type="file" accept="audio/*" class="hidden-file-input" style="display:none;" data-index="${idx}">
         </label>
 
-        <select class="btn-tool line-voice-select" id="voice-select-${idx}" title="ជ្រើសរើសសំឡេងតួអង្គសម្រាប់ឃ្លានេះ" style="max-width:200px; height:32px; padding:2px 6px; font-size:0.78rem;">
+        <select class="btn-tool line-voice-select" id="voice-select-${idx}" title="ជ្រើសរើសសំឡេងតួអង្គសម្រាប់ឃ្លានេះ" style="max-width:180px; height:32px; padding:2px 6px; font-size:0.78rem;">
           ${lineVoiceOptions}
         </select>
+
+        <button class="btn-tool btn-apply-speaker" id="apply-speaker-${idx}" title="កំណត់សំឡេងនេះឱ្យគ្រប់ឃ្លារបស់ ${roleName}" style="padding:3px 7px; font-size:0.73rem;">
+          <i data-lucide="copy-check"></i>
+          <span>អនុវត្តគ្រប់ឃ្លា</span>
+        </button>
 
         <button class="btn-tool btn-ai-gen" id="ai-btn-${idx}" title="ឱ្យ AI សំយោគនិយាយឃ្លានេះ">
           <i data-lucide="sparkles"></i>
@@ -1249,6 +1334,21 @@ function renderDialogueLines(segments) {
       document.querySelectorAll('.line-card').forEach(c => c.classList.remove('is-active'));
       card.classList.add('is-active');
     });
+
+    // Event 1b: Click card header to seek video
+    const headerEl = card.querySelector('.line-card-header');
+    if (headerEl) {
+      headerEl.style.cursor = 'pointer';
+      headerEl.addEventListener('click', (e) => {
+        if (e.target.closest('button') || e.target.closest('select')) return;
+        if (videoPlayer.src) {
+          videoPlayer.currentTime = parseFloat(startSec);
+          videoPlayer.play();
+        }
+        document.querySelectorAll('.line-card').forEach(c => c.classList.remove('is-active'));
+        card.classList.add('is-active');
+      });
+    }
 
     // Event 2: Update text on edit
     const textarea = card.querySelector(`#khmer-text-${idx}`);
@@ -1278,6 +1378,27 @@ function renderDialogueLines(segments) {
       voiceSelectEl.value = seg.voiceId || defaultVoiceId;
       voiceSelectEl.addEventListener('change', (e) => {
         seg.voiceId = e.target.value;
+      });
+    }
+
+    // Event 7: 1-Click Apply Voice to All Lines of this Character
+    const applySpeakerBtn = card.querySelector(`#apply-speaker-${idx}`);
+    if (applySpeakerBtn && voiceSelectEl) {
+      applySpeakerBtn.addEventListener('click', () => {
+        const chosenVoice = voiceSelectEl.value;
+        const chosenLabel = voiceSelectEl.options[voiceSelectEl.selectedIndex]?.text || chosenVoice;
+        const targetId = seg.speaker_id;
+        const targetName = seg.speaker_name;
+        let count = 0;
+        manualSegments.forEach((s, sIdx) => {
+          if ((targetId && s.speaker_id === targetId) || (targetName && s.speaker_name === targetName)) {
+            s.voiceId = chosenVoice;
+            const otherSelect = document.getElementById(`voice-select-${sIdx}`);
+            if (otherSelect) otherSelect.value = chosenVoice;
+            count++;
+          }
+        });
+        showToast(`⚡ បានកំណត់សំឡេង "${chosenLabel}" ជូនតួ ${roleName} ចំនួន ${count} ឃ្លារួចរាល់!`, 'success');
       });
     }
   });

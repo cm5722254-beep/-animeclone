@@ -672,7 +672,7 @@ app.post('/api/dubbing/assemble-custom', async (req, res) => {
 
     // Mix with original (center vocal cancellation & sidechain ducking, preserving rich normal BGM)
     const dubbedAudioPath = path.join(OUTPUTS_DIR, `custom_dubbed_master_${Date.now()}.mp3`);
-    await audioProcessor.mixVocalsWithOriginal(extractedAudioPath, masterDialoguePath, dubbedAudioPath, 2.2, 0.85);
+    await audioProcessor.mixVocalsWithOriginal(extractedAudioPath, masterDialoguePath, dubbedAudioPath, 2.4, 0.95);
 
     // Merge with video
     const videoExt = path.extname(inputVideoPath);
@@ -809,7 +809,7 @@ app.post('/api/character/speak', async (req, res) => {
 });
 
 // --- NEW TOOL 1: Subtitle & SRT Studio Endpoints ---
-app.post('/api/subtitles/generate', async (req, res) => {
+app.post(['/api/subtitles/generate', '/api/dubbing/export-srt'], async (req, res) => {
   try {
     const { segments, dual = false, filename = 'movie' } = req.body;
     if (!segments || !Array.isArray(segments) || segments.length === 0) {
@@ -870,9 +870,9 @@ app.post('/api/audio/remix', async (req, res) => {
   try {
     const {
       filename,
-      vocalGain = 1.6,
-      bgmGain = 0.25,
-      vocalSuppression = 'medium',
+      vocalGain = 2.4,
+      bgmGain = 0.95,
+      vocalSuppression = 'strong',
       reverbPreset = 'none'
     } = req.body;
 
