@@ -1,17 +1,17 @@
 $ws = New-Object -ComObject WScript.Shell
 $desktopPath = [Environment]::GetFolderPath('Desktop')
-$shortcutPath = Join-Path $desktopPath "AI Dubbing Studio Khmer.lnk"
+$shortcutPath = Join-Path $desktopPath "Cheatz Dabber.PRO.lnk"
 
 $scriptDir = $PSScriptRoot
 if (-not $scriptDir) { $scriptDir = (Get-Location).Path }
 
-$vbsPath = Join-Path $scriptDir "Launch_Studio_App.vbs"
+$exePath = Join-Path $scriptDir "Cheatz_Dabber_PRO.exe"
 
 $s = $ws.CreateShortcut($shortcutPath)
-$s.TargetPath = "wscript.exe"
-$s.Arguments = "`"$vbsPath`""
+$s.TargetPath = $exePath
 $s.WorkingDirectory = $scriptDir
-$s.Description = "AI Voice Clone & Dubbing Studio"
+$s.Description = "Cheatz Dabber.PRO - AI Voice Clone & Movie Dubbing Studio"
+$s.IconLocation = "$exePath,0"
 $s.Save()
 
-Write-Host "Desktop Shortcut Created Successfully at: $shortcutPath"
+Write-Host "Desktop Shortcut Created Successfully pointing to $exePath"

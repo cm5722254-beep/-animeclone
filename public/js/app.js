@@ -63,6 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initCharacterLab();
   initTranslator();
   initSettingsModal();
+  initQuickVoxcpmModal();
   initPresetChips();
   initManualSearch();
   loadExtractedMovieCharacters();
@@ -96,14 +97,63 @@ async function initConfig() {
     const statusText = document.getElementById('statusText');
 
     if (data.hasVoxcpmUrl) {
-      badge.classList.add('active');
-      statusText.textContent = '⚡ ម៉ាស៊ីន AI GPU (VoxCPM2): ត្រៀមរួចរាល់';
+      if (badge) badge.style.display = 'none'; // VoxCPM capsule is already active and live!
     } else if (data.hasElevenlabs || data.hasElevenLabsKey) {
-      badge.classList.add('active');
-      statusText.textContent = '✨ ElevenLabs AI: ត្រៀមរួចរាល់';
+      if (badge) {
+        badge.style.display = 'inline-flex';
+        badge.classList.add('active');
+        statusText.textContent = '✨ ElevenLabs AI: ត្រៀមរួចរាល់';
+      }
     } else {
-      badge.classList.add('active');
-      statusText.textContent = '🚀 AI ផ្ទាល់ក្នុង Tool: ត្រៀមរួចរាល់';
+      if (badge) {
+        badge.style.display = 'inline-flex';
+        badge.classList.add('active');
+        statusText.textContent = '🚀 Local Tool AI: ត្រៀមរួចរាល់';
+      }
+    }
+
+    // Dynamic Live VoxCPM2 GPU Check
+    const voxBadge = document.getElementById('voxcpmStatusBadge');
+    const voxText = document.getElementById('voxcpmStatusText');
+    const voxDot = document.getElementById('voxcpmStatusDot');
+    if (voxBadge && voxText) {
+      try {
+        const vRes = await fetch('/api/voxcpm/status');
+        const vData = await vRes.json();
+        if (vData.online) {
+          voxBadge.style.background = 'rgba(16, 185, 129, 0.15)';
+          voxBadge.style.border = '1px solid rgba(16, 185, 129, 0.4)';
+          voxBadge.style.color = '#34d399';
+          if (voxDot) {
+            voxDot.style.background = '#10b981';
+            voxDot.style.boxShadow = '0 0 8px #10b981';
+          }
+          voxText.textContent = '⚡ VoxCPM2: ភ្ជាប់រួចរាល់ (Online)';
+          document.getElementById('connectionAlertBanner')?.classList.add('hidden');
+        } else if (vData.configured) {
+          voxBadge.style.background = 'rgba(239, 68, 68, 0.15)';
+          voxBadge.style.border = '1px solid rgba(239, 68, 68, 0.4)';
+          voxBadge.style.color = '#f87171';
+          if (voxDot) {
+            voxDot.style.background = '#ef4444';
+            voxDot.style.boxShadow = '0 0 8px #ef4444';
+          }
+          voxText.textContent = '⚠️ VoxCPM2: ដាច់ការភ្ជាប់ (ចុចប្ដូរ Link)';
+          document.getElementById('connectionAlertBanner')?.classList.remove('hidden');
+        } else {
+          voxBadge.style.background = 'rgba(234, 179, 8, 0.15)';
+          voxBadge.style.border = '1px solid rgba(234, 179, 8, 0.4)';
+          voxBadge.style.color = '#facc15';
+          if (voxDot) {
+            voxDot.style.background = '#eab308';
+            voxDot.style.boxShadow = '0 0 8px #eab308';
+          }
+          voxText.textContent = '⚡ VoxCPM2: សូមកំណត់ Link';
+          document.getElementById('connectionAlertBanner')?.classList.remove('hidden');
+        }
+      } catch (e) {
+        console.warn('Vox status check error:', e);
+      }
     }
 
     if (data.elevenLabsKeyMasked || data.hasElevenlabs) {
@@ -115,6 +165,8 @@ async function initConfig() {
     if (data.voxcpmUrl) {
       const voxInput = document.getElementById('settingVoxcpmUrl');
       if (voxInput) voxInput.value = data.voxcpmUrl;
+      const quickInput = document.getElementById('quickVoxcpmUrlInput');
+      if (quickInput) quickInput.value = data.voxcpmUrl;
     }
 
     // Multi-computer LAN network detection
@@ -549,7 +601,7 @@ function initTranslator() {
   translateBtn.addEventListener('click', async () => {
     const text = input.value.trim();
     if (!text) {
-      alert('សូមបញ្ចូលឃ្លាសន្ទនាចិនជាមុនសិន!');
+      alert('សូមបញ្ចូលឃ្លាសន្ទនាដើមជាមុនសិន!');
       return;
     }
 
@@ -653,6 +705,134 @@ function initSettingsModal() {
         }
       } catch (err) {
         showToast('ការរក្សាទុកបរាជ័យ: ' + err.message, 'error');
+      }
+    });
+  }
+}
+
+// 7.1 Quick VoxCPM Link Modal (Instant 1-Click Link Update)
+function initQuickVoxcpmModal() {
+  const modal = document.getElementById('voxcpmModal');
+  const openBtn = document.getElementById('quickLinkBtn');
+  const badgeBtn = document.getElementById('voxcpmStatusBadge');
+  const closeBtn = document.getElementById('closeVoxcpmModalBtn');
+  const urlInput = document.getElementById('quickVoxcpmUrlInput');
+  const saveBtn = document.getElementById('saveQuickVoxcpmBtn');
+  const testBtn = document.getElementById('testQuickVoxcpmBtn');
+  const statusMsg = document.getElementById('quickVoxcpmStatusMsg');
+
+  const openModal = async () => {
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    if (statusMsg) statusMsg.innerHTML = '';
+    try {
+      const res = await fetch('/api/config');
+      const data = await res.json();
+      if (urlInput && data.voxcpmUrl) {
+        urlInput.value = data.voxcpmUrl;
+      }
+      if (urlInput) {
+        setTimeout(() => { urlInput.focus(); urlInput.select(); }, 150);
+      }
+    } catch (e) {}
+  };
+
+  if (openBtn) openBtn.addEventListener('click', openModal);
+  if (badgeBtn) badgeBtn.addEventListener('click', openModal);
+  if (closeBtn) closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
+
+  const bannerOpenBtn = document.getElementById('bannerOpenModalBtn');
+  if (bannerOpenBtn) bannerOpenBtn.addEventListener('click', openModal);
+
+  const bannerPasteBtn = document.getElementById('bannerPasteClipboardBtn');
+  if (bannerPasteBtn) {
+    bannerPasteBtn.addEventListener('click', async () => {
+      try {
+        const text = await navigator.clipboard.readText();
+        const clean = (text || '').trim();
+        const match = clean.match(/https:\/\/[a-zA-Z0-9-]+\.(trycloudflare\.com|ngrok-free\.app|ngrok\.io|loca\.lt)/);
+        if (match) {
+          const detectedUrl = match[0];
+          bannerPasteBtn.disabled = true;
+          showToast(`⚡ កំពុងតភ្ជាប់ទៅ Link: ${detectedUrl}...`, 'info');
+          const res = await fetch('/api/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ voxcpmUrl: detectedUrl })
+          });
+          const d = await res.json();
+          if (d.success) {
+            showToast('🎉 បានភ្ជាប់ម៉ាស៊ីន AI GPU ជោគជ័យ ១០០%!', 'success');
+            await initConfig();
+          }
+        } else {
+          showToast('មិនឃើញ Link ក្នុង Clipboard ទេ។ សូម Copy Link ពី Colab រួចចុចម្ដងទៀត!', 'warning');
+          openModal();
+        }
+      } catch (err) {
+        openModal();
+      } finally {
+        bannerPasteBtn.disabled = false;
+      }
+    });
+  }
+
+  // Test Link button
+  if (testBtn) {
+    testBtn.addEventListener('click', async () => {
+      const testUrl = urlInput.value.trim();
+      if (!testUrl) {
+        statusMsg.innerHTML = '<span style="color:#f87171;">⚠️ សូមបញ្ចូល Link ជាមុនសិន!</span>';
+        return;
+      }
+      testBtn.disabled = true;
+      statusMsg.innerHTML = '<span style="color:#38bdf8;"><i data-lucide="loader-2" class="spin"></i> កំពុងតេស្តភ្ជាប់ទៅកាន់ Server...</span>';
+      if (window.lucide) lucide.createIcons();
+
+      try {
+        await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ voxcpmUrl: testUrl })
+        });
+        const statusRes = await fetch('/api/voxcpm/status');
+        const statusData = await statusRes.json();
+        if (statusData.online) {
+          statusMsg.innerHTML = '<span style="color:#34d399;">✅ ភ្ជាប់ជោគជ័យ! Server GPU VoxCPM2 ឆ្លើយតបល្អ (200 OK)</span>';
+          initConfig();
+        } else {
+          statusMsg.innerHTML = `<span style="color:#f87171;">❌ មិនអាចភ្ជាប់បាន: ${statusData.message || 'សូមពិនិត្យ Colab ម្តងទៀត'}</span>`;
+        }
+      } catch (err) {
+        statusMsg.innerHTML = `<span style="color:#f87171;">❌ កំហុស: ${err.message}</span>`;
+      } finally {
+        testBtn.disabled = false;
+        if (window.lucide) lucide.createIcons();
+      }
+    });
+  }
+
+  // Save Link button
+  if (saveBtn) {
+    saveBtn.addEventListener('click', async () => {
+      const newUrl = urlInput.value.trim();
+      saveBtn.disabled = true;
+      try {
+        const res = await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ voxcpmUrl: newUrl })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast('🎉 រក្សាទុក Link VoxCPM2 ជោគជ័យ!', 'success');
+          modal.classList.add('hidden');
+          initConfig();
+        }
+      } catch (err) {
+        showToast('កំហុសរក្សាទុក: ' + err.message, 'error');
+      } finally {
+        saveBtn.disabled = false;
       }
     });
   }
@@ -854,13 +1034,32 @@ function renderDialogueLines(segments) {
 
     // Determine smart default voice according to the strict curated rule:
     // If recognized curated role, select it; else fallback STRICTLY to Male Lead or Female Lead!
-    let defaultVoiceId = 'auto';
+    let defaultVoiceId = isFemale ? 'voxcpm:hang_phleung_char_6_female.mp3' : 'voxcpm:hang_phleung_char_2_male.mp3';
     if (seg.speaker_role) {
       const matchRole = extractedMovieCharacters.find(c => c.role_key === seg.speaker_role);
       if (matchRole) defaultVoiceId = matchRole.id;
     }
-    if (defaultVoiceId === 'auto') {
-      defaultVoiceId = isFemale ? 'voxcpm:vp_character_1_female.mp3' : 'voxcpm:vp_character_20_female.mp3';
+
+    // Build rich distinct voice dropdown options for this line
+    let lineVoiceOptions = `<option value="movie-live-clone">🎯 Clone ពីរឿងដើម</option>`;
+    if (extractedMovieCharacters && extractedMovieCharacters.length > 0) {
+      const maleChars = extractedMovieCharacters.filter(c => c.gender !== 'female');
+      const femaleChars = extractedMovieCharacters.filter(c => c.gender === 'female');
+      if (maleChars.length > 0) {
+        lineVoiceOptions += `<optgroup label="👑 សំឡេងតួប្រុស">` +
+          maleChars.map(c => `<option value="${c.id}">${c.label}</option>`).join('') +
+          `</optgroup>`;
+      }
+      if (femaleChars.length > 0) {
+        lineVoiceOptions += `<optgroup label="🌸 សំឡេងតួស្រី">` +
+          femaleChars.map(c => `<option value="${c.id}">${c.label}</option>`).join('') +
+          `</optgroup>`;
+      }
+    } else {
+      lineVoiceOptions += `
+        <option value="voxcpm:hang_phleung_char_2_male.mp3">👑 តួឯកប្រុស</option>
+        <option value="voxcpm:hang_phleung_char_6_female.mp3">🌸 តួឯកស្រី</option>
+      `;
     }
 
     let statusHtml = '<span class="line-status-pill pending">⏳ មិនទាន់បញ្ចូល</span>';
@@ -880,7 +1079,7 @@ function renderDialogueLines(segments) {
         <div class="status-container">${statusHtml}</div>
       </div>
 
-      <div class="original-chinese-text">🇨🇳 ${seg.chinese_text || '(មិនមានអក្សរចិន)'}</div>
+      <div class="original-chinese-text">🌐 ${seg.original_text || seg.chinese_text || '(មិនមានអក្សរដើម)'}</div>
 
       <div class="khmer-input-wrapper">
         <textarea id="khmer-text-${idx}" placeholder="សរសេរពាក្យខ្មែរ...">${cleanPureKhmer(seg.khmer_translation || '')}</textarea>
@@ -898,9 +1097,8 @@ function renderDialogueLines(segments) {
           <input type="file" accept="audio/*" class="hidden-file-input" style="display:none;" data-index="${idx}">
         </label>
 
-        <select class="btn-tool line-voice-select" id="voice-select-${idx}" title="ជ្រើសរើសសំឡេងតួអង្គសម្រាប់ឃ្លានេះ" style="max-width:180px; height:32px; padding:2px 6px; font-size:0.78rem;">
-          <option value="movie-live-clone" selected>🎯 Clone ពីរឿងដើម</option>
-          <option value="voxcpm-voice-actor">🎬 ១៣ សំឡេងរឿង</option>
+        <select class="btn-tool line-voice-select" id="voice-select-${idx}" title="ជ្រើសរើសសំឡេងតួអង្គសម្រាប់ឃ្លានេះ" style="max-width:200px; height:32px; padding:2px 6px; font-size:0.78rem;">
+          ${lineVoiceOptions}
         </select>
 
         <button class="btn-tool btn-ai-gen" id="ai-btn-${idx}" title="ឱ្យ AI សំយោគនិយាយឃ្លានេះ">
@@ -945,6 +1143,15 @@ function renderDialogueLines(segments) {
     // Event 5: AI Speak
     const aiBtn = card.querySelector(`#ai-btn-${idx}`);
     aiBtn.addEventListener('click', () => handleGenerateLineAI(idx, aiBtn, card));
+
+    // Event 6: Voice dropdown selection
+    const voiceSelectEl = card.querySelector(`#voice-select-${idx}`);
+    if (voiceSelectEl) {
+      voiceSelectEl.value = seg.voiceId || defaultVoiceId;
+      voiceSelectEl.addEventListener('change', (e) => {
+        seg.voiceId = e.target.value;
+      });
+    }
   });
 
   if (window.lucide) lucide.createIcons();
@@ -1164,7 +1371,10 @@ async function loadExtractedMovieCharacters() {
       }).join('');
     }
 
-    // 2. Dropdowns are kept clean with strictly the 2 top options (Male & Female Pure Khmer)
+    // 2. Render Quick Cast Bar in Manual Studio
+    renderQuickCastBar(extractedMovieCharacters);
+    const strip = document.getElementById('castStripSection');
+    if (strip) strip.classList.remove('hidden');
   } catch (err) {
     console.warn('Could not load extracted characters:', err.message);
   }

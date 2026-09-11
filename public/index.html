@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-  <title>ស្ទូឌីយោបញ្ជូលសំឡេងភាពយន្ត AI | ចិន ➔ ខ្មែរ 100%</title>
+  <title>Cheatz Dabber.PRO | ស្ទូឌីយោបញ្ជូលសំឡេងភាពយន្ត AI</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -20,8 +20,11 @@
           <i data-lucide="sparkles"></i>
         </div>
         <div class="logo-text">
-          <h1>ស្ទូឌីយោបញ្ជូលសំឡេងភាពយន្ត AI</h1>
-          <span class="subtitle">បំប្លែងសំឡេងតួអង្គរឿងចិន ➔ និយាយខ្មែរស្វ័យប្រវត្តិកម្រិតខ្ពស់ (Zero-Shot AI)</span>
+          <div class="logo-title-row">
+            <h1 class="logo-title">Cheatz Dabber</h1>
+            <span class="pro-tag-badge">PRO</span>
+          </div>
+          <span class="subtitle">ស្ទូឌីយោបញ្ជូលសំឡេងភាពយន្ត AI • គ្រប់ភាសា ➔ ខ្មែរ 100% (Universal Multi-Language Zero-Shot)</span>
         </div>
       </div>
       <div class="header-actions">
@@ -32,28 +35,55 @@
             <i data-lucide="copy"></i>
           </button>
         </div>
-        <div class="api-badge" id="apiStatusBadge">
+        <div class="api-badge" id="apiStatusBadge" style="display: none;">
           <span class="status-dot"></span>
           <span class="badge-text" id="statusText">កំពុងត្រួតពិនិត្យប្រព័ន្ធ AI...</span>
         </div>
-        <div class="api-badge active" id="voxcpmStatusBadge" style="background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.35); color: #34d399;" title="ស្ថានភាពម៉ាស៊ីន GPU VoxCPM2">
-          <span class="status-dot" style="background: #10b981; box-shadow: 0 0 8px #10b981;"></span>
-          <span class="badge-text" id="voxcpmStatusText">⚡ VoxCPM2 200 OK (GPU Active)</span>
+        <div class="voxcpm-status-capsule" id="voxcpmStatusBadge" title="ចុចដើម្បីពិនិត្យ ឬប្ដូរ Link VoxCPM2 Server ថ្មី">
+          <span class="status-pulse-dot" id="voxcpmStatusDot"></span>
+          <span class="badge-text" id="voxcpmStatusText">⚡ VoxCPM2: កំពុងពិនិត្យ...</span>
         </div>
-        <button class="btn btn-outline-danger btn-icon" id="clearOutputsBtn" title="សម្អាតឯកសារ Output ចាស់ៗចោលដើម្បីសន្សំទំហំ Hard Disk">
+        <button class="btn btn-header-action btn-voxlink" id="quickLinkBtn" title="ប្ដូរ Link Google Colab / Kaggle ថ្មីភ្លាមៗ">
+          <i data-lucide="link"></i>
+          <span>ប្ដូរ Link VoxCPM</span>
+        </button>
+        <button class="btn btn-header-action btn-clear" id="clearOutputsBtn" title="សម្អាតឯកសារ Output ចាស់ៗចោលដើម្បីសន្សំទំហំ Hard Disk">
           <i data-lucide="trash-2"></i>
           <span>សម្អាត Output</span>
         </button>
-        <button class="btn btn-secondary btn-icon" id="openSettingsBtn" title="ការកំណត់ API">
+        <button class="btn btn-header-action btn-settings" id="openSettingsBtn" title="ការកំណត់ API">
           <i data-lucide="settings"></i>
           <span>ការកំណត់</span>
         </button>
-        <a href="https://t.me/BongCheatz_IT" target="_blank" class="btn btn-secondary btn-icon" style="text-decoration: none; color: #38bdf8; border-color: rgba(56, 189, 248, 0.3);" title="Telegram: @BongCheatz_IT">
+        <a href="https://t.me/BongCheatz_IT" target="_blank" class="btn btn-header-action btn-telegram" title="Telegram: @BongCheatz_IT">
           <i data-lucide="send"></i>
           <span>@BongCheatz_IT</span>
         </a>
       </div>
     </header>
+
+    <!-- Smart Reconnect Alert Banner (Appears if Colab disconnects or after power outage) -->
+    <div class="connection-alert-banner hidden" id="connectionAlertBanner">
+      <div class="alert-banner-content">
+        <div class="alert-banner-icon">
+          <i data-lucide="zap-off"></i>
+        </div>
+        <div class="alert-banner-text">
+          <strong>⚡ ម៉ាស៊ីន AI GPU បានដាច់ការតភ្ជាប់</strong>
+          <span>(អាចដោយសារដាច់ភ្លើង ឬទើបតែ Run Colab ឡើងវិញ)</span>
+        </div>
+      </div>
+      <div class="alert-banner-actions">
+        <button class="btn-banner-action primary" id="bannerPasteClipboardBtn" type="button" title="ចម្លង Link ពី Clipboard ចូលភ្លាមៗ">
+          <i data-lucide="clipboard-paste"></i>
+          <span>📋 Paste Link ពី Clipboard ភ្លាមៗ</span>
+        </button>
+        <button class="btn-banner-action" id="bannerOpenModalBtn" type="button">
+          <i data-lucide="link"></i>
+          <span>វាយ Link ដោយផ្ទាល់</span>
+        </button>
+      </div>
+    </div>
 
     <!-- Main Navigation Tabs -->
     <nav class="studio-nav">
@@ -134,12 +164,19 @@
           <div class="options-group">
             <div class="form-row">
               <div class="form-group">
-                <label><i data-lucide="globe"></i> ភាសាដើម</label>
+                <label><i data-lucide="globe"></i> ភាសាដើម (Source Language)</label>
                 <select id="sourceLang" class="form-input">
-                  <option value="zh" selected>🇨🇳 ភាសាចិន</option>
-                  <option value="en">🇺🇸 ភាសាអង់គ្លេស</option>
-                  <option value="ja">🇯🇵 ភាសាជប៉ុន</option>
-                  <option value="ko">🇰🇷 ភាសាកូរ៉េ</option>
+                  <option value="auto" selected>🌐 ស្វែងរកភាសាស្វ័យប្រវត្តិ (Auto-Detect គ្រប់ភាសាទាំងអស់)</option>
+                  <option value="zh">🇨🇳 ភាសាចិន (Chinese)</option>
+                  <option value="en">🇺🇸 ភាសាអង់គ្លេស (English)</option>
+                  <option value="th">🇹🇭 ភាសាថៃ (Thai)</option>
+                  <option value="ja">🇯🇵 ភាសាជប៉ុន (Japanese)</option>
+                  <option value="ko">🇰🇷 ភាសាកូរ៉េ (Korean)</option>
+                  <option value="vi">🇻🇳 ភាសាវៀតណាម (Vietnamese)</option>
+                  <option value="fr">🇫🇷 ភាសាបារាំង (French)</option>
+                  <option value="es">🇪🇸 ភាសាអេស្ប៉ាញ (Spanish)</option>
+                  <option value="hi">🇮🇳 ភាសាហិណ្ឌូ (Hindi)</option>
+                  <option value="ru">🇷🇺 ភាសារុស្ស៊ី (Russian)</option>
                 </select>
               </div>
               <div class="form-group">
@@ -153,18 +190,18 @@
             <div class="form-group">
               <label><i data-lucide="mic"></i> ជ្រើសរើសសំឡេងមនុស្សពិត</label>
               <select id="voiceChoice" class="form-input">
-                <option value="movie-live-clone" selected>🎯 Auto-Cast តួឯក (ប្រុស & ស្រី) + តួផ្សេងៗ Clone ចេញពីរឿងផ្ទាល់ (VoxCPM2)</option>
-                <option value="voxcpm-voice-actor">🎬 ១៣ សំឡេងរឿង (ប្រើសំឡេងគំរូសាច់រឿងទាំង ១៣)</option>
+                <option value="voxcpm-voice-actor" selected>🎭 Auto Distinct Cast (បែងចែក ២០+ សំឡេងតួអង្គផ្សេងៗគ្នា - មិនជាន់គ្នា ១០០%)</option>
+                <option value="movie-live-clone">🎯 Movie Live Clone (កាត់សំឡេងផ្ទាល់ពីរឿងដើម - ដូចតួដើម ១០០%)</option>
+                <option value="lead-only">👑 ប្រើតែសំឡេងតួឯកប្រុស & តួឯកស្រី (សំឡេងខ្មែរពិត)</option>
               </select>
             </div>
 
             <div class="form-group">
-              <label><i data-lucide="shield-check"></i> ជម្រើសចាត់ចែងសំឡេងការពារកុំឱ្យខុស</label>
+              <label><i data-lucide="shield-check"></i> ជម្រើសការពារកុំឱ្យជាន់សំឡេងគ្នា (Voice Anti-Collision)</label>
               <select id="castingSafetyMode" class="form-input">
-                <option value="live_movie_clone">🎯 Clone ផ្ទាល់ចេញពីរឿងដើម 100% (មិនប្រើសំឡេងដែលមានស្រាប់)</option>
-                <option value="safe_curated" selected>🛡️ Auto-Cast ១៣ តួអង្គ (បើខ្វះ ឬមិនច្បាស់ Fallback តែតួឯកប្រុស & តួឯកស្រី - មិនដាក់លើតួផ្សេង)</option>
-                <option value="strict_leads_only">🔒 ប្រើតែតួឯកប្រុស & តួឯកស្រី សុទ្ធ (មិនប្រើតួបន្ទាប់បន្សំ)</option>
-                <option value="single_voice">👤 ប្រើសំឡេងតែមួយគត់ដែលបានជ្រើសរើសខាងលើ</option>
+                <option value="safe_curated" selected>🛡️ Auto-Distinct (តួអង្គនីមួយៗប្រើសំឡេងដាច់ដោយឡែកពីគ្នា មិនច្រឡំគ្នាដាច់ខាត)</option>
+                <option value="live_movie_clone">🎯 Live Movie Clone 100% (កាត់សំឡេងសម្ដែងដើមពីរឿងមក Clone ផ្ទាល់)</option>
+                <option value="strict_leads_only">🔒 ប្រើតែតួឯកប្រុស & តួឯកស្រី សុទ្ធ (Leads Only)</option>
               </select>
             </div>
 
@@ -216,7 +253,7 @@
               </div>
               <div class="step-item" id="step-3">
                 <div class="step-num">3</div>
-                <div class="step-text">បកប្រែពាក្យពេចន៍ពីចិនទៅភាសាខ្មែរ</div>
+                <div class="step-text">បកប្រែពាក្យពេចន៍ទៅភាសាខ្មែរតាមសាច់រឿង</div>
               </div>
               <div class="step-item" id="step-4">
                 <div class="step-num">4</div>
@@ -380,14 +417,14 @@
           <div class="timeline-loading-state hidden" id="timelineLoadingState">
             <i data-lucide="loader" class="spin large-spin"></i>
             <h3>AI Gemini កំពុងស្តាប់ និងស្រង់ឃ្លាសន្ទនាគ្រប់តួអង្គ...</h3>
-            <p>សូមរង់ចាំបន្តិច ប្រព័ន្ធកំពុងបកប្រែជាភាសាភាពយន្តចិនបុរាណ</p>
+            <p>សូមរង់ចាំបន្តិច ប្រព័ន្ធកំពុងបកប្រែជាភាសាភាពយន្តនិយាយខ្មែរ</p>
           </div>
 
           <!-- Manual Studio Toolbar -->
           <div class="manual-toolbar hidden" id="manualToolbar">
             <div class="manual-search-wrapper">
               <i data-lucide="search"></i>
-              <input type="text" id="manualSearchInput" class="manual-search-input" placeholder="🔍 ស្វែងរកឃ្លាសន្ទនា (អក្សរចិន ឬខ្មែរ)...">
+              <input type="text" id="manualSearchInput" class="manual-search-input" placeholder="🔍 ស្វែងរកឃ្លាសន្ទនា (អក្សរដើម ឬខ្មែរ)...">
             </div>
 
             <div class="batch-actions-group">
@@ -399,6 +436,17 @@
 
             <div class="studio-progress-meter">
               <div class="studio-progress-meter-fill" id="studioProgressMeterFill"></div>
+            </div>
+          </div>
+
+          <!-- Quick Cast / Audition Strip -->
+          <div class="cast-strip-section hidden" id="castStripSection">
+            <div class="cast-strip-header">
+              <span class="cast-strip-title"><i data-lucide="headphones"></i> ស្ដាប់សំឡេងគំរូតួអង្គ (Audition):</span>
+              <span class="cast-strip-hint">ចុចលើតួអង្គដើម្បីស្ដាប់សំឡេង</span>
+            </div>
+            <div class="cast-pills-container" id="castPillsContainer">
+              <!-- Populated by JS -->
             </div>
           </div>
 
@@ -416,7 +464,7 @@
         <div class="panel">
           <div class="panel-header">
             <h2><i data-lucide="fingerprint"></i> បង្កើតគំរូ Clone សំឡេងតួអង្គ</h2>
-            <p class="panel-subtitle">កាត់យកសំឡេងតួអង្គចិនពី ៣ ទៅ ១០ វិនាទី រួចសាកល្បងឱ្យតួអង្គនោះនិយាយឃ្លាខ្មែរអ្វីក៏បាន!</p>
+            <p class="panel-subtitle">កាត់យកសំឡេងតួអង្គពី ៣ ទៅ ១០ វិនាទី រួចសាកល្បងឱ្យតួអង្គនោះនិយាយឃ្លាខ្មែរអ្វីក៏បាន!</p>
           </div>
 
           <div class="clone-form-grid">
@@ -487,14 +535,14 @@
       <div class="translator-container">
         <div class="panel">
           <div class="panel-header">
-            <h2><i data-lucide="message-circle"></i> ម៉ាស៊ីនបកប្រែពាក្យសំដីរឿងកុន</h2>
-            <p class="panel-subtitle">បកប្រែអត្ថបទសន្ទនារឿងចិនមកជាភាសាខ្មែរ ដោយរក្សាទឹកដម និងអារម្មណ៍រឿងកុន</p>
+            <h2><i data-lucide="message-circle"></i> ម៉ាស៊ីនបកប្រែពាក្យសំដីរឿងកុន (Universal Cinematic Translator)</h2>
+            <p class="panel-subtitle">បកប្រែអត្ថបទសន្ទនាគ្រប់ភាសា (ចិន, អង់គ្លេស, ថៃ, កូរ៉េ, ជប៉ុន...) មកជាភាសាខ្មែរ ដោយរក្សាទឹកដម និងអារម្មណ៍រឿងកុន</p>
           </div>
 
           <div class="translator-grid">
             <div class="form-group">
-              <label>🇨🇳 ពាក្យសំដីចិនដើម</label>
-              <textarea id="chineseDialogueInput" class="form-input textarea" rows="6" placeholder="បញ្ចូលឃ្លាសន្ទនាចិន... ឧ. 你以为你能逃出我的手掌心吗？今天就是你的死期！"></textarea>
+              <label>🌐 ពាក្យសំដីដើម (គ្រប់ភាសា: ចិន, អង់គ្លេស, ថៃ, កូរ៉េ, ជប៉ុន...)</label>
+              <textarea id="chineseDialogueInput" class="form-input textarea" rows="6" placeholder="បញ្ចូលឃ្លាសន្ទនាដើម... ឧ. 你以为你能逃出我的手掌心吗？ / I won't let you get away with this! / หยุดเดี๋ยวนี้!"></textarea>
             </div>
 
             <div class="form-group">
@@ -523,7 +571,7 @@
             <span class="badge badge-purple">ម៉ាស៊ីនសំឡេងកម្រិតស្ទូឌីយោ</span>
           </div>
 
-          <p class="panel-subtitle">គ្រប់គ្រងកម្រិតឮសំឡេងនិយាយខ្មែរ លុបសំឡេងចិនដើម និងរក្សាភ្លេងកំដរ (BGM/SFX) ឱ្យនៅពិរោះរណ្តំ</p>
+          <p class="panel-subtitle">គ្រប់គ្រងកម្រិតឮសំឡេងនិយាយខ្មែរ លុបសំឡេងដើម និងរក្សាភ្លេងកំដរ (BGM/SFX) ឱ្យនៅពិរោះរណ្តំ</p>
 
           <div class="mixer-controls-form">
             <!-- Vocal Volume Slider -->
@@ -560,11 +608,11 @@
 
             <!-- Foreign Vocal Cancellation -->
             <div class="form-group">
-              <label><i data-lucide="mic-off"></i> កម្រិតលុបសំឡេងចិនដើម</label>
+              <label><i data-lucide="mic-off"></i> កម្រិតលុបសំឡេងដើម (Original Vocal Cancellation)</label>
               <select id="mixerVocalSuppression" class="form-input">
                 <option value="mild">🍃 ស្រាល (Mild) - រក្សាភ្លេងកំដរឱ្យច្រើនបំផុត</option>
-                <option value="medium" selected>⚖️ មធ្យម (Medium - ណែនាំ) - លុបសំឡេងចិនល្អ ភ្លេងនៅច្បាស់</option>
-                <option value="strong">🛡️ ខ្លាំង (Strong) - លុបសំឡេងចិនទាំងស្រុង</option>
+                <option value="medium" selected>⚖️ មធ្យម (Medium - ណែនាំ) - លុបសំឡេងដើមល្អ ភ្លេងនៅច្បាស់</option>
+                <option value="strong">🛡️ ខ្លាំង (Strong) - លុបសំឡេងដើមទាំងស្រុង</option>
               </select>
             </div>
 
@@ -633,14 +681,14 @@
             <span class="badge badge-cyan">អក្សររត់រឿងកុន</span>
           </div>
 
-          <p class="panel-subtitle">បង្កើតអក្សររត់ខ្មែរ ឬពីរភាសា (ចិន+ខ្មែរ) ស្របតាមពេលវេលាតួនិយាយក្នុងរឿង</p>
+          <p class="panel-subtitle">បង្កើតអក្សររត់ខ្មែរ ឬពីរភាសា (ដើម+ខ្មែរ) ស្របតាមពេលវេលាតួនិយាយក្នុងរឿង</p>
 
           <div class="options-group">
             <div class="form-group">
               <label><i data-lucide="languages"></i> ទម្រង់អក្សររត់</label>
               <select id="subFormatChoice" class="form-input">
                 <option value="khmer" selected>🇰🇭 ភាសាខ្មែរសុទ្ធ</option>
-                <option value="dual">🇨🇳 + 🇰🇭 ពីរភាសា (ខ្មែរ + ចិន ពីរជួរ)</option>
+                <option value="dual">🌐 + 🇰🇭 ពីរភាសា (ខ្មែរ + ភាសាដើម ពីរជួរ)</option>
               </select>
             </div>
 
@@ -825,7 +873,7 @@
               <a href="https://aistudio.google.com" target="_blank" class="external-link">យក Key នៅទីនេះ (ឥតគិតថ្លៃ) <i data-lucide="external-link"></i></a>
             </label>
             <input type="password" id="settingGeminiKey" class="form-input" placeholder="AIzaSy...">
-            <span class="field-hint">ជួយបកប្រែឃ្លាសន្ទនាចិនមកខ្មែរឱ្យមានន័យស៊ីជម្រៅ</span>
+            <span class="field-hint">ជួយបកប្រែឃ្លាសន្ទនាភាពយន្តមកខ្មែរឱ្យមានន័យស៊ីជម្រៅ</span>
           </div>
 
           <div class="form-group">
@@ -874,6 +922,36 @@
               <span>រក្សាទុកការកំណត់</span>
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick VoxCPM Modal -->
+    <div class="modal-backdrop hidden" id="voxcpmModal">
+      <div class="modal-card" style="max-width: 480px;">
+        <div class="modal-header">
+          <h3><i data-lucide="zap" style="color: #10b981;"></i> ភ្ជាប់ម៉ាស៊ីន AI GPU (VoxCPM2)</h3>
+          <button class="btn-close-modal" id="closeVoxcpmModalBtn"><i data-lucide="x"></i></button>
+        </div>
+        <div class="modal-body">
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 14px; line-height: 1.5;">
+            ពេលអ្នក Run Google Colab / Kaggle ឡើងវិញ សូម Copy Link <code style="color: #38bdf8; background: rgba(56, 189, 248, 0.1); padding: 2px 6px; border-radius: 4px;">https://....trycloudflare.com</code> មក Paste ចូលខាងក្រោម៖
+          </p>
+          <div class="form-group">
+            <label><i data-lucide="link"></i> VoxCPM2 Public URL</label>
+            <input type="text" id="quickVoxcpmUrlInput" class="form-input" placeholder="https://xxxx-xxxx.trycloudflare.com" style="font-family: monospace;">
+          </div>
+          <div id="quickVoxcpmStatusMsg" style="font-size: 0.83rem; margin-top: 8px; min-height: 20px;"></div>
+        </div>
+        <div class="modal-actions" style="margin-top: 14px;">
+          <button class="btn btn-secondary" id="testQuickVoxcpmBtn" type="button">
+            <i data-lucide="refresh-cw"></i>
+            <span>តេស្តការភ្ជាប់</span>
+          </button>
+          <button class="btn btn-primary" id="saveQuickVoxcpmBtn" type="button">
+            <i data-lucide="check"></i>
+            <span>រក្សាទុក Link ថ្មី</span>
+          </button>
         </div>
       </div>
     </div>

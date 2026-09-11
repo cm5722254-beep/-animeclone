@@ -5,6 +5,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const axios = require('axios');
 
 const audioProcessor = require('./services/audioProcessor');
 const ElevenLabsService = require('./services/elevenlabsService');
@@ -103,6 +104,23 @@ app.get('/api/config', (req, res) => {
   });
 });
 
+// Check VoxCPM2 Live Server Status (Cloudflare Tunnel Ping)
+app.get('/api/voxcpm/status', async (req, res) => {
+  const url = process.env.VOXCPM_API_URL;
+  if (!url || !url.trim()) {
+    return res.json({ online: false, configured: false, message: 'មិនទាន់កំណត់ Link VoxCPM2' });
+  }
+  try {
+    const checkRes = await axios.get(url.trim(), { timeout: 20000 });
+    if (checkRes.status === 200) {
+      return res.json({ online: true, configured: true, url: url.trim(), message: 'GPU Server កំពុងដំណើរការល្អ (200 OK)' });
+    }
+    res.json({ online: false, configured: true, url: url.trim(), message: `ឆ្លើយតបកូដ HTTP ${checkRes.status}` });
+  } catch (err) {
+    res.json({ online: false, configured: true, url: url.trim(), message: err.message });
+  }
+});
+
 // Update config keys
 app.post('/api/config', (req, res) => {
   const { elevenlabsKey, geminiKey, voxcpmUrl } = req.body;
@@ -116,7 +134,7 @@ app.post('/api/config', (req, res) => {
     process.env.GEMINI_API_KEY = cleanKey;
     translator.setApiKey(cleanKey);
   }
-  if (voxcpmUrl !== undefined) {
+  if (voxcpmUrl !== undefined && voxcpmUrl.trim().length > 5) {
     process.env.VOXCPM_API_URL = voxcpmUrl.trim();
   }
 
@@ -231,7 +249,7 @@ app.post('/api/outputs/clear', (req, res) => {
 app.post('/api/dubbing/start', async (req, res) => {
   const {
     filename,
-    sourceLang = 'zh',
+    sourceLang = 'auto',
     targetLang = 'km',
     voiceId = 'voxcpm-voice-actor',
     numSpeakers = 0,
@@ -517,16 +535,19 @@ app.post('/api/dubbing/generate-line', async (req, res) => {
   }
 });
 
-// 3.1 Get extracted movie characters from videoplayback.mp4
+// 3.1 Get extracted movie characters from samples
 app.get('/api/characters/extracted', (req, res) => {
   try {
     const jsonPath = path.join(__dirname, 'extracted_characters.json');
+    const samplesDir = path.join(__dirname, 'samples');
     if (fs.existsSync(jsonPath)) {
       const characters = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
-      const augmented = characters.map(c => ({
-        ...c,
-        previewUrl: `/media/samples/${c.filename}`
-      }));
+      const augmented = characters
+        .filter(c => fs.existsSync(path.join(samplesDir, c.filename)))
+        .map(c => ({
+          ...c,
+          previewUrl: `/media/samples/${c.filename}`
+        }));
       return res.json({ success: true, count: augmented.length, characters: augmented });
     }
     res.json({ success: true, count: 0, characters: [] });
@@ -672,13 +693,13 @@ app.post('/api/character/clone', upload.single('voiceSample'), async (req, res) 
   }
 });
 
-// Translate dialogue snippet (Chinese -> Khmer)
+// Translate dialogue snippet (Universal Multi-Language -> Khmer)
 app.post('/api/translate', async (req, res) => {
   try {
-    const { text, context } = req.body;
+    const { text, sourceLang = 'auto', context } = req.body;
     if (!text) return res.status(400).json({ error: 'Text required' });
 
-    const translated = await translator.translateChineseToKhmer(text, context);
+    const translated = await translator.translateToKhmer(text, sourceLang, context);
     res.json({ success: true, original: text, translated });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -934,7 +955,7 @@ app.use((err, req, res, next) => {
 app.listen(PORT, '0.0.0.0', () => {
   const lanAddresses = getLocalNetworkAddresses();
   console.log(`====================================================`);
-  console.log(`🎬 AI Voice Clone & Dubbing Studio (ZH ➔ KM)`);
+  console.log(`🎬 Cheatz Dabber.PRO - AI Voice Clone & Dubbing Studio`);
   console.log(`💻 Local Machine:    http://localhost:${PORT}`);
   lanAddresses.forEach(net => {
     console.log(`🌐 ប្រើបានគ្រប់កុំព្យូទ័រ (${net.interface}): ${net.url}`);

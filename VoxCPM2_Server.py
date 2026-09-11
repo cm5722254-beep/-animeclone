@@ -122,35 +122,54 @@ server_thread = threading.Thread(target=run_api_server, daemon=True)
 server_thread.start()
 time.sleep(3)
 
-# បើក Cloudflare Public Tunnel ដោយសរសេរចូល log file (មិនជាប់គាំង ឬ Hang)
-print("🌐 កំពុងបង្កើត Cloudflare Public Tunnel URL...")
-log_file_path = "/content/cloudflared.log"
-with open(log_file_path, "w") as log_f:
-    cf_proc = subprocess.Popen(
-        ["cloudflared", "tunnel", "--url", "http://127.0.0.1:8000"],
-        stdout=log_f,
-        stderr=log_f,
-        text=True
-    )
+# ==============================================================================
+# 💡 ជម្រើសកុំឱ្យប្តូរ Link ពេលដាច់ភ្លើង (Permanent Static Domain - Free):
+# ចុះឈ្មោះ Free លើ https://ngrok.com រួចយក Authtoken & Static Domain មកដាក់ទីនេះ
+# (បើទុកទទេ វានឹងប្រើ Cloudflare Tunnel ស្វ័យប្រវត្តិតាមធម្មតា)
+# ==============================================================================
+NGROK_AUTHTOKEN = ""       # ឧ. "2bXXXXXXXXXXXXXXXXXXXXXXXXXX"
+NGROK_STATIC_DOMAIN = ""   # ឧ. "your-name.ngrok-free.app"
 
 public_url = None
-for attempt in range(60):
-    time.sleep(0.5)
-    if os.path.exists(log_file_path):
-        with open(log_file_path, "r", encoding="utf-8", errors="ignore") as f:
-            logs = f.read()
-            match = re.search(r"https://[a-zA-Z0-9-]+\.trycloudflare\.com", logs)
-            if match:
-                public_url = match.group(0)
-                break
+
+if NGROK_AUTHTOKEN and NGROK_STATIC_DOMAIN:
+    print("🌐 កំពុងបើក Permanent Static Tunnel (Link ថេរមិនបាច់ដូរពេលដាច់ភ្លើង)...")
+    os.system("pip install -q pyngrok")
+    from pyngrok import ngrok
+    ngrok.set_auth_token(NGROK_AUTHTOKEN)
+    tunnel = ngrok.connect(8000, "http", domain=NGROK_STATIC_DOMAIN)
+    public_url = tunnel.public_url
+else:
+    # បើក Cloudflare Public Tunnel ដោយសរសេរចូល log file (មិនជាប់គាំង ឬ Hang)
+    print("🌐 កំពុងបង្កើត Cloudflare Public Tunnel URL...")
+    log_file_path = "/content/cloudflared.log"
+    with open(log_file_path, "w") as log_f:
+        cf_proc = subprocess.Popen(
+            ["cloudflared", "tunnel", "--url", "http://127.0.0.1:8000"],
+            stdout=log_f,
+            stderr=log_f,
+            text=True
+        )
+
+    for attempt in range(60):
+        time.sleep(0.5)
+        if os.path.exists(log_file_path):
+            with open(log_file_path, "r", encoding="utf-8", errors="ignore") as f:
+                logs = f.read()
+                match = re.search(r"https://[a-zA-Z0-9-]+\.trycloudflare\.com", logs)
+                if match:
+                    public_url = match.group(0)
+                    break
 
 print("\n" + "=" * 68)
 print("👑 AI Voice Clone Studio (Khmer) - Telegram: @BongCheatz_IT")
 print("=" * 68)
 if public_url:
     print(f"🎉 VOXCPM2 API PUBLIC URL: {public_url}")
-    print("\n👉 សូមចម្លង (Copy) Link ខាងលើនេះ ទៅដាក់ក្នុង:")
-    print("   Web Studio ➔ ចុចប៊ូតុង 'ការកំណត់' (Settings) ➔ ប្រអប់ 'VoxCPM2 Server URL'")
+    if NGROK_STATIC_DOMAIN and NGROK_AUTHTOKEN:
+        print("💎 LINK នេះជា LINK ថេរអចិន្ត្រៃយ៍! ពេលដាច់ភ្លើង ឬ Restart Colab មិនបាច់ដូរទៀតទេ!")
+    else:
+        print("\n👉 សូមចម្លង (Copy) Link ខាងលើនេះ ទៅដាក់ក្នុង Web Studio (ឬចុច 1-Click Paste លើ Banner ក្នុង Web Studio)!")
 else:
     print("⚠️ Cloudflare ចំណាយពេលយូរជាងធម្មតា។ សូមពិនិត្យមើល /content/cloudflared.log")
 print("=" * 68 + "\n")

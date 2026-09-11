@@ -13,9 +13,11 @@ outputs/*
 !outputs/.gitkeep
 
 # Temporary & Scratch scripts
+scratch/
 scratch_*.js
 *.tmp
 *.log
+app_log.txt
 test_*.mp3
 
 # OS & IDE files

@@ -108,8 +108,8 @@ class KhmerDubbingService {
     }
 
     // 2. Try ElevenLabs Multilingual v2 with heightened theatrical emotion
-    const apiKey = process.env.ELEVENLABS_API_KEY;
-    const elevenVoiceId = (voiceId && voiceId !== 'voxcpm-voice-actor') ? voiceId : (isFemale ? '21m00Tcm4TlvDq8ikWAM' : 'SOYHLrjzK2X1ezoPC6cr');
+    const isCustomElevenVoice = voiceId && voiceId.length > 15 && !voiceId.includes('-') && !voiceId.includes('voxcpm');
+    const elevenVoiceId = isCustomElevenVoice ? voiceId : (isFemale ? '21m00Tcm4TlvDq8ikWAM' : 'SOYHLrjzK2X1ezoPC6cr');
     if (apiKey && apiKey.startsWith('sk_')) {
       try {
         console.log(`Generating emotional human speech via ElevenLabs (Voice: ${elevenVoiceId}, Emotion: ${emotion})...`);
@@ -162,10 +162,13 @@ class KhmerDubbingService {
     try {
       const result = await tts.toFile(targetDir, khmerText);
       if (fs.existsSync(result.audioFilePath)) {
-        if (fs.existsSync(outputPath)) {
-          fs.unlinkSync(outputPath);
+        if (outputPath.endsWith('.wav')) {
+          await runCmd(`ffmpeg -y -i "${result.audioFilePath}" -ar 44100 -ac 2 "${outputPath}"`);
+          try { if (fs.existsSync(result.audioFilePath)) fs.unlinkSync(result.audioFilePath); } catch (e) {}
+        } else {
+          if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+          fs.renameSync(result.audioFilePath, outputPath);
         }
-        fs.renameSync(result.audioFilePath, outputPath);
       }
       return outputPath;
     } finally {
@@ -179,30 +182,47 @@ class KhmerDubbingService {
 
   /**
    * Transcribe and Diarize an audio chunk using Gemini with multi-model fallback & 429 backoff
+   * Supports ANY language (Chinese, English, Thai, Korean, Japanese, French, Spanish, etc., or Auto-Detect)
    */
-  async transcribeChunkWithGemini(chunkPath, chunkStartTime, retries = 2) {
+  async transcribeChunkWithGemini(chunkPath, chunkStartTime, retries = 2, sourceLang = 'auto') {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) return [];
 
     const candidateModels = [
-      'gemini-2.5-flash',
-      'gemini-3.5-flash-lite',
-      'gemini-2.5-flash-lite',
       'gemini-3.6-flash',
+      'gemini-3.5-flash-lite',
       'gemini-flash-latest'
     ];
 
     const audioBuffer = fs.readFileSync(chunkPath);
     const base64Audio = audioBuffer.toString('base64');
 
-    const prompt = `You are a legendary movie dubbing director and audio engineer specialized in Chinese historical drama & donghua (រឿងភាគចិនបុរាណនិយាយខ្មែរ / ភាពយន្តចិន).
-Carefully listen to this video audio clip. Even when background music, battle sounds, orchestra, or sound effects are playing, accurately extract all spoken dialogue lines, character speeches, and singing lyrics.
+    const langNames = {
+      auto: 'ANY spoken language (Chinese, English, Thai, Korean, Japanese, Vietnamese, French, Spanish, Hindi, etc.) - Automatically detect spoken language',
+      zh: 'Chinese (Mandarin / Cantonese)',
+      en: 'English',
+      th: 'Thai (ภาษาไทย)',
+      ko: 'Korean (한국어)',
+      ja: 'Japanese (日本語)',
+      vi: 'Vietnamese (Tiếng Việt)',
+      hi: 'Hindi (हिन्दी)',
+      fr: 'French',
+      es: 'Spanish',
+      ru: 'Russian'
+    };
+    const langContext = langNames[sourceLang] || sourceLang;
+
+    const prompt = `You are an elite cinematic movie dubbing director and audio engineer specialized in Cambodian cinema dubbing (ស្ទូឌីយោបញ្ជូលសំឡេងភាពយន្តនិយាយខ្មែរ).
+The audio clip can be from any movie, anime, donghua, documentary, or TV series.
+Spoken language: ${langContext}.
+
+Carefully listen to this video audio clip. Even when background music, orchestra, battle cries, explosions, or sound effects are present, accurately extract all spoken dialogue lines, character speeches, shouting, and conversations.
 
 Instructions:
-1. Speech Recognition (ASR): Transcribe each spoken Chinese line.
+1. Speech Recognition (ASR): Accurately transcribe each spoken line in its original spoken language into "original_text".
 2. Diarization: Identify speakers and classify "speaker_role" into one of:
    "male_lead", "female_lead", "servant_female", "fierce_female", "fierce_male", "villager", "general", "crowd", "villain_female", "old_uncle", "governor", "elder", "old_woman".
-3. Theatrical Khmer Dubbing: Translate each line into authentic, highly dramatic, poetic, and cinematic Khmer matching Cambodian movie dubbing style. Infuse passionate emotion, dramatic interjections ("ឱ!", "ឯង!", "ឈប់ភ្លាម!", "ហ៊ឺ...", "ហេតុអ្វី?", "ព្រះអើយ!", "មិនអាចទេ!"), and acting punctuation (!, ?, ..., ~).
+3. Theatrical Khmer Dubbing: Translate each line into authentic, highly dramatic, poetic, and cinematic Khmer matching professional Cambodian movie dubbing style. Infuse passionate emotion, dramatic interjections ("ឱ!", "ឯង!", "ឈប់ភ្លាម!", "ហ៊ឺ...", "ហេតុអ្វី?", "ព្រះអើយ!", "មិនអាចទេ!", "ឆាប់ឡើង!"), and natural acting punctuation (!, ?, ..., ~).
 4. Accurate Timestamps: Relative start_time and end_time (in seconds, float or mm:ss).
 
 Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
@@ -215,8 +235,8 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
     "gender": "male",
     "start_time": 1.2,
     "end_time": 4.5,
-    "chinese_text": "Original Chinese line",
-    "khmer_translation": "Authentic theatrical Khmer dialogue",
+    "original_text": "Spoken line in original language",
+    "khmer_translation": "Authentic theatrical Khmer dialogue (ពាក្យពេចន៍សម្ដែងខ្មែរ)",
     "emotion": "heroic"
   }
 ]
@@ -291,7 +311,7 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
             const st = parseTime(seg.start_time ?? seg.start ?? seg.startTime, idx * 2.5);
             const et = parseTime(seg.end_time ?? seg.end ?? seg.endTime, st + 2.5);
             const khmer = (seg.khmer_translation ?? seg.khmer ?? seg.translation ?? seg.vietnamese ?? '').trim();
-            const chinese = (seg.chinese_text ?? seg.chinese ?? seg.text ?? seg.label ?? '').trim();
+            const original = (seg.original_text ?? seg.spoken_text ?? seg.chinese_text ?? seg.chinese ?? seg.text ?? seg.label ?? '').trim();
 
             return {
               speaker_id: seg.speaker_id || `speaker_${idx + 1}`,
@@ -300,7 +320,8 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
               gender: seg.gender || (seg.speaker_role?.includes('female') ? 'female' : 'male'),
               start_time: Math.max(0, st + chunkStartTime),
               end_time: Math.max(st + chunkStartTime + 0.5, et + chunkStartTime),
-              chinese_text: chinese,
+              chinese_text: original,
+              original_text: original,
               khmer_translation: khmer,
               emotion: seg.emotion || 'dramatic'
             };
@@ -330,7 +351,7 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
   /**
    * Extract dialogue timeline across the video with intelligent auto-seek past opening intro music
    */
-  async extractDialogueTimeline(audioPath, totalDuration, scope = 'full', onProgress = () => {}) {
+  async extractDialogueTimeline(audioPath, totalDuration, scope = 'full', onProgress = () => {}, sourceLang = 'auto') {
     let startOffset = 0;
     let targetDuration = totalDuration;
 
@@ -361,10 +382,11 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
       while (currentOffset < totalDuration) {
         if (scope === 'auto_dialogue_2m' && allSegments.length >= 8) break;
         if (scope !== 'full' && scope !== 'auto_dialogue_2m' && currentOffset >= maxScanDuration) {
-          // If 0 lines were found (e.g. 2m intro was silent/OP song), auto-scan forward to find real dialogue!
-          if (allSegments.length === 0 && currentOffset < Math.min(totalDuration, 600)) {
-            onProgress(20, '២ នាទីដំបូងជាភ្លេងក្បាលរឿង (Intro)។ ប្រព័ន្ធកំពុងស្វែងរកឈុតសន្ទនាបន្ទាប់ដោយស្វ័យប្រវត្តិ...');
-            currentOffset = Math.max(currentOffset, 420); // Jump forward to 7:00 where dialogue starts
+          // If fewer than 3 lines were found (e.g. 2m intro was just theme song), auto-scan forward to find real story dialogue!
+          if (allSegments.length < 3 && currentOffset < Math.min(totalDuration, 360)) {
+            onProgress(20, '២ នាទីដំបូងជាភ្លេងក្បាលរឿង (Intro Song)។ ប្រព័ន្ធកំពុងស្វែងរកឈុតសន្ទនាតួអង្គបន្ទាប់ដោយស្វ័យប្រវត្តិ...');
+            currentOffset = 135; // Jump to 2:15 where real episode dialogue begins
+            maxScanDuration = currentOffset + targetDuration;
             continue;
           }
           break;
@@ -379,7 +401,7 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
         const chunkPath = path.join(tempDir, `chunk_${chunkIndex}.mp3`);
         await runCmd(`ffmpeg -y -ss ${currentOffset} -t ${chunkLen} -i "${audioPath}" -vn -ac 1 -ar 16000 -b:a 32k "${chunkPath}"`);
 
-        const segs = await this.transcribeChunkWithGemini(chunkPath, currentOffset);
+        const segs = await this.transcribeChunkWithGemini(chunkPath, currentOffset, 2, sourceLang);
         if (segs.length > 0) {
           allSegments.push(...segs);
           console.log(`Chunk at ${currentOffset}s: Found ${segs.length} dialogue lines`);
@@ -549,9 +571,121 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
    * Rule: Use curated 13 roles; if missing/uncertain, STRICTLY fallback ONLY to male lead or female lead.
    * "បើខ្វះ អាចគ្នាបានតែតួឯកប្រុស និង តួឯកស្រី មិនដាក់លើតួផ្សេងបានទេ"
    */
+  /**
+   * Build dynamic distinct voice map across all detected characters in the movie.
+   * Guarantees that all 22 distinct character voices in /samples are utilized,
+   * and NO TWO CHARACTERS OF THE SAME GENDER SHARE THE SAME VOICE (កុំយកសំឡេងដដែល)!
+   */
+  buildDistinctSpeakerVoiceMap(segments, userRoleMap = {}) {
+    const samplesDir = path.join(__dirname, '../samples');
+
+    // 13 Distinct Male Voices Pool
+    const maleVoicesPool = [
+      'hang_phleung_char_2_male.mp3', // 👑 តួឯកប្រុស
+      'hang_phleung_char_7_male.mp3', // 👑 តួប្រុសស្វាហាប់ / ព្រះអាទិទេព
+      'hang_phleung_char_8_male.mp3', // 🛡️ មេទ័ពវិញ្ញាណ
+      'hang_phleung_char_1_male.mp3', // 👴 តួអ៊ំចាស់
+      'hang_phleung_char_4_male.mp3', // 🎙️ អ្នករៀបរាប់សាច់រឿង
+      'vp_character_7_male.mp3',      // ⚔️ តួប្រុសកាច
+      'vp_character_9_male.mp3',      // 🌾 អ្នកភូមិ
+      'vp_character_10_male.mp3',     // 🛡️ មេទ័ពរាជវាំង
+      'vp_character_12_male.mp3',     // 👥 មហាជន / អ្នកប្រាជ្ញ
+      'vp_character_16_male.mp3',     // 👴 តួអ៊ំចាស់ទី២
+      'vp_character_17_male.mp3',     // 📜 តួចាហ្វាយខេត្ត
+      'vp_character_19_male.mp3',     // 📿 ព្រឹទ្ធាចារ្យ / គ្រូ
+      'vp_character_2_male.mp3'       // 🍵 អ្នកបម្រើប្រុស
+    ].filter(fn => fs.existsSync(path.join(samplesDir, fn)));
+
+    // 7 Distinct Female Voices Pool
+    const femaleVoicesPool = [
+      'hang_phleung_char_6_female.mp3', // 🌸 តួឯកស្រី
+      'hang_phleung_char_5_female.mp3', // 👧 ភីលៀង / តួកុមារ
+      'vp_character_1_female.mp3',      // 🌸 តួស្រីទន់ភ្លន់
+      'vp_character_6_female.mp3',      // ⚡ តួស្រីកាច
+      'vp_character_14_female.mp3',     // 🐍 តួកាចពិសពុល
+      'vp_character_20_female.mp3',     // 👑 តួស្រីចាស់ទុំ
+      'vp_character_21_female.mp3'      // 👵 យាយចាស់
+    ].filter(fn => fs.existsSync(path.join(samplesDir, fn)));
+
+    const speakerMap = {};
+    const usedMale = new Set();
+    const usedFemale = new Set();
+
+    // Identify unique speakers in chronological order of appearance
+    const speakers = [];
+    for (const seg of segments) {
+      if (!speakers.includes(seg.speaker_id)) {
+        speakers.push(seg.speaker_id);
+      }
+    }
+
+    for (const sid of speakers) {
+      // 1. User manual override if chosen in UI
+      if (userRoleMap && userRoleMap[sid]) {
+        speakerMap[sid] = path.join(samplesDir, userRoleMap[sid]);
+        continue;
+      }
+
+      const firstSeg = segments.find(s => s.speaker_id === sid) || {};
+      const isFemale = firstSeg.gender === 'female' || (firstSeg.speaker_name && (firstSeg.speaker_name.toLowerCase().includes('female') || firstSeg.speaker_name.includes('ស្រី')));
+      const name = ((firstSeg.speaker_name || '') + ' ' + (firstSeg.khmer_translation || '')).toLowerCase();
+      const role = firstSeg.speaker_role || '';
+
+      let assigned = null;
+      if (isFemale) {
+        if (role === 'child' || name.includes('ក្មេង') || name.includes('កុមារ') || name.includes('អ្នកបម្រើ')) {
+          assigned = 'hang_phleung_char_5_female.mp3';
+        } else if (role === 'old_woman' || name.includes('យាយ')) {
+          assigned = 'vp_character_21_female.mp3';
+        } else if (role === 'fierce_female' || name.includes('ស្រីកាច') || name.includes('ថោកទាប')) {
+          assigned = 'vp_character_6_female.mp3';
+        } else if (role === 'villain_female' || name.includes('តួកាច') || name.includes('ពិសពុល')) {
+          assigned = 'vp_character_14_female.mp3';
+        }
+
+        // If not assigned by role or already taken by another character, take next distinct voice
+        if (!assigned || usedFemale.has(assigned)) {
+          const available = femaleVoicesPool.find(v => !usedFemale.has(v));
+          assigned = available || femaleVoicesPool[usedFemale.size % femaleVoicesPool.length];
+        }
+        usedFemale.add(assigned);
+      } else {
+        if (role === 'elder' || name.includes('ព្រឹទ្ធាចារ្យ') || name.includes('គ្រូ')) {
+          assigned = 'vp_character_19_male.mp3';
+        } else if (role === 'old_uncle' || name.includes('អ៊ំ') || name.includes('តា')) {
+          assigned = 'hang_phleung_char_1_male.mp3';
+        } else if (role === 'governor' || name.includes('ចៅហ្វាយខេត្ត')) {
+          assigned = 'vp_character_17_male.mp3';
+        } else if (role === 'general' || name.includes('មេទ័ព')) {
+          assigned = 'hang_phleung_char_8_male.mp3';
+        } else if (role === 'fierce_male' || name.includes('ប្រុសកាច')) {
+          assigned = 'vp_character_7_male.mp3';
+        } else if (role === 'villager' || name.includes('អ្នកភូមិ')) {
+          assigned = 'vp_character_9_male.mp3';
+        }
+
+        // If not assigned by role or already taken by another character, take next distinct voice
+        if (!assigned || usedMale.has(assigned)) {
+          const available = maleVoicesPool.find(v => !usedMale.has(v));
+          assigned = available || maleVoicesPool[usedMale.size % maleVoicesPool.length];
+        }
+        usedMale.add(assigned);
+      }
+
+      speakerMap[sid] = path.join(samplesDir, assigned);
+      console.log(`🎭 [Auto-Distinct Cast] Character "${firstSeg.speaker_name || sid}" assigned distinct voice: ${assigned}`);
+    }
+
+    return speakerMap;
+  }
+
+  /**
+   * Cast voice reference for a character role according to strict curated rules:
+   * Rule: Use curated roles; fallback to primary lead male/female
+   */
   resolveCuratedRoleVoice(seg, castingSafetyMode = 'safe_curated', userRoleMap = {}) {
-    const maleLead = path.join(__dirname, '../samples/vp_character_20_female.mp3');
-    const femaleLead = path.join(__dirname, '../samples/vp_character_1_female.mp3');
+    const maleLead = path.join(__dirname, '../samples/hang_phleung_char_2_male.mp3');
+    const femaleLead = path.join(__dirname, '../samples/hang_phleung_char_6_female.mp3');
 
     // 1. User manual override for this specific speaker
     if (userRoleMap && userRoleMap[seg.speaker_id]) {
@@ -569,17 +703,18 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
     const roleMap = {
       'male_lead': maleLead,
       'female_lead': femaleLead,
-      'servant_female': path.join(__dirname, '../samples/vp_character_2_male.mp3'),
+      'servant_female': path.join(__dirname, '../samples/hang_phleung_char_5_female.mp3'),
       'fierce_female': path.join(__dirname, '../samples/vp_character_6_female.mp3'),
       'fierce_male': path.join(__dirname, '../samples/vp_character_7_male.mp3'),
       'villager': path.join(__dirname, '../samples/vp_character_9_male.mp3'),
-      'general': path.join(__dirname, '../samples/vp_character_10_male.mp3'),
+      'general': path.join(__dirname, '../samples/hang_phleung_char_8_male.mp3'),
       'crowd': path.join(__dirname, '../samples/vp_character_12_male.mp3'),
       'villain_female': path.join(__dirname, '../samples/vp_character_14_female.mp3'),
-      'old_uncle': path.join(__dirname, '../samples/vp_character_16_male.mp3'),
+      'old_uncle': path.join(__dirname, '../samples/hang_phleung_char_1_male.mp3'),
       'governor': path.join(__dirname, '../samples/vp_character_17_male.mp3'),
       'elder': path.join(__dirname, '../samples/vp_character_19_male.mp3'),
-      'old_woman': path.join(__dirname, '../samples/vp_character_21_female.mp3')
+      'old_woman': path.join(__dirname, '../samples/vp_character_21_female.mp3'),
+      'child': path.join(__dirname, '../samples/hang_phleung_char_5_female.mp3')
     };
 
     // Check if role recognized
@@ -589,6 +724,7 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
 
     // Check text/name hints
     const name = ((seg.speaker_name || '') + ' ' + (seg.khmer_translation || '')).toLowerCase();
+    if (name.includes('ក្មេង') || name.includes('កុមារ') || name.includes('child')) return roleMap['child'];
     if (name.includes('អ្នកបម្រើ') || name.includes('maid') || name.includes('servant')) return roleMap['servant_female'];
     if (name.includes('ស្រីកាច') || name.includes('ថោកទាប') || name.includes('ស្រីចង្រៃ')) return roleMap['fierce_female'];
     if (name.includes('ប្រុសកាច')) return roleMap['fierce_male'];
@@ -596,14 +732,11 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
     if (name.includes('មេទ័ព') || name.includes('មន្ត្រី') || name.includes('commander')) return roleMap['general'];
     if (name.includes('មហាជន') || name.includes('អ្នកប្រាជ្ញ') || name.includes('crowd')) return roleMap['crowd'];
     if (name.includes('តួកាច') || name.includes('villainess')) return roleMap['villain_female'];
-    if (name.includes('អ៊ំចាស់') || name.includes('old uncle')) return roleMap['old_uncle'];
+    if (name.includes('អ៊ំចាស់') || name.includes('old uncle') || name.includes('តា')) return roleMap['old_uncle'];
     if (name.includes('ចាហ្វាយខេត្ត') || name.includes('ចៅហ្វាយខេត្ត') || name.includes('governor')) return roleMap['governor'];
     if (name.includes('ព្រឹទ្ធាចារ្យ') || name.includes('elder') || name.includes('គ្រូ')) return roleMap['elder'];
     if (name.includes('យាយចាស់') || name.includes('យាយ') || name.includes('grandmother')) return roleMap['old_woman'];
 
-    // STRICT USER MANDATE:
-    // "បើខ្វះ អាចគ្នាបានតែតួឯកប្រុស និង តួឯកស្រី មិនដាក់លើតួផ្សេងបានទេ"
-    // NEVER assign random secondary voices if unsure!
     return isFemale ? femaleLead : maleLead;
   }
 
@@ -612,7 +745,7 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
    */
   async processKhmerDubbing(videoPath, extractedAudioPath, outputDir, options = {}, onProgress = () => {}) {
     const {
-      sourceLang = 'zh',
+      sourceLang = 'auto',
       voiceId = 'voxcpm-voice-actor',
       scope = 'full', // 'full', or number of seconds (e.g. 120, 300)
       referenceAudioPath = null,
@@ -626,7 +759,7 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
     onProgress(15, 'AI Gemini កំពុងវិភាគសាច់រឿង និងបកប្រែគ្រប់តួអង្គក្នុងវីដេអូ...');
 
     // 1. Transcribe & Diarize all dialogue segments across the storyline
-    const dialogueSegments = await this.extractDialogueTimeline(extractedAudioPath, videoDuration, scope, onProgress);
+    const dialogueSegments = await this.extractDialogueTimeline(extractedAudioPath, videoDuration, scope, onProgress, sourceLang);
 
     console.log(`Total dialogue segments found: ${dialogueSegments.length}`);
 
@@ -669,6 +802,9 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
     // 2. Extract real voice samples for EACH character from the movie itself if available
     const autoExtractedVoiceMap = await this.extractCharacterVoiceSamples(extractedAudioPath, dialogueSegments, outputDir);
 
+    // 2.5 Build dynamic distinct speaker voice map so no two characters share the same voice
+    const distinctSpeakerVoiceMap = this.buildDistinctSpeakerVoiceMap(dialogueSegments, userVoiceMap);
+
     onProgress(50, 'កំពុង Clone សំឡេងតួអង្គនីមួយៗតាមសាច់រឿង (Zero-Shot 48kHz Voice Cloning)...');
 
     // 3. Clone and synthesize each dialogue line in the character's exact voice
@@ -686,15 +822,14 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
             refVoice = autoExtractedVoiceMap[seg.speaker_id];
             console.log(`[Movie-Live-Clone] Line ${i} (${seg.speaker_id}) cloned directly from live movie snippet: ${refVoice}`);
           } else {
-            refVoice = this.resolveCuratedRoleVoice(seg, castingSafetyMode, userVoiceMap);
+            refVoice = distinctSpeakerVoiceMap[seg.speaker_id] || this.resolveCuratedRoleVoice(seg, castingSafetyMode, userVoiceMap);
           }
-        } else if (voiceId === 'voxcpm-voice-actor' || voiceId === 'curated-cast') {
-          refVoice = this.resolveCuratedRoleVoice(seg, castingSafetyMode, userVoiceMap);
         } else if (voiceId && voiceId.startsWith('voxcpm:')) {
           const sampleName = voiceId.replace('voxcpm:', '');
           refVoice = path.join(__dirname, '../samples', sampleName);
         } else {
-          refVoice = this.resolveCuratedRoleVoice(seg, castingSafetyMode, userVoiceMap);
+          // Use distinct voice per speaker so characters NEVER have the same voice
+          refVoice = distinctSpeakerVoiceMap[seg.speaker_id] || this.resolveCuratedRoleVoice(seg, castingSafetyMode, userVoiceMap);
         }
       }
 

@@ -51,9 +51,9 @@ async function mixVocalsWithOriginal(originalAudioPath, dubbedAudioPath, outputP
     `[0:a]apad=whole_dur=${padDur},volume=${vocalGain},alimiter=limit=0.95[khmer_vox];` +
     `[1:a]asplit=2[low_b][mid_high];` +
     `[low_b]lowpass=f=260,volume=${bgmGain}[bass];` +
-    `[mid_high]stereotools=mlev=0.015625:slev=1.35,highpass=f=240,equalizer=f=1100:width_type=o:w=2.2:g=-16,volume=${bgmGain}[bgm_sides];` +
+    `[mid_high]stereotools=mlev=0.12:slev=1.25,highpass=f=240,equalizer=f=1100:width_type=o:w=2.2:g=-12,volume=${bgmGain}[bgm_sides];` +
     `[bass][bgm_sides]amix=inputs=2:dropout_transition=0[clean_bgm];` +
-    `[clean_bgm][khmer_vox]sidechaincompress=threshold=0.015:ratio=16:attack=10:release=250[ducked_bgm];` +
+    `[clean_bgm][khmer_vox]sidechaincompress=threshold=0.04:ratio=8:attack=15:release=350[ducked_bgm];` +
     `[khmer_vox][ducked_bgm]amix=inputs=2:duration=longest:dropout_transition=0:normalize=0`;
 
   const cmd = `ffmpeg -nostdin -y -i "${dubbedAudioPath}" -i "${originalAudioPath}" -filter_complex "${advancedBgmFilter}" -c:a libmp3lame -b:a 192k "${outputPath}"`;

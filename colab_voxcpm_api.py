@@ -38,6 +38,8 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, 
 os.makedirs("/content/uploads", exist_ok=True)
 os.makedirs("/content/outputs", exist_ok=True)
 
+from starlette.concurrency import run_in_threadpool
+
 @app.get("/")
 def home():
     return {"status": "ok", "model": "VoxCPM2", "service": "Khmer Voice Cloning API"}
@@ -66,7 +68,8 @@ async def clone_and_speak(
         if ref_path:
             gen_kwargs["reference_wav_path"] = ref_path
 
-        wav = model.generate(**gen_kwargs)
+        # Run heavy model inference in worker threadpool so event loop never blocks
+        wav = await run_in_threadpool(model.generate, **gen_kwargs)
         out_file = os.path.join("/content/outputs", f"out_{torch.randint(1000, 9999, (1,)).item()}.wav")
         sf.write(out_file, wav, 48000)
         return FileResponse(out_file, media_type="audio/wav")
@@ -80,22 +83,42 @@ server_thread = threading.Thread(target=server.run, daemon=True)
 server_thread.start()
 time.sleep(2)
 
-# បើក Cloudflare Public Tunnel
-print("🌐 កំពុងបើក Cloudflare Public Tunnel...")
-cf_proc = subprocess.Popen(["cloudflared", "tunnel", "--url", "http://127.0.0.1:8000"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+# ==============================================================================
+# 💡 ជម្រើសកុំឱ្យប្តូរ Link ពេលដាច់ភ្លើង (Permanent Static Domain - Free):
+# បើអ្នកមិនចង់ដូរ Link ពេលដាច់ភ្លើងទេ អាចចុះឈ្មោះ Free លើ https://ngrok.com
+# រួចយក Free Authtoken និង Static Domain មកដាក់ត្រង់នេះ (បើទុកទទេ វានឹងប្រើ Cloudflare)
+# ==============================================================================
+NGROK_AUTHTOKEN = ""       # ឧ. "2bXXXXXXXXXXXXXXXXXXXXXXXXXX"
+NGROK_STATIC_DOMAIN = ""   # ឧ. "your-name.ngrok-free.app"
 
 public_url = None
-for _ in range(60):
-    line = cf_proc.stdout.readline()
-    match = re.search(r"https://[a-zA-Z0-9-]+\.trycloudflare\.com", line)
-    if match:
-        public_url = match.group(0)
-        break
-    time.sleep(0.1)
+
+if NGROK_AUTHTOKEN and NGROK_STATIC_DOMAIN:
+    print("🌐 កំពុងបើក Permanent Ngrok Static Tunnel (Link ថេរមិនបាច់ដូររហូត)...")
+    os.system("pip install -q pyngrok")
+    from pyngrok import ngrok
+    ngrok.set_auth_token(NGROK_AUTHTOKEN)
+    tunnel = ngrok.connect(8000, "http", domain=NGROK_STATIC_DOMAIN)
+    public_url = tunnel.public_url
+else:
+    # បើក Cloudflare Public Tunnel (Auto Free)
+    print("🌐 កំពុងបើក Cloudflare Public Tunnel...")
+    cf_proc = subprocess.Popen(["cloudflared", "tunnel", "--url", "http://127.0.0.1:8000"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+
+    for _ in range(60):
+        line = cf_proc.stdout.readline()
+        match = re.search(r"https://[a-zA-Z0-9-]+\.trycloudflare\.com", line)
+        if match:
+            public_url = match.group(0)
+            break
+        time.sleep(0.1)
 
 print("=" * 65)
 print(f"🎉 VOXCPM2 API PUBLIC URL: {public_url}")
-print("👉 Copy URL នេះយកទៅដាក់ក្នុង Web Studio នៅលើកុំព្យូទ័ររបស់អ្នក!")
+if NGROK_STATIC_DOMAIN and NGROK_AUTHTOKEN:
+    print("💎 LINK នេះជា LINK ថេរអចិន្ត្រៃយ៍! ពេលដាច់ភ្លើង ឬ Restart Colab មិនបាច់ដូរទៀតទេ!")
+else:
+    print("👉 Copy URL នេះយកទៅដាក់ក្នុង Web Studio (ឬចុច 1-Click Paste លើ Banner ក្នុង Web Studio)!")
 print("=" * 65)
 
 # រក្សាទុក Server ឱ្យរត់រហូត

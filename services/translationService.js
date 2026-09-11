@@ -10,31 +10,32 @@ class TranslationService {
   }
 
   /**
-   * Translate Chinese script to Khmer with cinematic dialogue adaptation
+   * Universal translation: Translate dialogue from ANY language (Chinese, English, Thai, Korean, Japanese, etc.) into authentic cinematic Khmer
    */
-  async translateChineseToKhmer(chineseText, context = 'movie dialogue') {
+  async translateToKhmer(sourceText, sourceLang = 'auto', context = 'movie dialogue') {
     if (!this.apiKey) {
-      // If no API key is provided, provide a helpful note or fallback
-      return `[បកប្រែ] ${chineseText}`;
+      return `[បកប្រែ] ${sourceText}`;
     }
 
     const candidateModels = [
-      'gemini-3.5-flash',
+      'gemini-3.6-flash',
       'gemini-3.5-flash-lite',
-      'gemini-3.7-flash',
-      'gemini-flash-latest',
-      'gemini-3.6-flash'
+      'gemini-flash-latest'
     ];
 
-    const prompt = `You are an award-winning Khmer movie dubbing director and dialogue scriptwriter.
-Translate the following Chinese movie dialogue directly into natural, deeply emotional, and theatrical spoken Khmer for voice dubbing.
+    const langNotice = (sourceLang === 'auto' || !sourceLang)
+      ? 'from any spoken language (Chinese, English, Thai, Korean, Japanese, Vietnamese, French, Spanish, Hindi, etc.)'
+      : `from ${sourceLang}`;
+
+    const prompt = `You are an award-winning Cambodian cinema dubbing director and dialogue scriptwriter.
+Translate the following movie/video dialogue ${langNotice} directly into natural, deeply emotional, authentic, and theatrical spoken Khmer for voice dubbing.
 Infuse the character's full dramatic emotional passion (anger, sorrow, romance, commanding authority, terror, or grief).
-Use authentic Khmer cinema expressions and emotional intonations (such as: ឱ!, ឯង!, ឈប់ភ្លាម!, ហ៊ឺ..., ហេតុអ្វី?, មិនអាចទេ!, ព្រះអើយ!).
+Use authentic Khmer cinema expressions and emotional intonations (such as: ឱ!, ឯង!, ឈប់ភ្លាម!, ហ៊ឺ..., ហេតុអ្វី?, មិនអាចទេ!, ព្រះអើយ!, ឆាប់ឡើង!).
 Use punctuation (!, ?, ..., ~) to direct the voice actor's breathing and passionate delivery.
 Only return the translated Khmer text without extra explanation or quotes.
 
-Original Chinese:
-${chineseText}
+Original Spoken Dialogue:
+${sourceText}
 
 Khmer Translation:`;
 
@@ -50,11 +51,17 @@ Khmer Translation:`;
         const translated = res.data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
         if (translated) return translated;
       } catch (err) {
-        // Try next model if 429 or 503
         continue;
       }
     }
-    return chineseText;
+    return sourceText;
+  }
+
+  /**
+   * Backward compatible alias for Chinese -> Khmer
+   */
+  async translateChineseToKhmer(chineseText, context = 'movie dialogue') {
+    return this.translateToKhmer(chineseText, 'zh', context);
   }
 }
 
