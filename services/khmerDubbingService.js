@@ -108,9 +108,10 @@ class KhmerDubbingService {
     }
 
     // 2. Try ElevenLabs Multilingual v2 with heightened theatrical emotion
+    const elevenApiKey = process.env.ELEVENLABS_API_KEY;
     const isCustomElevenVoice = voiceId && voiceId.length > 15 && !voiceId.includes('-') && !voiceId.includes('voxcpm');
     const elevenVoiceId = isCustomElevenVoice ? voiceId : (isFemale ? '21m00Tcm4TlvDq8ikWAM' : 'SOYHLrjzK2X1ezoPC6cr');
-    if (apiKey && apiKey.startsWith('sk_')) {
+    if (elevenApiKey && elevenApiKey.startsWith('sk_')) {
       try {
         console.log(`Generating emotional human speech via ElevenLabs (Voice: ${elevenVoiceId}, Emotion: ${emotion})...`);
         const response = await axios.post(
@@ -127,7 +128,7 @@ class KhmerDubbingService {
           },
           {
             headers: {
-              'xi-api-key': apiKey,
+              'xi-api-key': elevenApiKey,
               'Content-Type': 'application/json'
             },
             responseType: 'arraybuffer',

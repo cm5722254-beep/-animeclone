@@ -1574,6 +1574,7 @@ async function handleBatchGenerateAi() {
       if (window.lucide) lucide.createIcons();
       try {
         await handleGenerateLineAI(idx, btn, card);
+        await new Promise(r => setTimeout(r, 500));
       } catch (e) {
         console.warn('Batch line error:', e.message);
       }
