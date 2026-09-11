@@ -14,24 +14,31 @@ if sys.platform == 'win32':
         pass
 
 from typing import Optional, List
-from fastapi import FastAPI, File, UploadFile, Form, BackgroundTasks, HTTPException
+from fastapi import FastAPI, File, UploadFile, Form, BackgroundTasks, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse, FileResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+# Load environment variables with override
+env_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+load_dotenv(dotenv_path=env_file_path, override=True)
 
-from services import audio_processor
+from services import audio_processor, auth_db
 from services.khmer_dubber import KhmerDubber, clean_pure_khmer, ROLE_THEATRICAL_PROFILES
 
 app = FastAPI(title="AI Voice Clone & Dubbing Studio (ZH -> KM)")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-BIN_DIR = os.path.join(BASE_DIR, 'bin')
-if os.path.exists(BIN_DIR) and BIN_DIR not in os.environ.get('PATH', ''):
-    os.environ['PATH'] = BIN_DIR + os.pathsep + os.environ.get('PATH', '')
+EXTRA_PATHS = [
+    os.path.join(BASE_DIR, 'bin'),
+    '/opt/homebrew/bin',      # Apple Silicon Mac (M1/M2/M3/M4) Homebrew
+    '/usr/local/bin',          # Intel Mac Homebrew & standard UNIX tools
+    '/opt/local/bin',          # MacPorts
+]
+for p in EXTRA_PATHS:
+    if os.path.exists(p) and p not in os.environ.get('PATH', ''):
+        os.environ['PATH'] = p + os.pathsep + os.environ.get('PATH', '')
 
 UPLOADS_DIR = os.path.join(BASE_DIR, 'uploads')
 OUTPUTS_DIR = os.path.join(BASE_DIR, 'outputs')
@@ -45,11 +52,52 @@ os.makedirs(SAMPLES_DIR, exist_ok=True)
 khmer_dubber = KhmerDubber()
 active_jobs = {}
 
+# --- Authentication Helpers ---
+def get_request_user(request: Request) -> Optional[dict]:
+    """Retrieve validated user from Authorization Bearer token or headers."""
+    auth_header = request.headers.get('Authorization', '')
+    token = ''
+    if auth_header.startswith('Bearer '):
+        token = auth_header[7:].strip()
+    if not token:
+        token = request.headers.get('x-auth-token', '')
+    if not token:
+        token = request.query_params.get('token', '')
+    return auth_db.get_user_by_token(token) if token else None
+
+def require_admin(request: Request) -> dict:
+    """Ensure current user is authenticated and has admin role."""
+    user = get_request_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="សូមចូលប្រើប្រាស់គណនី Admin ជាមុនសិន")
+    if user.get('role') != 'admin':
+        raise HTTPException(status_code=403, detail="អ្នកមិនមានសិទ្ធិជា Administrator ទេ")
+    return user
+
 # --- Pydantic Request Models ---
+class AuthRegisterRequest(BaseModel):
+    username: str
+    password: str
+
+class AuthLoginRequest(BaseModel):
+    username: str
+    password: str
+
+class SetPremiumRequest(BaseModel):
+    userId: int
+    days: int
+
+class RevokePremiumRequest(BaseModel):
+    userId: int
+
+class DeleteUserRequest(BaseModel):
+    userId: int
+
 class ConfigUpdate(BaseModel):
     elevenlabsKey: Optional[str] = None
     geminiKey: Optional[str] = None
     voxcpmUrl: Optional[str] = None
+    geminiModel: Optional[str] = None
 
 class DubbingStartRequest(BaseModel):
     filename: str
@@ -59,6 +107,9 @@ class DubbingStartRequest(BaseModel):
     scope: Optional[str] = 'full'
     castingSafetyMode: Optional[str] = 'safe_curated'
     characterVoiceMap: Optional[dict] = {}
+    maleLeadVoice: Optional[str] = 'hang_phleung_char_2_male.mp3'
+    femaleLeadVoice: Optional[str] = 'hang_phleung_char_6_female.mp3'
+    geminiModel: Optional[str] = 'gemini-3.5-flash'
 
 class ScanTimelineRequest(BaseModel):
     filename: str
@@ -91,63 +142,252 @@ class CharacterUpdateRequest(BaseModel):
     gender: Optional[str] = None
     words: Optional[str] = None
 
+class SwitchModeRequest(BaseModel):
+    mode: str
+    cloudUrl: Optional[str] = None
+
+# --- Authentication & Admin Endpoints ---
+
+@app.post('/api/auth/register')
+def auth_register(body: AuthRegisterRequest):
+    try:
+        res = auth_db.register_user(body.username, body.password)
+        return res
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post('/api/auth/login')
+def auth_login(body: AuthLoginRequest):
+    try:
+        res = auth_db.login_user(body.username, body.password)
+        return res
+    except ValueError as ve:
+        raise HTTPException(status_code=401, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post('/api/auth/logout')
+def auth_logout(request: Request):
+    auth_header = request.headers.get('Authorization', '')
+    token = ''
+    if auth_header.startswith('Bearer '):
+        token = auth_header[7:].strip()
+    if not token:
+        token = request.headers.get('x-auth-token', '')
+    if token:
+        auth_db.logout_user(token)
+    return {'success': True}
+
+@app.get('/api/auth/me')
+def auth_me(request: Request):
+    user = get_request_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthenticated")
+    return {'user': user}
+
+@app.get('/api/admin/users')
+def admin_list_users(request: Request):
+    require_admin(request)
+    users = auth_db.list_all_users()
+    return {'users': users}
+
+@app.post('/api/admin/set-premium')
+def admin_set_premium(body: SetPremiumRequest, request: Request):
+    require_admin(request)
+    try:
+        res = auth_db.set_user_premium(body.userId, body.days)
+        return {'success': True, 'data': res}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post('/api/admin/revoke-premium')
+def admin_revoke_premium(body: RevokePremiumRequest, request: Request):
+    require_admin(request)
+    try:
+        res = auth_db.revoke_user_premium(body.userId)
+        return {'success': True, 'data': res}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post('/api/admin/delete-user')
+def admin_delete_user(body: DeleteUserRequest, request: Request):
+    admin = require_admin(request)
+    if body.userId == admin['id']:
+        raise HTTPException(status_code=400, detail="មិនអាចលុបគណនី Admin ផ្ទាល់ខ្លួនបានទេ")
+    auth_db.delete_user(body.userId)
+    return {'success': True}
+
 # --- API Endpoints ---
 
 @app.get('/api/config')
 def get_config():
+    load_dotenv(dotenv_path=env_file_path, override=True)
     eleven_key = os.getenv('ELEVENLABS_API_KEY', '')
     gemini_key = os.getenv('GEMINI_API_KEY', '')
     voxcpm_url = os.getenv('VOXCPM_API_URL', '')
+    mode = os.getenv('VOXCPM_MODE', 'local' if voxcpm_url.startswith('http://127.0.0.1') or not voxcpm_url else 'cloud')
     return {
         'hasElevenlabs': bool(eleven_key and not eleven_key.startswith('your_')),
         'hasGemini': bool(gemini_key and not gemini_key.startswith('your_')),
+        'geminiModel': os.getenv('GEMINI_MODEL', 'gemini-3.5-flash'),
         'hasVoxcpmUrl': bool(voxcpm_url),
         'voxcpmUrl': voxcpm_url,
+        'cloudUrl': os.getenv('VOXCPM_CLOUD_URL', voxcpm_url if not voxcpm_url.startswith('http://127.0.0.1') else ''),
+        'mode': mode,
         'port': int(os.getenv('PORT', 3000))
+    }
+
+@app.get('/api/voxcpm/local-check')
+def check_local_voxcpm():
+    import requests
+    local_url = "http://127.0.0.1:8000"
+    try:
+        r = requests.get(f"{local_url}/", timeout=1.5)
+        if r.status_code == 200:
+            data = r.json()
+            return {
+                'online': True,
+                'url': local_url,
+                'device': data.get('device', 'cpu'),
+                'gpuName': data.get('gpuName', 'Local PC'),
+                'modelReady': data.get('modelLoaded', False) or data.get('status') == 'ok',
+                'message': 'ម៉ាស៊ីន Local PC (Port 8000) កំពុងដំណើរការល្អ'
+            }
+    except Exception:
+        pass
+    return {
+        'online': False,
+        'url': local_url,
+        'message': 'មិនទាន់បើក Local VoxCPM2 Server នៅឡើយទេ (ចុចបើក START_LOCAL_VOXCPM.bat)'
+    }
+
+def set_env_vars(updates: dict):
+    env_path = os.path.join(BASE_DIR, '.env')
+    lines = []
+    if os.path.exists(env_path):
+        with open(env_path, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+
+    for k, v in updates.items():
+        if v is not None:
+            os.environ[k] = str(v)
+            found = False
+            for i, line in enumerate(lines):
+                if line.strip().startswith(f"{k}="):
+                    lines[i] = f"{k}={v}\n"
+                    found = True
+                    break
+            if not found:
+                lines.append(f"{k}={v}\n")
+
+    with open(env_path, 'w', encoding='utf-8') as f:
+        f.writelines(lines)
+
+@app.post('/api/voxcpm/switch-mode')
+def switch_voxcpm_mode(body: SwitchModeRequest, request: Request):
+    user = get_request_user(request)
+    if body.mode in ['cloud', 'local']:
+        if not user or (user.get('tier') != 'premium' and user.get('role') != 'admin'):
+            raise HTTPException(
+                status_code=403,
+                detail="មុខងារ VoxCPM2 Cloud និង Computer សម្រាប់តែសមាជិក Premium ប៉ុណ្ណោះ។ គណនី Free អាចប្រើប្រាស់បានតែ Offline Neural Mode។"
+            )
+
+    current_cloud = os.getenv('VOXCPM_CLOUD_URL') or ''
+    if os.getenv('VOXCPM_API_URL') and not os.getenv('VOXCPM_API_URL').startswith('http://127.0.0.1') and not os.getenv('VOXCPM_API_URL').startswith('http://localhost'):
+        current_cloud = os.getenv('VOXCPM_API_URL')
+    if body.cloudUrl:
+        current_cloud = body.cloudUrl.strip()
+
+    updates = {
+        'VOXCPM_CLOUD_URL': current_cloud,
+        'VOXCPM_MODE': body.mode
+    }
+    if body.mode == 'local':
+        updates['VOXCPM_API_URL'] = "http://127.0.0.1:8000"
+    elif body.mode == 'cloud':
+        updates['VOXCPM_API_URL'] = current_cloud
+    elif body.mode == 'pure_khmer':
+        updates['VOXCPM_API_URL'] = ''
+
+    set_env_vars(updates)
+
+    return {
+        'success': True,
+        'mode': os.getenv('VOXCPM_MODE'),
+        'activeUrl': os.getenv('VOXCPM_API_URL', ''),
+        'cloudUrl': current_cloud
     }
 
 @app.get('/api/voxcpm/status')
 def get_voxcpm_status():
     url = os.getenv('VOXCPM_API_URL', '')
-    if not url or not url.strip():
-        return {'online': False, 'configured': False, 'message': 'មិនទាន់កំណត់ Link VoxCPM2'}
+    mode = os.getenv('VOXCPM_MODE', 'local' if url.startswith('http://127.0.0.1') or not url else 'cloud')
+
+    if mode == 'pure_khmer' or not url or not url.strip():
+        return {
+            'online': True,
+            'configured': True,
+            'mode': 'pure_khmer',
+            'isLocal': True,
+            'message': '100% Pure Khmer Neural Engine (Offline & Fast)'
+        }
 
     clean_url = url.strip()
-    if clean_url.startswith('http') and '.' not in clean_url:
+    if clean_url.startswith('http') and '.' not in clean_url and not clean_url.startswith('http://127.0.0.1') and not clean_url.startswith('http://localhost'):
         clean_url = clean_url.rstrip('/') + '.trycloudflare.com'
 
     import requests
     try:
-        r = requests.get(clean_url, timeout=12)
+        timeout = 2.0 if clean_url.startswith('http://127.0.0.1') or clean_url.startswith('http://localhost') else 15
+        r = requests.get(clean_url, timeout=timeout)
         if r.status_code == 200:
-            return {'online': True, 'configured': True, 'url': clean_url, 'message': 'GPU Server កំពុងដំណើរការល្អ (200 OK)'}
-        return {'online': False, 'configured': True, 'url': clean_url, 'message': f'ឆ្លើយតបកូដ HTTP {r.status_code}'}
+            is_local = clean_url.startswith('http://127.0.0.1') or clean_url.startswith('http://localhost')
+            return {
+                'online': True,
+                'configured': True,
+                'url': clean_url,
+                'isLocal': is_local,
+                'mode': 'local' if is_local else 'cloud',
+                'message': 'Local PC Server កំពុងដំណើរការ (200 OK)' if is_local else 'GPU Cloud Server កំពុងដំណើរការល្អ (200 OK)'
+            }
+        return {'online': False, 'configured': True, 'url': clean_url, 'mode': mode, 'message': f'ឆ្លើយតបកូដ HTTP {r.status_code}'}
     except Exception as e:
-        return {'online': False, 'configured': True, 'url': clean_url, 'message': str(e)}
+        is_local = clean_url.startswith('http://127.0.0.1') or clean_url.startswith('http://localhost')
+        msg = 'មិនទាន់បើក START_LOCAL_VOXCPM.bat លើកុំព្យូទ័រ' if is_local else str(e)
+        return {'online': False, 'configured': True, 'url': clean_url, 'isLocal': is_local, 'mode': mode, 'message': msg}
 
 @app.post('/api/config')
 def update_config(body: ConfigUpdate):
-    env_path = os.path.join(BASE_DIR, '.env')
+    updates = {}
     if body.elevenlabsKey is not None:
-        os.environ['ELEVENLABS_API_KEY'] = body.elevenlabsKey.strip()
+        val = body.elevenlabsKey.strip()
+        if val:
+            updates['ELEVENLABS_API_KEY'] = val
+        elif body.elevenlabsKey == '__CLEAR__':
+            updates['ELEVENLABS_API_KEY'] = ''
+
     if body.geminiKey is not None:
-        os.environ['GEMINI_API_KEY'] = body.geminiKey.strip()
+        val = body.geminiKey.strip()
+        if val:
+            updates['GEMINI_API_KEY'] = val
+        elif body.geminiKey == '__CLEAR__':
+            updates['GEMINI_API_KEY'] = ''
+
+    if body.geminiModel is not None:
+        val = body.geminiModel.strip()
+        if val:
+            updates['GEMINI_MODEL'] = val
+
     if body.voxcpmUrl is not None:
         val = body.voxcpmUrl.strip()
-        if val.startswith('http') and '.' not in val:
+        if val.startswith('http') and '.' not in val and not val.startswith('http://127.0.0.1') and not val.startswith('http://localhost'):
             val = val.rstrip('/') + '.trycloudflare.com'
-        os.environ['VOXCPM_API_URL'] = val
+        updates['VOXCPM_API_URL'] = val
 
-    port = os.getenv('PORT', '3000')
-    env_content = (
-        f"PORT={port}\n"
-        f"ELEVENLABS_API_KEY={os.getenv('ELEVENLABS_API_KEY', '')}\n"
-        f"GEMINI_API_KEY={os.getenv('GEMINI_API_KEY', '')}\n"
-        f"VOXCPM_API_URL={os.getenv('VOXCPM_API_URL', '')}\n"
-    )
-    with open(env_path, 'w', encoding='utf-8') as f:
-        f.write(env_content)
-
+    set_env_vars(updates)
     return {'success': True, 'message': 'API keys & configurations saved'}
 
 @app.post('/api/upload')
@@ -278,7 +518,15 @@ async def separate_audio_track(body: SeparateRequest):
     }
 
 @app.post('/api/dubbing/start')
-async def start_dubbing(body: DubbingStartRequest, background_tasks: BackgroundTasks):
+async def start_dubbing(body: DubbingStartRequest, background_tasks: BackgroundTasks, request: Request):
+    user = get_request_user(request)
+    is_free = not user or (user.get('tier') != 'premium' and user.get('role') != 'admin')
+    if is_free:
+        # Free account: strictly locked to offline pure_khmer and default voice
+        body.voiceId = 'voxcpm-voice-actor'
+        os.environ['VOXCPM_MODE'] = 'pure_khmer'
+        os.environ['VOXCPM_API_URL'] = ''
+
     input_path = os.path.join(UPLOADS_DIR, body.filename)
     if not os.path.exists(input_path):
         root_path = os.path.join(BASE_DIR, body.filename)
@@ -326,7 +574,10 @@ async def start_dubbing(body: DubbingStartRequest, background_tasks: BackgroundT
                         'voiceId': body.voiceId,
                         'scope': body.scope,
                         'castingSafetyMode': body.castingSafetyMode,
-                        'characterVoiceMap': body.characterVoiceMap
+                        'characterVoiceMap': body.characterVoiceMap,
+                        'maleLeadVoice': body.maleLeadVoice,
+                        'femaleLeadVoice': body.femaleLeadVoice,
+                        'geminiModel': body.geminiModel
                     },
                     on_progress=on_prog
                 )
@@ -343,6 +594,8 @@ async def start_dubbing(body: DubbingStartRequest, background_tasks: BackgroundT
                 job['progress'] = 100
                 job['message'] = 'Dubbing complete'
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             job['status'] = 'failed'
             job['error'] = str(e)
             job['message'] = f"កំហុសក្នុងការ dubbing: {str(e)}"
@@ -622,7 +875,27 @@ def get_extracted_characters():
     return {'success': True, 'count': 0, 'characters': []}
 
 @app.get('/api/characters/all')
-def get_all_characters():
+def get_all_characters(request: Request):
+    user = get_request_user(request)
+    is_free = not user or (user.get('tier') != 'premium' and user.get('role') != 'admin')
+
+    # If Free user, return ONLY the Default Natural voice
+    if is_free:
+        default_voice = {
+            'id': 'default_neural_piseth',
+            'filename': 'default_neural.mp3',
+            'label': '🎙️ Default Neural (PisethNatural - Free)',
+            'role_key': 'male_lead',
+            'gender': 'male',
+            'is_curated': True,
+            'is_free_only': True,
+            'words': 'សំឡេងធម្មជាតិស្តង់ដារ PisethNeural សម្រាប់គណនី Free',
+            'exists': True,
+            'previewUrl': None,
+            'sizeBytes': 0
+        }
+        return {'success': True, 'count': 1, 'characters': [default_voice], 'isFree': True}
+
     json_path = os.path.join(BASE_DIR, 'extracted_characters.json')
     characters = []
     if os.path.exists(json_path):
@@ -663,7 +936,7 @@ def get_all_characters():
             'sizeBytes': size
         })
 
-    return {'success': True, 'count': len(enriched), 'characters': enriched}
+    return {'success': True, 'count': len(enriched), 'characters': enriched, 'isFree': False}
 
 @app.put('/api/characters/update')
 def update_character(body: CharacterUpdateRequest):

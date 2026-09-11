@@ -1,38 +1,58 @@
-# -animeclone
+# 🎬 Cheatz Dabber - AI Multi-Character Khmer Dubbing Studio
+### គាំទ្រទាំង Windows និង macOS (Apple Silicon M1/M2/M3/M4 & Intel)
 
-🎬 **AI Video & Anime Multi-Character Khmer Dubbing Studio** (ចិន ➔ ខ្មែរ)
+ប្រព័ន្ធស្ទូឌីយោបញ្ជូលសំឡេង និងក្លូនសំឡេងតួអង្គភាពយន្ត/Donghua មកជាភាសាខ្មែរស្វ័យប្រវត្តិកម្រិតខ្ពស់ (Zero-Shot AI Voice Cloning & Dubbing Studio)។
 
-ប្រព័ន្ធស្ទូឌីយោបញ្ជូលសំឡេង និងក្លូនសំឡេងតួអង្គភាពយន្តចិន/Donghua មកជាភាសាខ្មែរស្វ័យប្រវត្តិកម្រិតខ្ពស់ (Zero-Shot AI Voice Cloning & Dubbing Studio)។
+---
 
-## ✨ លក្ខណៈពិសេសចម្បង (Key Features)
-- 🎭 **Auto-Diarization & Role Recognition:** កំណត់អត្តសញ្ញាណតួអង្គ និងចាត់តាំងសំឡេងតាមតួនាទី (តួឯកប្រុស, តួឯកស្រី, តួកាច, មេទ័ព, ចាហ្វាយខេត្ត, យាយចាស់...)។
-- 🎙️ **Zero-Shot Voice Cloning:** Clone សំឡេងចេញពីរឿងដើមផ្ទាល់ ឬប្រើប្រាស់គំរូសំឡេង ១៣ តួអង្គ។
-- 🎵 **BGM Preservation & Center Channel Vocal Suppression:** លុបសំឡេងនិយាយចិនដើមស្អាត ដោយរក្សាភ្លេងកំដរ (BGM) និង Sound Effects ពេញលេញធម្មតា។
-- 🌐 **Multi-Computer LAN Access:** ដំណើរការលើបណ្តាញមូលដ្ឋាន (Wi-Fi / LAN) អាចបើកប្រើប្រាស់បានគ្រប់កុំព្យូទ័រ និងទូរស័ព្ទ។
-- 🗣️ **Theatrical & Emotional Dubbing:** បញ្ចូលមនោសញ្ចេតនា ទឹកដមសំឡេងឡើងចុះ និងពាក្យពេចន៍ភាពយន្តក្បាច់គុណបុរាណ។
+## 💻 របៀបបើកដំណើរការលើ Windows (Windows 10 / 11)
 
-## 🚀 ការដំឡើង និងដំណើរការ (Quick Start)
+1. **បើកដំណើរការកម្មវិធីស្ទូឌីយោ (Studio):**
+   - គ្រាន់តែ **Double-Click** លើឯកសារ `run.bat` ឬ `Launch_Studio_App.vbs`
+   - កម្មវិធីនឹងរៀបចំ Python Virtualenv និង FFmpeg ដោយស្វ័យប្រវត្តិ រួចបើកផ្ទាំង Studio លើ Browser `http://localhost:3000`
 
-1. **Clone repository:**
-   ```bash
-   git clone https://github.com/cm5722254-beep/-animeclone.git
-   cd -animeclone
-   ```
+2. **បើក Local VoxCPM2 Engine លើកុំព្យូទ័រ (Port 8000 - Optional):**
+   - **Double-Click** លើ `START_LOCAL_VOXCPM.bat`
 
-2. **ដំឡើង Dependencies:**
-   ```bash
-   npm install
-   ```
+---
 
-3. **កំណត់ API Keys ក្នុងឯកសារ `.env`:**
-   ចម្លង `.env.example` ទៅ `.env`៖
-   ```bash
-   cp .env.example .env
-   ```
-   បញ្ចូល `GEMINI_API_KEY`, `ELEVENLABS_API_KEY`, និង `VOXCPM_API_URL` (ប្រសិនបើមាន)។
+## 🍏 របៀបបើកដំណើរការលើ macOS (MacBook, iMac, Mac mini)
 
-4. **ដំណើរការ Server:**
-   ```bash
-   npm start
-   ```
-   បើក Browser: `http://localhost:3000` ឬតាម LAN IP របស់កុំព្យូទ័រ។
+គាំទ្រទាំង **Apple Silicon (M1/M2/M3/M4)** ដោយប្រើ Metal/MPS GPU Acceleration និង **Intel Mac**។
+
+### ជំហានទី ១ (ដំឡើងដំបូង - តែម្ដងគត់):
+បើក Terminal ក្នុង Folder នេះ រួចវាយ៖
+```bash
+chmod +x install_mac.sh START_STUDIO_MAC.command START_LOCAL_VOXCPM_MAC.command
+bash install_mac.sh
+```
+*(ស្គ្រីបនេះនឹងរៀបចំ FFmpeg តាម Homebrew និងដំឡើង Python packages ទាំងអស់ដោយស្វ័យប្រវត្តិ)*
+
+### ជំហានទី ២ (បើកដំណើរការជាប្រចាំ):
+- **បើកស្ទូឌីយោ (Studio):**
+  - គ្រាន់តែ **Double-Click** លើឯកសារ `START_STUDIO_MAC.command` ក្នុង Finder!
+  - វានឹងបើក Web Browser ទៅកាន់ `http://localhost:3000` ដោយស្វ័យប្រវត្តិ។
+- **បើក Local VoxCPM2 Engine (Port 8000):**
+  - **Double-Click** លើឯកសារ `START_LOCAL_VOXCPM_MAC.command`
+
+---
+
+## ✨ លក្ខណៈពិសេសចម្បង (Core Features)
+
+- 🎭 **Auto-Diarization & Multi-Character Recognition:** កំណត់អត្តសញ្ញាណតួអង្គ និងបែងចែកសំឡេងតាមតួនាទី (តួឯកប្រុស, តួឯកស្រី, តួកាច, ចាស់ទុំ, មេទ័ព...)
+- 🎙️ **Zero-Shot Voice Cloning:** Clone សំឡេងចេញពីរឿងផ្ទាល់ ឬជ្រើសរើសសំឡេងតួអង្គខ្មែរដែលរៀបចំទុកស្រាប់
+- 🎵 **Vocal Suppression & BGM Preservation:** លុបសំឡេងនិយាយដើមស្អាត ដោយរក្សាភ្លេងកំដរ (BGM) និង Sound Effects ១០០%
+- 🧠 **Google Gemini 2.5 / 3.5 Flash Integration:** ស្ដាប់សំឡេងដើមផ្ទាល់ និងបកប្រែមកជាភាសាខ្មែរភាពយន្តបែបបុរាណរស់រវើក
+- 🖥️ **Cross-Platform:** ដំណើរការយ៉ាងរលូនលើទាំង **Windows** (NVIDIA CUDA / CPU) និង **macOS** (Apple Silicon Metal MPS / CPU)
+
+---
+
+## ⚙️ ការកំណត់ API Keys ក្នុង `.env`
+
+បើកឯកសារ `.env` រួចកំណត់៖
+```env
+GEMINI_API_KEY=your_gemini_key_here
+ELEVENLABS_API_KEY=your_elevenlabs_key_here
+GEMINI_MODEL=gemini-3.5-flash
+PORT=3000
+```

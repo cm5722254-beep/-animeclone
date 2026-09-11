@@ -1,0 +1,21 @@
+# ====================================================================
+# Render.com Blueprint Specification for Cheatz Dabber AI Studio
+# ====================================================================
+services:
+  - type: web
+    name: animeclone-ai-studio
+    runtime: docker
+    plan: free
+    region: singapore # Options: singapore, oregon, frankfurt, ohio
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: GEMINI_MODEL
+        value: gemini-3.5-flash
+      - key: VOXCPM_MODE
+        value: pure_khmer
+      - key: GEMINI_API_KEY
+        sync: false # Set securely in Render.com Dashboard -> Environment
+      - key: ELEVENLABS_API_KEY
+        sync: false # Set securely in Render.com Dashboard -> Environment

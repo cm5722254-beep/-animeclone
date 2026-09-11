@@ -3,17 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>Cheatz Dabber.PRO | ស្ទូឌីយោបញ្ជូលសំឡេងភាពយន្ត AI</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=2026.perfect.v1">
 </head>
 <body>
   <div class="app-container">
-    <!-- Top Header -->
+    <!-- Top Header (Clean 2026 Studio Desktop) -->
     <header class="app-header">
       <div class="logo-group">
         <div class="logo-icon">
@@ -23,42 +26,57 @@
           <div class="logo-title-row">
             <h1 class="logo-title">Cheatz Dabber</h1>
             <span class="pro-tag-badge">PRO</span>
+            <span class="app-version-pill">v2.5 AI</span>
           </div>
-          <span class="subtitle">ស្ទូឌីយោបញ្ជូលសំឡេងភាពយន្ត AI • គ្រប់ភាសា ➔ ខ្មែរ 100% (Universal Multi-Language Zero-Shot)</span>
         </div>
       </div>
       <div class="header-actions">
-        <div class="network-badge" id="networkShareBadge" style="display: none;" title="ចុចដើម្បីចម្លង Link សម្រាប់ប្រើលើកុំព្យូទ័រផ្សេងទៀត">
-          <i data-lucide="wifi"></i>
-          <span id="networkIpText">បណ្ដាញ LAN: ...</span>
-          <button class="btn-copy-mini" id="copyNetworkIpBtn" title="ចម្លង Link">
-            <i data-lucide="copy"></i>
+        <!-- Engine Switcher Dock (3 Engine Options) -->
+        <div class="engine-mode-switcher" id="engineModeSwitcher">
+          <button type="button" class="engine-mode-btn" data-mode="cloud" id="modeBtnCloud" title="ជម្រើសទី ១: VoxCPM2 Cloud (Google Colab / Kaggle GPU សម្រាប់ Clone សំឡេង)">
+            <i data-lucide="cloud-lightning"></i>
+            <span>VoxCPM2 Cloud</span>
+            <span class="engine-indicator-dot" id="engineCloudDot"></span>
+          </button>
+          <button type="button" class="engine-mode-btn active" data-mode="local" id="modeBtnLocal" title="ជម្រើសទី ២: VoxCPM2 Computer (Local PC GPU/CPU Port 8000)">
+            <i data-lucide="laptop"></i>
+            <span>VoxCPM2 Computer</span>
+            <span class="engine-indicator-dot" id="engineLocalDot"></span>
+          </button>
+          <button type="button" class="engine-mode-btn" data-mode="pure_khmer" id="modeBtnPure" title="ជម្រើសទី ៣: Khmer Offline Neural (ដំណើរការលឿន Offline 100% មិនបាច់ប្រើ GPU)">
+            <i data-lucide="sparkles"></i>
+            <span>Khmer Offline Neural</span>
           </button>
         </div>
-        <div class="api-badge" id="apiStatusBadge" style="display: none;">
-          <span class="status-dot"></span>
-          <span class="badge-text" id="statusText">កំពុងត្រួតពិនិត្យប្រព័ន្ធ AI...</span>
-        </div>
+
         <div class="voxcpm-status-capsule" id="voxcpmStatusBadge" title="ចុចដើម្បីពិនិត្យ ឬប្ដូរ Link VoxCPM2 Server ថ្មី">
           <span class="status-pulse-dot" id="voxcpmStatusDot"></span>
-          <span class="badge-text" id="voxcpmStatusText">⚡ VoxCPM2: កំពុងពិនិត្យ...</span>
+          <span class="badge-text" id="voxcpmStatusText">⚡ VoxCPM2: ភ្ជាប់រួចរាល់</span>
         </div>
-        <button class="btn btn-header-action btn-voxlink" id="quickLinkBtn" title="ប្ដូរ Link Google Colab / Kaggle ថ្មីភ្លាមៗ">
-          <i data-lucide="link"></i>
-          <span>ប្ដូរ Link VoxCPM</span>
+
+        <button class="btn btn-header-action btn-admin-action hidden" id="btnAdminUsers" title="ផ្ទាំងគ្រប់គ្រងអ្នកប្រើប្រាស់ (Admin Users Management)">
+          <i data-lucide="users"></i>
+          <span>គ្រប់គ្រង Users</span>
         </button>
-        <button class="btn btn-header-action btn-clear" id="clearOutputsBtn" title="សម្អាតឯកសារ Output ចាស់ៗចោលដើម្បីសន្សំទំហំ Hard Disk">
-          <i data-lucide="trash-2"></i>
-          <span>សម្អាត Output</span>
+
+        <!-- User Profile Capsule -->
+        <div class="user-profile-capsule" id="userProfileCapsule">
+          <div class="user-avatar-circle" id="userAvatarCircle"><i data-lucide="user"></i></div>
+          <div class="user-meta-info">
+            <span class="user-name-display" id="userNameDisplay">Loading...</span>
+            <span class="user-tier-badge tier-free" id="userTierBadge">🌱 FREE</span>
+          </div>
+          <button type="button" class="btn-user-logout" id="btnLogout" title="ចាកចេញពីគណនី (Logout)"><i data-lucide="log-out"></i></button>
+        </div>
+
+        <button class="btn btn-header-action btn-capcut-export" id="btnCapcutExport" title="នាំចេញវីដេអូកាត់តរួច (Export Video)">
+          <i data-lucide="download-cloud"></i>
+          <span>នាំចេញវីដេអូ</span>
         </button>
-        <button class="btn btn-header-action btn-settings" id="openSettingsBtn" title="ការកំណត់ API">
+
+        <button class="btn btn-header-action btn-settings-icon" id="openSettingsBtn" title="ការកំណត់ API & ប្រព័ន្ធ">
           <i data-lucide="settings"></i>
-          <span>ការកំណត់</span>
         </button>
-        <a href="https://t.me/BongCheatz_IT" target="_blank" class="btn btn-header-action btn-telegram" title="Telegram: @BongCheatz_IT">
-          <i data-lucide="send"></i>
-          <span>@BongCheatz_IT</span>
-        </a>
       </div>
     </header>
 
@@ -85,37 +103,27 @@
       </div>
     </div>
 
-    <!-- Main Navigation Tabs -->
+    <!-- Main Navigation Tabs (Clean & Sleek) -->
     <nav class="studio-nav">
       <button class="nav-tab active" data-tab="tab-dubbing">
         <i data-lucide="film"></i>
-        <span>ស្វ័យប្រវត្តិពេញលេញ</span>
-        <span class="tab-badge hot">ស្វ័យប្រវត្តិ</span>
+        <span>ស្ទូឌីយោបញ្ជូលសំឡេង</span>
       </button>
       <button class="nav-tab" data-tab="tab-manual" id="navTabManual">
         <i data-lucide="mic"></i>
         <span>បន្ទប់កាត់តសំឡេង</span>
-        <span class="tab-badge pro">ជំនាញ</span>
       </button>
       <button class="nav-tab" data-tab="tab-mixer" id="navTabMixer">
         <i data-lucide="sliders"></i>
         <span>លាយភ្លេង & សំឡេង</span>
-        <span class="tab-badge new">ថ្មី</span>
       </button>
       <button class="nav-tab" data-tab="tab-subtitles" id="navTabSubtitles">
         <i data-lucide="subtitles"></i>
         <span>អក្សររត់ក្រោមរឿង</span>
-        <span class="tab-badge new">ថ្មី</span>
-      </button>
-      <button class="nav-tab" data-tab="tab-tuner" id="navTabTuner">
-        <i data-lucide="activity"></i>
-        <span>សារ៉េទឹកដម & ល្បឿន</span>
-        <span class="tab-badge new">ថ្មី</span>
       </button>
       <button class="nav-tab" data-tab="tab-character" id="navTabCharacter">
         <i data-lucide="mic-2"></i>
         <span>គ្រប់គ្រងសំឡេង</span>
-        <span class="tab-badge pro" id="tabVoiceCountBadge">២៥+</span>
       </button>
       <button class="nav-tab" data-tab="tab-translator">
         <i data-lucide="languages"></i>
@@ -140,7 +148,7 @@
                 <i data-lucide="video"></i>
               </div>
               <p class="drop-title">អូសទម្លាក់វីដេអូរឿងចូលទីនេះ ឬ <span class="browse-link">ជ្រើសរើសឯកសារ</span></p>
-              <span class="drop-hint">គាំទ្រ: MP4, MKV, MOV, WebM, MP3 (ទំហំធំរហូតដល់ 10GB សម្រាប់រឿងកុន 4K)</span>
+              <span class="drop-hint">គាំទ្រ: MP4, MKV, MOV, WebM, MP3 (រហូតដល់ 10GB)</span>
             </div>
             <!-- File info preview -->
             <div class="file-preview-card hidden" id="filePreviewCard">
@@ -153,66 +161,50 @@
             </div>
           </div>
 
-          <!-- Quick Load Movie Sample Button -->
-          <div style="margin-top: 12px; margin-bottom: 8px;">
-            <button type="button" class="btn btn-secondary btn-sm full-width" id="quickLoadHangPhleungBtn" style="justify-content: center; background: linear-gradient(135deg, rgba(99, 102, 241, 0.18), rgba(236, 72, 153, 0.18)); border: 1px solid rgba(168, 85, 247, 0.45); color: #c084fc; padding: 10px 14px; font-size: 0.88rem; font-weight: 500; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); transition: all 0.2s ease;">
-              <i data-lucide="play-circle" style="color: #f472b6;"></i>
-              <span>🎬 ផ្ទុកវីដេអូស្រាប់៖ "រឿង៖ វីរនារីហង្សភ្លើង _ ភាគទី 01" (២១ នាទី)</span>
-            </button>
-          </div>
-
-          <!-- Dubbing Options -->
+          <!-- Dubbing Options in Sleek Clean Modules -->
           <div class="options-group">
-            <div class="form-row">
+            <!-- Module 1: Character Voice Casting -->
+            <div class="studio-card-module">
+              <div class="studio-module-title">
+                <i data-lucide="users"></i>
+                <span>🎭 តួអង្គ & សំឡេងខ្មែរ (Voice Casting)</span>
+              </div>
+
               <div class="form-group">
-                <label><i data-lucide="globe"></i> ភាសាដើម (Source Language)</label>
-                <select id="sourceLang" class="form-input">
-                  <option value="auto" selected>🌐 ស្វែងរកភាសាស្វ័យប្រវត្តិ (Auto-Detect គ្រប់ភាសាទាំងអស់)</option>
-                  <option value="zh">🇨🇳 ភាសាចិន (Chinese)</option>
-                  <option value="en">🇺🇸 ភាសាអង់គ្លេស (English)</option>
-                  <option value="th">🇹🇭 ភាសាថៃ (Thai)</option>
-                  <option value="ja">🇯🇵 ភាសាជប៉ុន (Japanese)</option>
-                  <option value="ko">🇰🇷 ភាសាកូរ៉េ (Korean)</option>
-                  <option value="vi">🇻🇳 ភាសាវៀតណាម (Vietnamese)</option>
-                  <option value="fr">🇫🇷 ភាសាបារាំង (French)</option>
-                  <option value="es">🇪🇸 ភាសាអេស្ប៉ាញ (Spanish)</option>
-                  <option value="hi">🇮🇳 ភាសាហិណ្ឌូ (Hindi)</option>
-                  <option value="ru">🇷🇺 ភាសារុស្ស៊ី (Russian)</option>
+                <label><i data-lucide="mic"></i> ជ្រើសរើសរបៀបសំឡេង</label>
+                <select id="voiceChoice" class="form-input">
+                  <option value="voxcpm-voice-actor" selected>🎭 Auto Distinct Cast (បែងចែក ២០+ សំឡេងតួអង្គផ្សេងៗគ្នា - មិនជាន់គ្នា ១០០%)</option>
+                  <option value="movie-live-clone">🎯 Movie Live Clone (កាត់សំឡេងផ្ទាល់ពីរឿងដើម - ដូចតួដើម ១០០%)</option>
+                  <option value="lead-only">👑 ប្រើតែសំឡេងតួឯកប្រុស & តួឯកស្រី (សំឡេងខ្មែរពិត)</option>
                 </select>
               </div>
-              <div class="form-group">
-                <label><i data-lucide="arrow-right-left"></i> ភាសាចង់បាន</label>
-                <select id="targetLang" class="form-input">
-                  <option value="km" selected>🇰🇭 ភាសាខ្មែរ</option>
-                </select>
-              </div>
-            </div>
 
-            <div class="form-group">
-              <label><i data-lucide="mic"></i> ជ្រើសរើសសំឡេងមនុស្សពិត</label>
-              <select id="voiceChoice" class="form-input">
-                <option value="voxcpm-voice-actor" selected>🎭 Auto Distinct Cast (បែងចែក ២០+ សំឡេងតួអង្គផ្សេងៗគ្នា - មិនជាន់គ្នា ១០០%)</option>
-                <option value="movie-live-clone">🎯 Movie Live Clone (កាត់សំឡេងផ្ទាល់ពីរឿងដើម - ដូចតួដើម ១០០%)</option>
-                <option value="lead-only">👑 ប្រើតែសំឡេងតួឯកប្រុស & តួឯកស្រី (សំឡេងខ្មែរពិត)</option>
-              </select>
-            </div>
-
-            <!-- Lead Voices Customization: Male Lead & Female Lead -->
-            <div class="form-row">
-              <div class="form-group">
-                <label><i data-lucide="user-check"></i> 👑 សំឡេងតួឯកប្រុស (Male Lead Voice)</label>
+              <!-- Lead Voices Customization: Full-Width Casting Cards -->
+              <div class="casting-lead-card card-male">
+                <div class="casting-lead-header">
+                  <span class="role-badge male"><i data-lucide="user-check"></i> 👑 តួឯកប្រុស (Male Lead)</span>
+                  <button type="button" class="btn-voice-preview-badge" id="previewMaleLeadBtn" title="ចុចដើម្បីស្ដាប់សំឡេងគំរូតួប្រុស">
+                    <i data-lucide="volume-2"></i> <span>▶ ស្ដាប់</span>
+                  </button>
+                </div>
                 <select id="maleLeadVoice" class="form-input">
                   <option value="hang_phleung_char_2_male.mp3" selected>👑 តួឯកប្រុស ទី១ (ហង្សភ្លើង - សំឡេងកម្លោះសង្ហា)</option>
                   <option value="char_male_lead_star7.mp3">👑 តួប្រុស ផ្កាយ៧ (ក្បួនផ្កាយ៧ - ម៉ឺងម៉ាត់អង់អាច)</option>
                   <option value="char_male_tactics.mp3">👑 តួប្រុស យុទ្ធសាស្ត្រ (សំឡេងច្បាស់ល្អ)</option>
-                  <option value="hang_phleung_char_7_male.mp3">👑 តួឯកប្រុស ទី២ (ព្រះអាទិទេព ស៊ីងជឺ - ម៉ឺងម៉ាត់អង់អាច)</option>
+                  <option value="hang_phleung_char_7_male.mp3">👑 តួឯកប្រុស ទី២ (ព្រះអាទិទេព ស៊ីងជឺ - ម៉ឺងម៉ាត់)</option>
                   <option value="main_lead_male.mp3">👑 តួឯកប្រុស ទី៣ (សំឡេងខ្មែររោងកុនច្បាស់)</option>
                   <option value="vp_character_17_male.mp3">👑 តួឯកប្រុស ទី៤ (ទន់ភ្លន់ សុភាពបុរស)</option>
                   <option value="vp_character_2_male.mp3">👑 តួឯកប្រុស ទី៥ (ក្មេងវ័យ រហ័សរហួន)</option>
                 </select>
               </div>
-              <div class="form-group">
-                <label><i data-lucide="user-check"></i> 🌸 សំឡេងតួឯកស្រី (Female Lead Voice)</label>
+
+              <div class="casting-lead-card card-female" style="margin-top: 6px;">
+                <div class="casting-lead-header">
+                  <span class="role-badge female"><i data-lucide="user-check"></i> 🌸 តួឯកស្រី (Female Lead)</span>
+                  <button type="button" class="btn-voice-preview-badge" id="previewFemaleLeadBtn" title="ចុចដើម្បីស្ដាប់សំឡេងគំរូតួស្រី">
+                    <i data-lucide="volume-2"></i> <span>▶ ស្ដាប់</span>
+                  </button>
+                </div>
                 <select id="femaleLeadVoice" class="form-input">
                   <option value="hang_phleung_char_6_female.mp3" selected>🌸 តួឯកស្រី ទី១ (ហង្សភ្លើង - ស្រទន់ពីរោះ)</option>
                   <option value="char_female_lead_palace.mp3">🌸 តួឯកស្រី ដំណាក់រាជវាំង (សំឡេងច្បាស់ល្អឥតខ្ចោះ)</option>
@@ -223,66 +215,112 @@
                   <option value="hang_phleung_char_5_female.mp3">👧 តួស្រីក្មេង (ភីលៀង - គួរឱ្យស្រឡាញ់)</option>
                 </select>
               </div>
+
+              <!-- Collapsible Advanced Casting Settings (Keeps UI Clean & Tidy) -->
+              <details class="clean-advanced-box">
+                <summary><i data-lucide="sliders-horizontal"></i> ការកំណត់សំឡេងកម្រិតខ្ពស់ (Advanced)</summary>
+                <div class="advanced-content">
+                  <div class="form-group">
+                    <label><i data-lucide="shield-check"></i> ជម្រើសការពារសំឡេងជាន់គ្នា</label>
+                    <select id="castingSafetyMode" class="form-input">
+                      <option value="safe_curated" selected>🛡️ Auto-Distinct (សំឡេងដាច់ពីគ្នា មិនច្រឡំគ្នា)</option>
+                      <option value="live_movie_clone">🎯 Live Movie Clone (កាត់សំឡេងដើម Clone ផ្ទាល់)</option>
+                      <option value="strict_leads_only">🔒 Leads Only (តួឯកប្រុស & ស្រី)</option>
+                    </select>
+                  </div>
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label><i data-lucide="users"></i> ការ Clone សំឡេងតួអង្គ</label>
+                    <select id="speakerCount" class="form-input">
+                      <option value="0" selected>🎭 Auto-Clone គ្រប់តួទាំងអស់ពីរឿងផ្ទាល់</option>
+                      <option value="1">👤 តួអង្គឯកម្នាក់</option>
+                      <option value="2">👥 តួឯកប្រុស & តួឯកស្រី</option>
+                      <option value="4">👥 តួច្រើននាក់ (៤ នាក់ឡើងទៅ)</option>
+                    </select>
+                  </div>
+                </div>
+              </details>
             </div>
 
-            <div class="form-group">
-              <label><i data-lucide="shield-check"></i> ជម្រើសការពារកុំឱ្យជាន់សំឡេងគ្នា (Voice Anti-Collision)</label>
-              <select id="castingSafetyMode" class="form-input">
-                <option value="safe_curated" selected>🛡️ Auto-Distinct (តួអង្គនីមួយៗប្រើសំឡេងដាច់ដោយឡែកពីគ្នា មិនច្រឡំគ្នាដាច់ខាត)</option>
-                <option value="live_movie_clone">🎯 Live Movie Clone 100% (កាត់សំឡេងសម្ដែងដើមពីរឿងមក Clone ផ្ទាល់)</option>
-                <option value="strict_leads_only">🔒 ប្រើតែតួឯកប្រុស & តួឯកស្រី សុទ្ធ (Leads Only)</option>
-              </select>
-            </div>
+            <!-- Module 2: Cinema Style, Language & Emotion (Organized 2x2 Grid) -->
+            <div class="studio-card-module">
+              <div class="studio-module-title">
+                <i data-lucide="clapperboard"></i>
+                <span>🎬 រចនាប័ទ្មភាពយន្ត & អារម្មណ៍ (Cinema Style & Tone)</span>
+              </div>
 
-            <div class="form-group">
-              <label><i data-lucide="users"></i> ការ Clone សំឡេងតួអង្គ</label>
-              <select id="speakerCount" class="form-input">
-                <option value="0" selected>🎭 Auto-Clone គ្រប់តួអង្គទាំងអស់ចេញពីវីដេអូរឿងផ្ទាល់</option>
-                <option value="1">👤 តួអង្គឯកម្នាក់</option>
-                <option value="2">👥 តួអង្គពីរនាក់ (តួឯកប្រុស & តួឯកស្រី)</option>
-                <option value="3">👥 តួអង្គ ៣ នាក់</option>
-                <option value="4">👥 តួអង្គច្រើននាក់ (៤ នាក់ឡើងទៅ)</option>
-              </select>
-            </div>
+              <!-- Hidden Target Language to satisfy JS without taking up space -->
+              <input type="hidden" id="targetLang" value="km">
 
-            <div class="form-group">
-              <label><i data-lucide="compass"></i> ប្រភេទរឿង & វប្បធម៌និយាយ (Movie Setting & Genre)</label>
-              <select id="movieGenre" class="form-input">
-                <option value="ancient" selected>🗡️ រឿងចិនបុរាណ / រាជវាំង / ក្បាច់គុន / Xianxia (ពាក្យរាជស័ព្ទ, និកាយ, លោកម្ចាស់, មេទ័ព...)</option>
-                <option value="modern">🏙️ រឿងចិនសម័យ / ស្នេហា / Action (ភាសានិយាយសម័យ បង-អូន, ចៅហ្វាយ, ប៉ូលីស...)</option>
-                <option value="comedy">😂 រឿងកំប្លែង / សើចសប្បាយ (ពាក្យកំប្លុកកំប្លែង ឆ្លើយឆ្លងលេងសើច)</option>
-              </select>
-            </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label><i data-lucide="globe"></i> ភាសាដើម</label>
+                  <select id="sourceLang" class="form-input">
+                    <option value="auto" selected>🌐 ស្វ័យប្រវត្តិ (Auto)</option>
+                    <option value="zh">🇨🇳 ភាសាចិន (Chinese)</option>
+                    <option value="en">🇺🇸 ភាសាអង់គ្លេស (English)</option>
+                    <option value="th">🇹🇭 ភាសាថៃ (Thai)</option>
+                    <option value="ja">🇯🇵 ភាសាជប៉ុន (Japanese)</option>
+                    <option value="ko">🇰🇷 ភាសាកូរ៉េ (Korean)</option>
+                    <option value="vi">🇻🇳 ភាសាវៀតណាម (Vietnamese)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label><i data-lucide="clock"></i> រយៈពេលកាត់ត</label>
+                  <select id="dubbingScope" class="form-input">
+                    <option value="full" selected>🎬 ពេញមួយភាគ (រឿងទាំងមូល)</option>
+                    <option value="auto_dialogue_2m">⚡ សន្ទនា ២ នាទី (លឿន)</option>
+                    <option value="from_7m">⚔️ ចាប់ពីនាទីទី ៧ ឡើង</option>
+                    <option value="from_8m">⚔️ ចាប់ពីនាទីទី ៨ ឡើង</option>
+                    <option value="120">⏱️ ២ នាទីដំបូង</option>
+                    <option value="300">⏱️ ៥ នាទីដំបូង</option>
+                  </select>
+                </div>
+              </div>
 
-            <div class="form-group">
-              <label><i data-lucide="heart"></i> កម្រិតមនោសញ្ចេតនា & អារម្មណ៍សម្ដែង (Emotional Delivery)</label>
-              <select id="emotionIntensity" class="form-input">
-                <option value="dramatic" selected>🎭 មនោសញ្ចេតនាភាពយន្តពិតៗ (Theatrical Cinema Acting - អារម្មណ៍រស់រវើក)</option>
-                <option value="deep_sorrow">😭 កម្សត់ / ស្រក់ទឹកភ្នែក / ឈឺចាប់ខ្លាំង (Deep Sorrow & Grief)</option>
-                <option value="fierce_battle">😡 ខឹងសម្បារ / គំរាមកំហែង / ច្បាំង (Fierce Anger & Battle Cry)</option>
-                <option value="sweet_romance">💖 ស្នេហាផ្អែមល្ហែម / ស្រទន់ (Tender Passion & Sweet Romance)</option>
-                <option value="heroic_command">🛡️ អង់អាចក្លាហាន / បញ្ជាកងទ័ព (Heroic Authority & Command)</option>
-              </select>
-            </div>
+              <div class="form-row" style="margin-bottom: 0;">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label><i data-lucide="compass"></i> ប្រភេទរឿង</label>
+                  <select id="movieGenre" class="form-input">
+                    <option value="ancient" selected>🗡️ រឿងបុរាណ / ក្បាច់គុន</option>
+                    <option value="modern">🏙️ រឿងសម័យ / Action</option>
+                    <option value="comedy">😂 រឿងកំប្លែង / សើច</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label><i data-lucide="heart"></i> អារម្មណ៍សម្ដែង</label>
+                  <select id="emotionIntensity" class="form-input">
+                    <option value="dramatic" selected>🎭 មនោសញ្ចេតនាភាពយន្ត</option>
+                    <option value="deep_sorrow">😭 កម្សត់ / ឈឺចាប់</option>
+                    <option value="fierce_battle">😡 ខឹងសម្បារ / ច្បាំង</option>
+                    <option value="sweet_romance">💖 ស្នេហាផ្អែមល្ហែម</option>
+                    <option value="heroic_command">🛡️ អង់អាចក្លាហាន</option>
+                  </select>
+                </div>
+              </div>
 
-            <div class="form-group">
-              <label><i data-lucide="clock"></i> រយៈពេលបញ្ជូលសំឡេង</label>
-              <select id="dubbingScope" class="form-input">
-                <option value="full" selected>🎬 ពេញមួយភាគ / រឿងទាំងមូល (ស្កេនគ្រប់ឈុតទាំងអស់ - មិនបាត់មួយឃ្លា)</option>
-                <option value="auto_dialogue_2m">⚡ ឈុតឆាកសន្ទនា ២ នាទី (សាកល្បងលឿន)</option>
-                <option value="from_7m">⚔️ ចាប់ពីនាទីទី ៧ ឡើងទៅ (ឈុតតួអង្គជជែក & ប្រយុទ្ធ)</option>
-                <option value="from_8m">⚔️ ចាប់ពីនាទីទី ៨ ឡើងទៅ (ឈុតសន្ទនាសំខាន់)</option>
-                <option value="120">⏱️ ២ នាទីដំបូង (០:០០ - ២:០០)</option>
-                <option value="300">⏱️ ៥ នាទីដំបូង (០:០០ - ៥:០០)</option>
-              </select>
+              <!-- Gemini Model Quick Switcher -->
+              <div class="form-group gemini-switcher-group">
+                <label class="gemini-label-row">
+                  <span><i data-lucide="cpu"></i> ម៉ូឌែល AI បកប្រែ (Gemini Model)</span>
+                  <span class="badge-gemini-live">⚡ Google AI</span>
+                </label>
+                <select id="quickGeminiModel" class="form-input gemini-model-select">
+                  <option value="gemini-3.5-flash" selected>⚡ Gemini 3.5 Flash (លឿន & ឆ្លាតវៃ - Recommended)</option>
+                  <option value="gemini-3.1-flash-lite">🚀 Gemini 3.1 Flash-Lite (លឿនបំផុត Ultra-Fast)</option>
+                  <option value="gemini-3.7-flash">🧠 Gemini 3.7 Flash (កម្រិតខ្ពស់ Advanced Reasoning)</option>
+                  <option value="gemini-flash-latest">🔄 Gemini Flash Latest (ស្វ័យប្រវត្តិតាម Google)</option>
+                </select>
+              </div>
             </div>
           </div>
 
-          <!-- Action Button -->
-          <button class="btn btn-primary btn-glow btn-block" id="startDubbingBtn" disabled>
-            <i data-lucide="wand-2"></i>
-            <span>ចាប់ផ្តើម Clone សំឡេង & បកប្រែស្វ័យប្រវត្តិ</span>
-          </button>
+          <!-- Sticky Action Button Footer -->
+          <div class="control-panel-footer">
+            <button class="btn btn-primary btn-glow btn-block" id="startDubbingBtn" disabled>
+              <i data-lucide="wand-2"></i>
+              <span>ចាប់ផ្តើម Clone សំឡេង & បកប្រែស្វ័យប្រវត្តិ</span>
+            </button>
+          </div>
 
           <!-- Pipeline Stepper / Progress -->
           <div class="pipeline-progress hidden" id="pipelineProgress">
@@ -323,13 +361,16 @@
           </div>
         </section>
 
-        <!-- Right Column: Results & Video Player -->
+        <!-- Right Column: Results & Cinema Video Monitor -->
         <section class="panel preview-panel">
-          <div class="panel-header">
-            <h2><i data-lucide="monitor-play"></i> ផ្ទាំងចាក់វីដេអូប្រៀបធៀប (មុន & ក្រោយ)</h2>
+          <div class="panel-header capcut-monitor-header">
+            <div class="monitor-info">
+              <h2><i data-lucide="monitor-play"></i> ផ្ទាំងបញ្ចាំងភាពយន្ត (Cinema Monitor)</h2>
+              <span class="monitor-badge">4K ULTRA HD • 48kHz Hi-Fi</span>
+            </div>
             <div class="view-toggle">
-              <button class="toggle-btn active" id="toggleOriginal">វីដេអូរឿងដើម</button>
-              <button class="toggle-btn" id="toggleDubbed">សំឡេងខ្មែរ</button>
+              <button class="toggle-btn active" id="toggleOriginal"><i data-lucide="film"></i> រឿងដើម</button>
+              <button class="toggle-btn" id="toggleDubbed"><i data-lucide="sparkles"></i> សំឡេងខ្មែរ</button>
             </div>
           </div>
 
@@ -339,9 +380,166 @@
               កម្មវិធីរុករករបស់អ្នកមិនគាំទ្រការចាក់វីដេអូនេះទេ។
             </video>
             <div class="empty-player-state" id="emptyPlayerState">
-              <div class="empty-icon"><i data-lucide="clapperboard"></i></div>
-              <h3>មិនទាន់មានវីដេអូនៅឡើយទេ</h3>
-              <p>សូមបញ្ចូលវីដេអូ ឬ Audio នៅផ្ទាំងខាងឆ្វេងដើម្បីចាប់ផ្តើម</p>
+              <!-- Minimal Clean HUD -->
+              <div class="cinema-hud-overlay">
+                <div class="hud-item hud-top-left">
+                  <span class="hud-dot"></span>
+                  <span>STANDBY</span>
+                </div>
+                <div class="hud-item hud-top-right">
+                  <span>4K UHD • 60 FPS</span>
+                </div>
+              </div>
+
+              <!-- Main Hero Launchpad Card (Clean & Tidy) -->
+              <div class="cinema-launchpad-card">
+                <div class="launchpad-icon-ring">
+                  <i data-lucide="clapperboard"></i>
+                </div>
+
+                <h3 class="launchpad-title">ស្ទូឌីយោបញ្ចាំងភាពយន្ត AI</h3>
+                <p class="launchpad-subtitle">
+                  បកប្រែ & បញ្ចូលសំឡេងភាពយន្តស្វ័យប្រវត្តិ • មិនបាច់កាត់តដោយដៃ
+                </p>
+
+                <!-- Action Button -->
+                <div class="launchpad-actions">
+                  <button type="button" class="btn-launch-hero" id="emptyBrowseLocalBtn">
+                    <i data-lucide="folder-open"></i>
+                    <span>📁 ជ្រើសរើសវីដេអូរឿងពីកុំព្យូទ័រ</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cinema Transport Bar -->
+          <div class="cinema-transport-bar" id="cinemaTransportBar">
+            <div class="transport-group-left">
+              <button type="button" class="btn-transport" id="btnTransportBack5" title="ថយក្រោយ ៥ វិនាទី"><i data-lucide="rotate-ccw"></i> <span>-5s</span></button>
+              <button type="button" class="btn-transport-play" id="btnTransportPlay" title="ចាក់ / ផ្អាក (Play/Pause)"><i data-lucide="play"></i></button>
+              <button type="button" class="btn-transport" id="btnTransportFwd5" title="ទៅមុខ ៥ វិនាទី"><i data-lucide="rotate-cw"></i> <span>+5s</span></button>
+            </div>
+            <div class="transport-group-center">
+              <span class="cinema-timecode" id="cinemaTimecodeDisplay">00:00:00 / 00:00:00</span>
+            </div>
+            <div class="transport-group-right">
+              <button type="button" class="btn-transport-tool" id="btnTransportFullscreen" title="ពេញអេក្រង់ (Fullscreen)"><i data-lucide="maximize"></i></button>
+            </div>
+          </div>
+
+          <!-- CapCut Live Audio Mixer Dock -->
+          <div class="capcut-audio-mixer" id="capcutAudioMixer">
+            <div class="mixer-card">
+              <div class="mixer-header">
+                <i data-lucide="mic-2"></i>
+                <span>សំឡេងនិយាយខ្មែរ (Vocals)</span>
+                <span class="mixer-val" id="valVocalsMix">100%</span>
+              </div>
+              <input type="range" min="30" max="250" value="100" class="capcut-slider" id="sliderVocalsMix">
+            </div>
+
+            <div class="mixer-card">
+              <div class="mixer-header">
+                <i data-lucide="music-2"></i>
+                <span>ភ្លេងកំដរដើម (BGM & FX)</span>
+                <span class="mixer-val" id="valBgmMix">45%</span>
+              </div>
+              <input type="range" min="0" max="150" value="45" class="capcut-slider" id="sliderBgmMix">
+            </div>
+
+            <div class="mixer-vu-meter">
+              <div class="vu-channel">
+                <span class="vu-label">L</span>
+                <div class="vu-bar"><div class="vu-fill" id="vuFillL"></div></div>
+              </div>
+              <div class="vu-channel">
+                <span class="vu-label">R</span>
+                <div class="vu-bar"><div class="vu-fill" id="vuFillR"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CapCut Desktop Interactive Multi-Track Timeline -->
+          <div class="capcut-timeline-dock" id="capcutTimelineDock">
+            <div class="timeline-toolbar">
+              <div class="timeline-toolbar-left">
+                <span class="timeline-title"><i data-lucide="layers"></i> CapCut Timeline Editor</span>
+                <span class="timeline-timecode" id="timelineCurrentTimecode">00:00.000</span>
+              </div>
+              <div class="timeline-toolbar-right">
+                <button type="button" class="btn-timeline-tool" id="timelinePlayPauseBtn" title="Play / Pause"><i data-lucide="play"></i></button>
+                <button type="button" class="btn-timeline-tool" id="timelineZoomOutBtn" title="Zoom Out"><i data-lucide="zoom-out"></i></button>
+                <button type="button" class="btn-timeline-tool" id="timelineZoomInBtn" title="Zoom In"><i data-lucide="zoom-in"></i></button>
+              </div>
+            </div>
+
+            <div class="timeline-workspace" id="timelineWorkspace">
+              <!-- Ruler -->
+              <div class="timeline-ruler" id="timelineRuler"></div>
+
+              <!-- Tracks Container -->
+              <div class="timeline-tracks">
+                <!-- Track 1: Video -->
+                <div class="timeline-track track-video">
+                  <div class="track-header">
+                    <div class="track-header-top">
+                      <span class="track-badge-tag tag-v">V1</span>
+                      <i data-lucide="video"></i>
+                      <span>វីដេអូ</span>
+                    </div>
+                  </div>
+                  <div class="track-lane" id="laneVideoTrack">
+                    <div class="video-track-bar" id="videoTrackBar">
+                      <span class="track-bar-label" id="videoTrackLabel">Video Track</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Track 2: Dialogue Segments -->
+                <div class="timeline-track track-dialogue">
+                  <div class="track-header">
+                    <div class="track-header-top">
+                      <span class="track-badge-tag tag-a">A1</span>
+                      <i data-lucide="mic"></i>
+                      <span>សំឡេងខ្មែរ</span>
+                    </div>
+                    <button type="button" class="btn-track-mute" id="muteVocalsBtn" title="បិទ/បើក សំឡេងនិយាយ (Mute Vocals)">
+                      <i data-lucide="volume-2"></i>
+                    </button>
+                  </div>
+                  <div class="track-lane track-segments-lane" id="laneDialogueTrack">
+                    <div class="timeline-empty-hint" id="timelineEmptyHint">
+                      <span>បន្ទាត់សន្ទនានឹងបង្ហាញនៅទីនេះពេល Dubbing ឬ Scan រួចរាល់...</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Track 3: BGM / Original Audio -->
+                <div class="timeline-track track-bgm">
+                  <div class="track-header">
+                    <div class="track-header-top">
+                      <span class="track-badge-tag tag-m">A2</span>
+                      <i data-lucide="music"></i>
+                      <span>ភ្លេង BGM</span>
+                    </div>
+                    <button type="button" class="btn-track-mute" id="muteBgmBtn" title="បិទ/បើក ភ្លេងកំដរ (Mute BGM)">
+                      <i data-lucide="volume-2"></i>
+                    </button>
+                  </div>
+                  <div class="track-lane" id="laneBgmTrack">
+                    <div class="bgm-track-bar" id="bgmTrackBar">
+                      <span class="track-bar-label">Original Background Music & Effects</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Scrubbable Playhead Needle -->
+              <div class="timeline-playhead" id="timelinePlayhead" style="left: 0px;">
+                <div class="playhead-handle"></div>
+                <div class="playhead-line"></div>
+              </div>
             </div>
           </div>
 
@@ -1106,8 +1304,21 @@
               <span>គន្លឹះ Google Gemini API (សម្រាប់បកប្រែពាក្យពេចន៍)</span>
               <a href="https://aistudio.google.com" target="_blank" class="external-link">យក Key នៅទីនេះ (ឥតគិតថ្លៃ) <i data-lucide="external-link"></i></a>
             </label>
-            <input type="password" id="settingGeminiKey" class="form-input" placeholder="AIzaSy...">
-            <span class="field-hint">ជួយបកប្រែឃ្លាសន្ទនាភាពយន្តមកខ្មែរឱ្យមានន័យស៊ីជម្រៅ</span>
+            <input type="password" id="settingGeminiKey" class="form-input" placeholder="AQ.Ab... ឬ AIzaSy...">
+            <span class="field-hint">ប្រើសម្រាប់ស្តាប់ និងបកប្រែពាក្យនិយាយជាក់ស្តែងពីវីដេអូ។ ប្រសិនបើគ្មាន Key ប្រព័ន្ធនឹង Dubbing ស្វ័យប្រវត្តិតាម Curated Cinema Mode ដោយមិនគាំងឡើយ</span>
+          </div>
+
+          <div class="form-group">
+            <label>
+              <span>🤖 ម៉ូឌែល AI Gemini សម្រាប់ដំណើរការ (Option Switch Model)</span>
+            </label>
+            <select id="settingGeminiModel" class="form-input" style="font-weight: 600; color: #38bdf8; background: rgba(15, 23, 42, 0.75);">
+              <option value="gemini-3.5-flash" selected>⚡ Gemini 3.5 Flash (លឿន & ឆ្លាតវៃ - Recommended)</option>
+              <option value="gemini-3.1-flash-lite">🚀 Gemini 3.1 Flash-Lite (លឿនបំផុត Ultra-Fast)</option>
+              <option value="gemini-3.7-flash">🧠 Gemini 3.7 Flash (កម្រិតខ្ពស់ Advanced Reasoning)</option>
+              <option value="gemini-flash-latest">🔄 Gemini Flash Latest (ស្វ័យប្រវត្តិតាម Google)</option>
+            </select>
+            <span class="field-hint">អាចជ្រើសរើសប្ដូរម៉ូឌែល Gemini តាមតម្រូវការល្បឿន និងភាពស៊ីជម្រៅនៃការបកប្រែ</span>
           </div>
 
           <div class="form-group">
@@ -1382,10 +1593,188 @@
     </div>
   </div>
 
+  <!-- CapCut Desktop Export Modal -->
+  <div class="modal hidden" id="capcutExportModal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content modal-capcut-export">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <i data-lucide="download-cloud" style="color: #38bdf8;"></i>
+          <h3>នាំចេញវីដេអូកាត់ត (Export Project - CapCut Studio)</h3>
+        </div>
+        <button class="modal-close" id="closeExportModalBtn"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="export-preset-summary">
+          <div class="export-summary-thumb">
+            <i data-lucide="film"></i>
+          </div>
+          <div class="export-summary-meta">
+            <strong id="exportProjectTitle">រឿង៖ វីរនារីហង្សភ្លើង _ ភាគទី 01.mp4</strong>
+            <span>Khmer Dubbed Master • Stereo BGM • 48kHz Hi-Fi</span>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top: 14px;">
+          <label><i data-lucide="monitor"></i> កម្រិតគុណភាពវីដេអូ (Resolution)</label>
+          <div class="export-chip-selector" id="exportResolutionGroup">
+            <button type="button" class="export-chip active" data-res="1080p">1080p Full HD</button>
+            <button type="button" class="export-chip" data-res="4k">4K Cinema UHD</button>
+            <button type="button" class="export-chip" data-res="720p">720p HD</button>
+            <button type="button" class="export-chip" data-res="audio_only">Audio MP3 Only</button>
+          </div>
+        </div>
+
+        <div class="form-row" style="margin-top: 10px;">
+          <div class="form-group">
+            <label><i data-lucide="file-video"></i> ទម្រង់ឯកសារ (Format)</label>
+            <select id="exportFormatSelect" class="form-input">
+              <option value="mp4" selected>MP4 (H.264 / AAC - Universal)</option>
+              <option value="mkv">MKV (Matroska High Quality)</option>
+              <option value="mov">MOV (Apple ProRes Compatible)</option>
+              <option value="mp3">MP3 (320kbps Audio)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label><i data-lucide="gauge"></i> Bitrate គុណភាព</label>
+            <select id="exportBitrateSelect" class="form-input">
+              <option value="high" selected>Cinema Master (ខ្ពស់បំផុត)</option>
+              <option value="standard">Standard Web (មធ្យម)</option>
+              <option value="fast">Fast Export (រហ័សទំហំតូច)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top: 8px;">
+          <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #cbd5e1; font-size: 0.88rem;">
+            <input type="checkbox" id="exportBurnSubtitles" checked style="accent-color: #38bdf8; width: 16px; height: 16px;">
+            <span>បង្កប់អក្សររត់ក្រោមរឿងខ្មែរ (Burn Khmer Subtitles) ចូលក្នុងវីដេអូ</span>
+          </label>
+        </div>
+
+        <div class="export-render-progress hidden" id="exportRenderProgress" style="margin-top: 14px;">
+          <div class="progress-bar-container">
+            <div class="progress-bar-fill" id="exportProgressBar" style="width: 0%;"></div>
+          </div>
+          <span class="export-progress-text" id="exportProgressText">កំពុងរៀបចំ Render...</span>
+        </div>
+
+        <div class="modal-actions" style="margin-top: 20px;">
+          <button class="btn btn-secondary" id="cancelExportModalBtn" type="button">បោះបង់</button>
+          <button class="btn btn-primary btn-glow" id="startRenderExportBtn" type="button" style="background: linear-gradient(135deg, #0284c7, #6366f1); border-color: #38bdf8;">
+            <i data-lucide="download"></i>
+            <span>ទាញយក / Export ភ្លាមៗ</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1. Authentication Lock Screen Modal (Login / Register) -->
+  <div class="modal-overlay auth-modal-backdrop hidden" id="authModal">
+    <div class="auth-card-box">
+      <div class="auth-header">
+        <div class="auth-logo-ring">
+          <i data-lucide="sparkles"></i>
+        </div>
+        <h2 class="auth-title">Cheatz Dabber <span class="auth-pro-badge">PRO</span></h2>
+        <p class="auth-subtitle">AI Video & Multi-Character Khmer Dubbing Studio</p>
+      </div>
+
+      <!-- Auth Switcher Tabs -->
+      <div class="auth-tabs-dock">
+        <button type="button" class="auth-tab active" id="authTabLogin">ចូលគណនី (Login)</button>
+        <button type="button" class="auth-tab" id="authTabRegister">បង្កើតគណនី (Register)</button>
+      </div>
+
+      <!-- Auth Form -->
+      <form id="authForm" onsubmit="return false;" class="auth-form-body">
+        <div class="auth-alert-message hidden" id="authAlertMsg"></div>
+
+        <div class="form-group">
+          <label for="authUsernameInput"><i data-lucide="user"></i> ឈ្មោះគណនី ឬ Gmail (Username / Email)</label>
+          <input type="text" id="authUsernameInput" class="form-input auth-input" placeholder="ឧទាហរណ៍៖ cm5722254@gmail.com ឬ user123" required autocomplete="username">
+        </div>
+
+        <div class="form-group">
+          <label for="authPasswordInput"><i data-lucide="lock"></i> ពាក្យសម្ងាត់ (Password)</label>
+          <input type="password" id="authPasswordInput" class="form-input auth-input" placeholder="បញ្ចូលពាក្យសម្ងាត់..." required autocomplete="current-password">
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-glow btn-block auth-submit-btn" id="authSubmitBtn">
+          <i data-lucide="log-in"></i>
+          <span id="authSubmitBtnText">ចូលប្រើប្រាស់</span>
+        </button>
+      </form>
+
+      <div class="auth-footer-notice">
+        <div class="notice-badge"><i data-lucide="info"></i> ព័ត៌មានគណនី</div>
+        <p>• គណនី <strong>FREE</strong> ប្រើប្រាស់បានតែជម្រើស <strong>Khmer Offline Neural</strong></p>
+        <p>• មុខងារ <strong>VoxCPM2 Cloud & Computer</strong> សម្រាប់តែសមាជិក <strong>PREMIUM</strong></p>
+        <p>• ដើម្បីទទួលបាន Premium សូមទាក់ទង Administrator</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Admin User Management Modal -->
+  <div class="modal-overlay hidden" id="adminUsersModal">
+    <div class="modal-box admin-modal-box">
+      <div class="modal-header">
+        <div class="admin-header-title">
+          <i data-lucide="shield-check"></i>
+          <h3>ផ្ទាំងគ្រប់គ្រងអ្នកប្រើប្រាស់ (Admin User Management)</h3>
+        </div>
+        <button class="modal-close-btn" id="closeAdminUsersBtn" type="button"><i data-lucide="x"></i></button>
+      </div>
+
+      <div class="modal-body admin-modal-body">
+        <div class="admin-stats-summary">
+          <div class="admin-stat-card">
+            <span class="stat-title">អ្នកប្រើប្រាស់សរុប</span>
+            <span class="stat-count" id="adminTotalUsersCount">0</span>
+          </div>
+          <div class="admin-stat-card">
+            <span class="stat-title">សមាជិក Premium</span>
+            <span class="stat-count count-premium" id="adminPremiumUsersCount">0</span>
+          </div>
+          <div class="admin-stat-card">
+            <span class="stat-title">សមាជិក Free</span>
+            <span class="stat-count count-free" id="adminFreeUsersCount">0</span>
+          </div>
+        </div>
+
+        <!-- Users List Table Container -->
+        <div class="admin-table-container">
+          <table class="admin-users-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>ឈ្មោះអ្នកប្រើ</th>
+                <th>Role</th>
+                <th>Tier</th>
+                <th>កាលបរិច្ឆេទផុតកំណត់</th>
+                <th style="text-align: right;">សកម្មភាព (Actions)</th>
+              </tr>
+            </thead>
+            <tbody id="adminUsersTableBody">
+              <tr>
+                <td colspan="6" style="text-align: center; color: #64748b; padding: 24px;">កំពុងផ្ទុកបញ្ជីអ្នកប្រើប្រាស់...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="modal-actions admin-modal-actions">
+        <button type="button" class="btn btn-secondary" id="closeAdminUsersBottomBtn">បិទ</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Studio Toast Notification Container -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <script src="js/app.js"></script>
+  <script src="js/app.js?v=2026.auth.v1"></script>
   <script>
     // Initialize Lucide Icons
     lucide.createIcons();

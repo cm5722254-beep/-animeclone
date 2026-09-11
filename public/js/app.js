@@ -1,3 +1,25 @@
+// Global Authenticated Fetch Interceptor & User State
+let currentUser = null;
+const originalFetch = window.fetch;
+window.fetch = function(url, options = {}) {
+  const token = localStorage.getItem('studio_auth_token');
+  if (token && typeof url === 'string' && url.startsWith('/api/')) {
+    options.headers = options.headers || {};
+    if (options.headers instanceof Headers) {
+      if (!options.headers.has('Authorization')) {
+        options.headers.set('Authorization', `Bearer ${token}`);
+      }
+    } else if (Array.isArray(options.headers)) {
+      options.headers.push(['Authorization', `Bearer ${token}`]);
+    } else {
+      if (!options.headers['Authorization']) {
+        options.headers['Authorization'] = `Bearer ${token}`;
+      }
+    }
+  }
+  return originalFetch.call(this, url, options);
+};
+
 // State
 let currentUploadedFile = null;
 let currentDubbingJobId = null;
@@ -52,6 +74,7 @@ function showToast(message, type = 'info') {
 
 // DOM Elements
 document.addEventListener('DOMContentLoaded', () => {
+  initAuthAndRBAC();
   initTabs();
   initConfig();
   initUpload();
@@ -67,6 +90,20 @@ document.addEventListener('DOMContentLoaded', () => {
   initPresetChips();
   initManualSearch();
   initVoiceDashboard();
+  initEngineModeSwitcher();
+  initVoiceAuditionPreviews();
+  initCinemaTransportBar();
+  initCapCutAudioMixerDock();
+  initCapCutTimelineDock();
+  initCapCutExportModal();
+  initTimelineTrackControls();
+
+  // Populate CapCut timeline with default segments on startup
+  setTimeout(() => {
+    if (typeof renderCapCutTimeline === 'function') {
+      renderCapCutTimeline(DEFAULT_PRESET_TIMELINE_SEGMENTS, 50);
+    }
+  }, 400);
 });
 
 // 1. Navigation Tabs
@@ -168,6 +205,12 @@ async function initConfig() {
       const quickInput = document.getElementById('quickVoxcpmUrlInput');
       if (quickInput) quickInput.value = data.voxcpmUrl;
     }
+
+    const currentModel = data.geminiModel || 'gemini-3.5-flash';
+    const settingModelEl = document.getElementById('settingGeminiModel');
+    const quickModelEl = document.getElementById('quickGeminiModel');
+    if (settingModelEl) settingModelEl.value = currentModel;
+    if (quickModelEl) quickModelEl.value = currentModel;
 
     // Multi-computer LAN network detection
     try {
@@ -292,7 +335,26 @@ function initUpload() {
       const emptyState = document.getElementById('emptyPlayerState');
       if (emptyState) emptyState.classList.add('hidden');
 
+      if (typeof renderCapCutTimeline === 'function') {
+        renderCapCutTimeline(DEFAULT_PRESET_TIMELINE_SEGMENTS, 1293);
+      }
+
       showToast('🎬 បានផ្ទុកវីដេអូ "រឿង៖ វីរនារីហង្សភ្លើង _ ភាគទី 01" រួចរាល់ អាចចុច Dubbing ភ្លាមៗ!', 'success');
+    });
+  }
+
+  const emptyQuickLoadBtn = document.getElementById('emptyQuickLoadBtn');
+  if (emptyQuickLoadBtn && quickLoadBtn) {
+    emptyQuickLoadBtn.addEventListener('click', () => {
+      quickLoadBtn.click();
+    });
+  }
+
+  const emptyBrowseLocalBtn = document.getElementById('emptyBrowseLocalBtn');
+  if (emptyBrowseLocalBtn) {
+    emptyBrowseLocalBtn.addEventListener('click', () => {
+      const fileInput = document.getElementById('mediaFileInput');
+      if (fileInput) fileInput.click();
     });
   }
 }
@@ -418,6 +480,7 @@ function initDubbingActions() {
     const emotionIntensity = document.getElementById('emotionIntensity') ? document.getElementById('emotionIntensity').value : 'dramatic';
     const maleLeadVoice = document.getElementById('maleLeadVoice') ? document.getElementById('maleLeadVoice').value : 'hang_phleung_char_2_male.mp3';
     const femaleLeadVoice = document.getElementById('femaleLeadVoice') ? document.getElementById('femaleLeadVoice').value : 'hang_phleung_char_6_female.mp3';
+    const geminiModel = document.getElementById('quickGeminiModel')?.value || document.getElementById('settingGeminiModel')?.value || 'gemini-3.5-flash';
 
     try {
       const res = await fetch('/api/dubbing/start', {
@@ -434,7 +497,8 @@ function initDubbingActions() {
           genre,
           emotionIntensity,
           maleLeadVoice,
-          femaleLeadVoice
+          femaleLeadVoice,
+          geminiModel
         })
       });
 
@@ -507,6 +571,11 @@ function startPolling(jobId) {
         player.src = dubbedMediaUrl;
         toggleDubbed.classList.add('active');
         toggleOriginal.classList.remove('active');
+
+        // Render CapCut Timeline with all character dialogue lines
+        if (job.dialogueSegments && job.dialogueSegments.length > 0) {
+          renderCapCutTimeline(job.dialogueSegments, player.duration || 60);
+        }
 
         // Set download buttons
         resultBar.classList.remove('hidden');
@@ -724,15 +793,18 @@ function initSettingsModal() {
       const elevenlabsKey = elevenInput.value.trim();
       const geminiKey = geminiInput.value.trim();
       const voxcpmUrl = voxcpmInput ? voxcpmInput.value.trim() : '';
+      const geminiModel = document.getElementById('settingGeminiModel')?.value || 'gemini-3.5-flash';
 
       try {
         const res = await fetch('/api/config', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ elevenlabsKey, geminiKey, voxcpmUrl })
+          body: JSON.stringify({ elevenlabsKey, geminiKey, voxcpmUrl, geminiModel })
         });
         const data = await res.json();
         if (data.success) {
+          const quickModelEl = document.getElementById('quickGeminiModel');
+          if (quickModelEl) quickModelEl.value = geminiModel;
           showToast('រក្សាទុកការកំណត់បានជោគជ័យ!', 'success');
           modal.classList.add('hidden');
           initConfig();
@@ -741,6 +813,31 @@ function initSettingsModal() {
         showToast('ការរក្សាទុកបរាជ័យ: ' + err.message, 'error');
       }
     });
+
+    // Quick sync between quickGeminiModel and settingGeminiModel
+    const quickModelEl = document.getElementById('quickGeminiModel');
+    const settingModelEl = document.getElementById('settingGeminiModel');
+    if (quickModelEl) {
+      quickModelEl.addEventListener('change', async () => {
+        const val = quickModelEl.value;
+        if (settingModelEl) settingModelEl.value = val;
+        try {
+          await fetch('/api/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ geminiModel: val })
+          });
+          showToast(`🤖 បានប្ដូរទៅម៉ូឌែល ${val} ជោគជ័យ!`, 'info');
+        } catch (e) {
+          console.warn('Auto-save model error:', e);
+        }
+      });
+    }
+    if (settingModelEl) {
+      settingModelEl.addEventListener('change', () => {
+        if (quickModelEl) quickModelEl.value = settingModelEl.value;
+      });
+    }
   }
 }
 
@@ -2674,5 +2771,1004 @@ function initPitchTuner() {
     });
   }
 }
+
+// ==========================================================================
+// 15. CapCut Desktop Engine Mode Switcher
+// ==========================================================================
+let currentEngineMode = 'local';
+
+async function initEngineModeSwitcher() {
+  const btnLocal = document.getElementById('modeBtnLocal');
+  const btnCloud = document.getElementById('modeBtnCloud');
+  const btnPure = document.getElementById('modeBtnPure');
+  const localDot = document.getElementById('engineLocalDot');
+  const cloudDot = document.getElementById('engineCloudDot');
+
+  if (!btnLocal || !btnCloud || !btnPure) return;
+
+  // Check initial status
+  try {
+    const cfgRes = await fetch('/api/config');
+    const cfg = await cfgRes.json();
+    currentEngineMode = cfg.mode || 'local';
+    updateEngineModeButtons(currentEngineMode);
+  } catch (e) {
+    console.warn('Config mode check:', e);
+  }
+
+  // Periodic Local Engine check (Port 8000)
+  async function checkLocal() {
+    try {
+      const res = await fetch('/api/voxcpm/local-check');
+      const data = await res.json();
+      if (data.online) {
+        if (localDot) {
+          localDot.className = 'engine-indicator-dot online';
+          localDot.title = 'Local PC Server (Port 8000) កំពុងដំណើរការល្អ';
+        }
+      } else {
+        if (localDot) {
+          localDot.className = 'engine-indicator-dot offline';
+          localDot.title = 'មិនទាន់បើក Local Server នៅឡើយទេ';
+        }
+      }
+    } catch {
+      if (localDot) localDot.className = 'engine-indicator-dot offline';
+    }
+  }
+
+  checkLocal();
+  setInterval(checkLocal, 10000);
+
+  // Periodic Cloud check
+  async function checkCloud() {
+    try {
+      const res = await fetch('/api/voxcpm/status');
+      const data = await res.json();
+      if (cloudDot) {
+        if (data.online && !data.isLocal && data.mode !== 'pure_khmer') {
+          cloudDot.className = 'engine-indicator-dot online';
+        } else {
+          cloudDot.className = 'engine-indicator-dot offline';
+        }
+      }
+    } catch {
+      if (cloudDot) cloudDot.className = 'engine-indicator-dot offline';
+    }
+  }
+  checkCloud();
+  setInterval(checkCloud, 15000);
+
+  function updateEngineModeButtons(mode) {
+    [btnLocal, btnCloud, btnPure].forEach(b => b.classList.remove('active'));
+    if (mode === 'local') btnLocal.classList.add('active');
+    else if (mode === 'cloud') btnCloud.classList.add('active');
+    else if (mode === 'pure_khmer') btnPure.classList.add('active');
+  }
+
+  btnLocal.addEventListener('click', async () => {
+    if (currentUser && currentUser.tier === 'free' && currentUser.role !== 'admin') {
+      showToast('🔒 ជម្រើស "VoxCPM2 Computer" សម្រាប់តែសមាជិក Premium ប៉ុណ្ណោះ! សូមទាក់ទង Admin។', 'warning');
+      return;
+    }
+    currentEngineMode = 'local';
+    updateEngineModeButtons('local');
+    try {
+      const res = await fetch('/api/voxcpm/switch-mode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'local' })
+      });
+      const data = await res.json();
+      showToast('🖥️ បានប្ដូរទៅជម្រើស "VoxCPM2 Computer" (Local PC: Port 8000)!', 'success');
+      checkLocal();
+    } catch (err) {
+      showToast('កំហុសប្ដូរ Mode: ' + err.message, 'error');
+    }
+  });
+
+  btnCloud.addEventListener('click', async () => {
+    if (currentUser && currentUser.tier === 'free' && currentUser.role !== 'admin') {
+      showToast('🔒 ជម្រើស "VoxCPM2 Cloud" សម្រាប់តែសមាជិក Premium ប៉ុណ្ណោះ! សូមទាក់ទង Admin។', 'warning');
+      return;
+    }
+    currentEngineMode = 'cloud';
+    updateEngineModeButtons('cloud');
+    try {
+      const res = await fetch('/api/voxcpm/switch-mode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'cloud' })
+      });
+      showToast('⚡ បានប្ដូរទៅជម្រើស "VoxCPM2 Cloud" (Google Colab / Kaggle GPU)!', 'info');
+      checkCloud();
+    } catch (err) {
+      showToast('កំហុសប្ដូរ Mode: ' + err.message, 'error');
+    }
+  });
+
+  btnPure.addEventListener('click', async () => {
+    currentEngineMode = 'pure_khmer';
+    updateEngineModeButtons('pure_khmer');
+    try {
+      await fetch('/api/voxcpm/switch-mode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'pure_khmer' })
+      });
+      showToast('🎭 បានប្ដូរទៅជម្រើស "Khmer Offline Neural" (100% Offline & Fast)!', 'success');
+    } catch (err) {
+      showToast('កំហុសប្ដូរ Mode: ' + err.message, 'error');
+    }
+  });
+}
+
+// ==========================================================================
+// 16. Instant Voice Audition Previews (▶ ស្ដាប់សាកល្បងសំឡេង)
+// ==========================================================================
+let activeAuditionAudio = null;
+
+function initVoiceAuditionPreviews() {
+  const maleBtn = document.getElementById('previewMaleLeadBtn');
+  const femaleBtn = document.getElementById('previewFemaleLeadBtn');
+  const maleSelect = document.getElementById('maleLeadVoice');
+  const femaleSelect = document.getElementById('femaleLeadVoice');
+
+  function playSample(selectEl, btnEl) {
+    if (!selectEl) return;
+    const filename = selectEl.value;
+    if (!filename) return;
+
+    if (activeAuditionAudio) {
+      activeAuditionAudio.pause();
+      activeAuditionAudio = null;
+      document.querySelectorAll('.btn-voice-preview-badge').forEach(b => b.classList.remove('playing'));
+    }
+
+    const audioUrl = `/media/samples/${encodeURIComponent(filename)}`;
+    const audio = new Audio(audioUrl);
+    activeAuditionAudio = audio;
+    if (btnEl) btnEl.classList.add('playing');
+
+    audio.play().catch(err => {
+      console.warn('Audio preview error:', err);
+      if (btnEl) btnEl.classList.remove('playing');
+    });
+
+    audio.onended = () => {
+      if (btnEl) btnEl.classList.remove('playing');
+      activeAuditionAudio = null;
+    };
+  }
+
+  if (maleBtn && maleSelect) {
+    maleBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      playSample(maleSelect, maleBtn);
+    });
+  }
+
+  if (femaleBtn && femaleSelect) {
+    femaleBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      playSample(femaleSelect, femaleBtn);
+    });
+  }
+}
+
+// ==========================================================================
+// 17. Cinema Transport Bar & Timecode
+// ==========================================================================
+function initCinemaTransportBar() {
+  const playBtn = document.getElementById('btnTransportPlay');
+  const back5Btn = document.getElementById('btnTransportBack5');
+  const fwd5Btn = document.getElementById('btnTransportFwd5');
+  const fullscreenBtn = document.getElementById('btnTransportFullscreen');
+  const timecodeEl = document.getElementById('cinemaTimecodeDisplay');
+  const player = document.getElementById('studioVideoPlayer');
+
+  if (!player) return;
+
+  function formatTime(s) {
+    if (isNaN(s) || s < 0) s = 0;
+    const hrs = Math.floor(s / 3600);
+    const mins = Math.floor((s % 3600) / 60);
+    const secs = Math.floor(s % 60);
+    return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  }
+
+  function updateTimecode() {
+    if (!timecodeEl) return;
+    const cur = player.currentTime || 0;
+    const dur = player.duration || 0;
+    timecodeEl.textContent = `${formatTime(cur)} / ${formatTime(dur)}`;
+  }
+
+  if (playBtn) {
+    playBtn.addEventListener('click', () => {
+      if (player.paused) {
+        player.play();
+        playBtn.innerHTML = '<i data-lucide="pause"></i>';
+      } else {
+        player.pause();
+        playBtn.innerHTML = '<i data-lucide="play"></i>';
+      }
+      if (window.lucide) lucide.createIcons();
+    });
+
+    player.addEventListener('play', () => {
+      playBtn.innerHTML = '<i data-lucide="pause"></i>';
+      if (window.lucide) lucide.createIcons();
+    });
+
+    player.addEventListener('pause', () => {
+      playBtn.innerHTML = '<i data-lucide="play"></i>';
+      if (window.lucide) lucide.createIcons();
+    });
+  }
+
+  if (back5Btn) {
+    back5Btn.addEventListener('click', () => {
+      player.currentTime = Math.max(0, player.currentTime - 5);
+      updateTimecode();
+    });
+  }
+
+  if (fwd5Btn) {
+    fwd5Btn.addEventListener('click', () => {
+      player.currentTime = Math.min(player.duration || 3600, player.currentTime + 5);
+      updateTimecode();
+    });
+  }
+
+  if (fullscreenBtn) {
+    fullscreenBtn.addEventListener('click', () => {
+      const container = document.querySelector('.player-container') || player;
+      if (!document.fullscreenElement) {
+        if (container.requestFullscreen) container.requestFullscreen();
+        else if (player.requestFullscreen) player.requestFullscreen();
+      } else {
+        if (document.exitFullscreen) document.exitFullscreen();
+      }
+    });
+  }
+
+  player.addEventListener('timeupdate', updateTimecode);
+  player.addEventListener('loadedmetadata', updateTimecode);
+}
+
+// ==========================================================================
+// 18. CapCut Live Audio Balance Dock & VU Meter
+// ==========================================================================
+function initCapCutAudioMixerDock() {
+  const sliderVocals = document.getElementById('sliderVocalsMix');
+  const sliderBgm = document.getElementById('sliderBgmMix');
+  const valVocals = document.getElementById('valVocalsMix');
+  const valBgm = document.getElementById('valBgmMix');
+  const vuFillL = document.getElementById('vuFillL');
+  const vuFillR = document.getElementById('vuFillR');
+  const player = document.getElementById('studioVideoPlayer');
+
+  if (sliderVocals && valVocals) {
+    sliderVocals.addEventListener('input', () => {
+      valVocals.textContent = `${sliderVocals.value}%`;
+    });
+  }
+
+  if (sliderBgm && valBgm) {
+    sliderBgm.addEventListener('input', () => {
+      valBgm.textContent = `${sliderBgm.value}%`;
+    });
+  }
+
+  // Realistic animated VU Meter while video is playing
+  if (player && vuFillL && vuFillR) {
+    let vuInterval = null;
+    player.addEventListener('play', () => {
+      if (vuInterval) clearInterval(vuInterval);
+      vuInterval = setInterval(() => {
+        if (player.paused || player.ended) {
+          vuFillL.style.height = '15%';
+          vuFillR.style.height = '15%';
+          clearInterval(vuInterval);
+          return;
+        }
+        const leftH = 30 + Math.random() * 55;
+        const rightH = 30 + Math.random() * 55;
+        vuFillL.style.height = `${leftH}%`;
+        vuFillR.style.height = `${rightH}%`;
+      }, 90);
+    });
+
+    player.addEventListener('pause', () => {
+      if (vuInterval) clearInterval(vuInterval);
+      vuFillL.style.height = '15%';
+      vuFillR.style.height = '15%';
+    });
+  }
+}
+
+// ==========================================================================
+// 18. CapCut Desktop Interactive Multi-Track Timeline
+// ==========================================================================
+let timelineScale = 12; // pixels per second
+
+function initCapCutTimelineDock() {
+  const playPauseBtn = document.getElementById('timelinePlayPauseBtn');
+  const zoomInBtn = document.getElementById('timelineZoomInBtn');
+  const zoomOutBtn = document.getElementById('timelineZoomOutBtn');
+  const player = document.getElementById('studioVideoPlayer');
+  const playhead = document.getElementById('timelinePlayhead');
+  const timecodeDisplay = document.getElementById('timelineCurrentTimecode');
+  const workspace = document.getElementById('timelineWorkspace');
+
+  if (playPauseBtn && player) {
+    playPauseBtn.addEventListener('click', () => {
+      if (player.paused) {
+        player.play();
+        playPauseBtn.innerHTML = '<i data-lucide="pause"></i>';
+      } else {
+        player.pause();
+        playPauseBtn.innerHTML = '<i data-lucide="play"></i>';
+      }
+      if (window.lucide) lucide.createIcons();
+    });
+  }
+
+  if (zoomInBtn) {
+    zoomInBtn.addEventListener('click', () => {
+      timelineScale = Math.min(45, timelineScale + 4);
+      if (window.lastRenderedSegments) {
+        renderCapCutTimeline(window.lastRenderedSegments, player.duration || 60);
+      }
+    });
+  }
+
+  if (zoomOutBtn) {
+    zoomOutBtn.addEventListener('click', () => {
+      timelineScale = Math.max(5, timelineScale - 3);
+      if (window.lastRenderedSegments) {
+        renderCapCutTimeline(window.lastRenderedSegments, player.duration || 60);
+      }
+    });
+  }
+
+  // Update playhead on video timeupdate
+  if (player && playhead && timecodeDisplay) {
+    player.addEventListener('timeupdate', () => {
+      const cur = player.currentTime || 0;
+      const xPos = 120 + (cur * timelineScale); // 120px offset for track headers
+      playhead.style.left = `${xPos}px`;
+
+      const m = Math.floor(cur / 60);
+      const s = Math.floor(cur % 60);
+      const ms = Math.floor((cur % 1) * 1000);
+      timecodeDisplay.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(ms).padStart(3, '0')}`;
+    });
+  }
+
+  // Scrub timeline by clicking on ruler or workspace
+  if (workspace && player) {
+    workspace.addEventListener('click', (e) => {
+      if (e.target.closest('.timeline-dialogue-chip') || e.target.closest('.track-header')) return;
+      const rect = workspace.getBoundingClientRect();
+      const clickX = e.clientX - rect.left + workspace.scrollLeft;
+      const timeX = clickX - 120;
+      if (timeX >= 0) {
+        const targetTime = timeX / timelineScale;
+        if (targetTime <= (player.duration || 3600)) {
+          player.currentTime = targetTime;
+        }
+      }
+    });
+  }
+}
+
+function renderCapCutTimeline(segments, totalDuration) {
+  window.lastRenderedSegments = segments;
+  const ruler = document.getElementById('timelineRuler');
+  const dialogueLane = document.getElementById('laneDialogueTrack');
+  const videoBar = document.getElementById('videoTrackBar');
+  const bgmBar = document.getElementById('bgmTrackBar');
+  const player = document.getElementById('studioVideoPlayer');
+
+  if (!dialogueLane || !segments || segments.length === 0) return;
+
+  const dur = Math.max(15, totalDuration || 60);
+  const totalW = Math.max(800, dur * timelineScale);
+
+  if (videoBar) videoBar.style.width = `${totalW}px`;
+  if (bgmBar) bgmBar.style.width = `${totalW}px`;
+
+  // 1. Build Ruler ticks
+  if (ruler) {
+    ruler.innerHTML = '';
+    const step = dur > 120 ? 10 : 5;
+    for (let t = 0; t <= dur; t += step) {
+      const tick = document.createElement('div');
+      tick.className = 'ruler-tick';
+      tick.style.left = `${120 + (t * timelineScale)}px`;
+      const m = Math.floor(t / 60);
+      const s = Math.floor(t % 60);
+      tick.textContent = `${m}:${String(s).padStart(2, '0')}`;
+      ruler.appendChild(tick);
+    }
+  }
+
+  // 2. Speaker color palette for vibrant CapCut chips
+  const speakerPalette = [
+    'linear-gradient(135deg, #4f46e5, #7c3aed)',
+    'linear-gradient(135deg, #ec4899, #f43f5e)',
+    'linear-gradient(135deg, #06b6d4, #0284c7)',
+    'linear-gradient(135deg, #10b981, #059669)',
+    'linear-gradient(135deg, #f59e0b, #d97706)',
+    'linear-gradient(135deg, #8b5cf6, #6d28d9)'
+  ];
+
+  const speakerColorMap = {};
+  let colorIdx = 0;
+
+  // Clear lane
+  dialogueLane.innerHTML = '';
+
+  segments.forEach((seg, idx) => {
+    const sid = seg.speaker_id || seg.speaker || `speaker_${idx}`;
+    if (!speakerColorMap[sid]) {
+      speakerColorMap[sid] = speakerPalette[colorIdx % speakerPalette.length];
+      colorIdx++;
+    }
+
+    const st = parseFloat(seg.start_time || seg.start || 0);
+    const et = parseFloat(seg.end_time || seg.end || (st + 2.5));
+    const leftPos = st * timelineScale;
+    const segWidth = Math.max(40, (et - st) * timelineScale);
+
+    const chip = document.createElement('div');
+    chip.className = 'timeline-dialogue-chip';
+    chip.style.left = `${leftPos}px`;
+    chip.style.width = `${segWidth}px`;
+    chip.style.background = speakerColorMap[sid];
+
+    const charName = seg.speaker_name || sid;
+    const khmerText = seg.khmer_translation || seg.text || '';
+
+    chip.title = `${charName} (${st.toFixed(1)}s - ${et.toFixed(1)}s): "${khmerText}"`;
+    chip.innerHTML = `
+      <span class="chip-speaker">${charName}</span>
+      <span class="chip-text">${khmerText}</span>
+    `;
+
+    chip.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('.timeline-dialogue-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+
+      if (player) {
+        player.currentTime = st;
+        player.play();
+      }
+
+      // If line has audio path, play it directly
+      if (seg.audioPath) {
+        const lineAudio = new Audio(seg.audioPath);
+        lineAudio.play().catch(() => {});
+      }
+    });
+
+    dialogueLane.appendChild(chip);
+  });
+}
+
+// Sample Timeline Data for Instant Preview
+const DEFAULT_PRESET_TIMELINE_SEGMENTS = [
+  { start_time: 1.5, end_time: 6.2, speaker_id: 'lead_male', speaker_name: '👑 តួឯកប្រុស', khmer_translation: 'តើអ្នកណាហ៊ានចូលមកដំណាក់ហង្សភ្លើង?' },
+  { start_time: 7.0, end_time: 12.8, speaker_id: 'lead_female', speaker_name: '🌸 តួឯកស្រី', khmer_translation: 'ខ្ញុំជាម្ចាស់ក្សត្រី មិនមែនជាមនុស្សចម្លែកទេ!' },
+  { start_time: 14.2, end_time: 20.0, speaker_id: 'general_male', speaker_name: '🛡️ មេទ័ពរាជវាំង', khmer_translation: 'កម្លាំងទ័ពសត្រូវមកដល់ច្រកទ្វារខាងជើងហើយ!' },
+  { start_time: 21.5, end_time: 28.2, speaker_id: 'lead_male', speaker_name: '👑 តួឯកប្រុស', khmer_translation: 'លើកនេះ យើងនឹងមិនថយក្រោយជាដាច់ខាត!' },
+  { start_time: 29.8, end_time: 37.0, speaker_id: 'lead_female', speaker_name: '🌸 តួឯកស្រី', khmer_translation: 'ដាវហង្សភ្លើងនឹងបំភ្លឺផ្លូវជ័យជំនះរបស់យើង!' },
+  { start_time: 38.5, end_time: 46.0, speaker_id: 'side_actor', speaker_name: '👥 កងទ័ពក្លាហាន', khmer_translation: 'ចូលប្រយុទ្ធទាំងអស់គ្នា ដើម្បីទឹកដីមាតុភូមិ!' }
+];
+
+// 19. CapCut Desktop Export Modal Logic
+function initCapCutExportModal() {
+  const exportBtn = document.getElementById('btnCapcutExport');
+  const modal = document.getElementById('capcutExportModal');
+  const closeBtn = document.getElementById('closeExportModalBtn');
+  const cancelBtn = document.getElementById('cancelExportModalBtn');
+  const startExportBtn = document.getElementById('startRenderExportBtn');
+  const resolutionChips = document.querySelectorAll('.export-chip');
+  const progressBar = document.getElementById('exportProgressBar');
+  const progressText = document.getElementById('exportProgressText');
+  const progressContainer = document.getElementById('exportRenderProgress');
+  const projectTitleEl = document.getElementById('exportProjectTitle');
+
+  if (!modal) return;
+
+  function openModal() {
+    if (currentUploadedFile && currentUploadedFile.originalName) {
+      if (projectTitleEl) projectTitleEl.textContent = currentUploadedFile.originalName;
+    }
+    modal.classList.remove('hidden');
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function closeModal() {
+    modal.classList.add('hidden');
+    if (progressContainer) progressContainer.classList.add('hidden');
+    if (progressBar) progressBar.style.width = '0%';
+  }
+
+  if (exportBtn) exportBtn.addEventListener('click', openModal);
+  if (closeBtn) closeBtn.addEventListener('click', closeModal);
+  if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+
+  resolutionChips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      resolutionChips.forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+    });
+  });
+
+  if (startExportBtn) {
+    startExportBtn.addEventListener('click', async () => {
+      const activeRes = document.querySelector('.export-chip.active')?.getAttribute('data-res') || '1080p';
+      const format = document.getElementById('exportFormatSelect')?.value || 'mp4';
+      
+      startExportBtn.disabled = true;
+      if (progressContainer) progressContainer.classList.remove('hidden');
+      if (progressText) progressText.textContent = `🚀 កំពុង Render វីដេអូ ${activeRes.toUpperCase()} (${format.toUpperCase()})...`;
+
+      let p = 0;
+      const renderTimer = setInterval(() => {
+        p += 15;
+        if (p > 100) p = 100;
+        if (progressBar) progressBar.style.width = `${p}%`;
+        if (p === 100) {
+          clearInterval(renderTimer);
+          if (progressText) progressText.textContent = '✅ Render ជោគជ័យ! កំពុងចាប់ផ្តើមទាញយក...';
+
+          setTimeout(() => {
+            closeModal();
+            startExportBtn.disabled = false;
+
+            // Trigger download of dubbed video or original
+            const targetUrl = dubbedMediaUrl || originalMediaUrl || '/media/uploads/video_hang_phleung_ep01.mp4';
+            const a = document.createElement('a');
+            a.href = targetUrl;
+            a.download = `Cheatz_Dabber_Export_${activeRes}_${Date.now()}.${format === 'audio_only' ? 'mp3' : format}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            showToast('🎉 ការនាំចេញវីដេអូបានសម្រេចជាស្ថាពរ!', 'success');
+          }, 600);
+        }
+      }, 120);
+    });
+  }
+}
+
+// 20. Track Mute/Unmute Toggles
+function initTimelineTrackControls() {
+  const muteVocalsBtn = document.getElementById('muteVocalsBtn');
+  const muteBgmBtn = document.getElementById('muteBgmBtn');
+  const vocalsSlider = document.getElementById('sliderVocalsMix');
+  const bgmSlider = document.getElementById('sliderBgmMix');
+
+  let vocalsMuted = false;
+  let bgmMuted = false;
+  let prevVocals = 100;
+  let prevBgm = 45;
+
+  if (muteVocalsBtn && vocalsSlider) {
+    muteVocalsBtn.addEventListener('click', () => {
+      vocalsMuted = !vocalsMuted;
+      if (vocalsMuted) {
+        prevVocals = vocalsSlider.value;
+        vocalsSlider.value = 0;
+        muteVocalsBtn.classList.add('muted');
+        muteVocalsBtn.innerHTML = '<i data-lucide="volume-x"></i>';
+      } else {
+        vocalsSlider.value = prevVocals;
+        muteVocalsBtn.classList.remove('muted');
+        muteVocalsBtn.innerHTML = '<i data-lucide="volume-2"></i>';
+      }
+      vocalsSlider.dispatchEvent(new Event('input'));
+      if (window.lucide) lucide.createIcons();
+    });
+  }
+
+  if (muteBgmBtn && bgmSlider) {
+    muteBgmBtn.addEventListener('click', () => {
+      bgmMuted = !bgmMuted;
+      if (bgmMuted) {
+        prevBgm = bgmSlider.value;
+        bgmSlider.value = 0;
+        muteBgmBtn.classList.add('muted');
+        muteBgmBtn.innerHTML = '<i data-lucide="volume-x"></i>';
+      } else {
+        bgmSlider.value = prevBgm;
+        muteBgmBtn.classList.remove('muted');
+        muteBgmBtn.innerHTML = '<i data-lucide="volume-2"></i>';
+      }
+      bgmSlider.dispatchEvent(new Event('input'));
+      if (window.lucide) lucide.createIcons();
+    });
+  }
+}
+
+// ==========================================================================
+// 21. Authentication & Role-Based Access Control (RBAC) System
+// ==========================================================================
+
+function initAuthAndRBAC() {
+  const authModal = document.getElementById('authModal');
+  const authTabLogin = document.getElementById('authTabLogin');
+  const authTabRegister = document.getElementById('authTabRegister');
+  const authForm = document.getElementById('authForm');
+  const authUsernameInput = document.getElementById('authUsernameInput');
+  const authPasswordInput = document.getElementById('authPasswordInput');
+  const authSubmitBtn = document.getElementById('authSubmitBtn');
+  const authSubmitBtnText = document.getElementById('authSubmitBtnText');
+  const authAlertMsg = document.getElementById('authAlertMsg');
+
+  const userNameDisplay = document.getElementById('userNameDisplay');
+  const userTierBadge = document.getElementById('userTierBadge');
+  const btnLogout = document.getElementById('btnLogout');
+  const btnAdminUsers = document.getElementById('btnAdminUsers');
+
+  // Admin Modal Elements
+  const adminUsersModal = document.getElementById('adminUsersModal');
+  const closeAdminUsersBtn = document.getElementById('closeAdminUsersBtn');
+  const closeAdminUsersBottomBtn = document.getElementById('closeAdminUsersBottomBtn');
+  const adminUsersTableBody = document.getElementById('adminUsersTableBody');
+  const adminTotalUsersCount = document.getElementById('adminTotalUsersCount');
+  const adminPremiumUsersCount = document.getElementById('adminPremiumUsersCount');
+  const adminFreeUsersCount = document.getElementById('adminFreeUsersCount');
+
+  let authMode = 'login'; // 'login' or 'register'
+
+  function showAuthAlert(msg, type = 'error') {
+    if (!authAlertMsg) return;
+    authAlertMsg.textContent = msg;
+    authAlertMsg.className = `auth-alert-message ${type}`;
+    authAlertMsg.classList.remove('hidden');
+  }
+
+  function hideAuthAlert() {
+    if (authAlertMsg) authAlertMsg.classList.add('hidden');
+  }
+
+  // Switch tabs
+  if (authTabLogin && authTabRegister) {
+    authTabLogin.addEventListener('click', () => {
+      authMode = 'login';
+      authTabLogin.classList.add('active');
+      authTabRegister.classList.remove('active');
+      if (authSubmitBtnText) authSubmitBtnText.textContent = 'ចូលប្រើប្រាស់';
+      hideAuthAlert();
+    });
+
+    authTabRegister.addEventListener('click', () => {
+      authMode = 'register';
+      authTabRegister.classList.add('active');
+      authTabLogin.classList.remove('active');
+      if (authSubmitBtnText) authSubmitBtnText.textContent = 'បង្កើតគណនីថ្មី';
+      hideAuthAlert();
+    });
+  }
+
+  // Update Header User UI
+  function updateUserUI(user) {
+    currentUser = user;
+    if (userNameDisplay) userNameDisplay.textContent = user.username;
+
+    if (userTierBadge) {
+      userTierBadge.className = 'user-tier-badge';
+      if (user.role === 'admin') {
+        userTierBadge.classList.add('tier-admin');
+        userTierBadge.textContent = '👑 ADMIN';
+      } else if (user.tier === 'premium') {
+        userTierBadge.classList.add('tier-premium');
+        let remainingText = '';
+        if (user.premium_expires_at) {
+          const diffMs = new Date(user.premium_expires_at) - new Date();
+          const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+          remainingText = days > 0 ? ` [${days} ថ្ងៃ]` : ' [ជិតផុត]';
+        }
+        userTierBadge.textContent = `⭐ PREMIUM${remainingText}`;
+      } else {
+        userTierBadge.classList.add('tier-free');
+        userTierBadge.textContent = '🌱 FREE';
+      }
+    }
+
+    // Toggle Admin Button visibility
+    if (btnAdminUsers) {
+      if (user.role === 'admin') {
+        btnAdminUsers.classList.remove('hidden');
+      } else {
+        btnAdminUsers.classList.add('hidden');
+      }
+    }
+
+    // Feature gating for Free users on engine modes
+    const btnLocal = document.getElementById('modeBtnLocal');
+    const btnCloud = document.getElementById('modeBtnCloud');
+    if (user.tier === 'free' && user.role !== 'admin') {
+      if (btnLocal) btnLocal.classList.add('is-locked');
+      if (btnCloud) btnCloud.classList.add('is-locked');
+      // If current mode is not pure_khmer, auto-switch to pure_khmer
+      const btnPure = document.getElementById('modeBtnPure');
+      if (btnPure) btnPure.click();
+    } else {
+      if (btnLocal) btnLocal.classList.remove('is-locked');
+      if (btnCloud) btnCloud.classList.remove('is-locked');
+    }
+  }
+
+  // Check Current Session on Load
+  async function checkAuthStatus() {
+    const token = localStorage.getItem('studio_auth_token');
+    if (!token) {
+      if (authModal) authModal.classList.remove('hidden');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/auth/me');
+      if (res.ok) {
+        const data = await res.json();
+        updateUserUI(data.user);
+        if (authModal) authModal.classList.add('hidden');
+      } else {
+        localStorage.removeItem('studio_auth_token');
+        if (authModal) authModal.classList.remove('hidden');
+      }
+    } catch {
+      if (authModal) authModal.classList.remove('hidden');
+    }
+  }
+
+  // Handle Auth Form Submission
+  if (authForm) {
+    authForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = (authUsernameInput.value || '').trim();
+      const password = (authPasswordInput.value || '').trim();
+
+      if (!username || !password) {
+        showAuthAlert('សូមបញ្ចូលឈ្មោះគណនី និងពាក្យសម្ងាត់');
+        return;
+      }
+
+      if (authSubmitBtn) authSubmitBtn.disabled = true;
+      hideAuthAlert();
+
+      const endpoint = authMode === 'login' ? '/api/auth/login' : '/api/auth/register';
+
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.detail || 'ការផ្ទៀងផ្ទាត់មិនជោគជ័យ');
+        }
+
+        // Success!
+        localStorage.setItem('studio_auth_token', data.token);
+        updateUserUI(data.user);
+        if (authModal) authModal.classList.add('hidden');
+        showToast(`🎉 ស្វាគមន៍មកកាន់ស្ទូឌីយោ @${data.user.username}!`, 'success');
+        authUsernameInput.value = '';
+        authPasswordInput.value = '';
+
+        // Reload characters for the authenticated user
+        if (typeof loadAllCharacters === 'function') {
+          loadAllCharacters();
+        }
+      } catch (err) {
+        showAuthAlert(err.message || 'កំហុសបណ្តាញ');
+      } finally {
+        if (authSubmitBtn) authSubmitBtn.disabled = false;
+      }
+    });
+  }
+
+  // Handle Logout
+  if (btnLogout) {
+    btnLogout.addEventListener('click', async () => {
+      if (!confirm('តើអ្នកប្រាកដជាចង់ចាកចេញពីគណនីនេះមែនទេ?')) return;
+      try {
+        await fetch('/api/auth/logout', { method: 'POST' });
+      } catch {}
+      localStorage.removeItem('studio_auth_token');
+      currentUser = null;
+      if (authModal) authModal.classList.remove('hidden');
+      showToast('👋 បានចាកចេញពីគណនីរួចរាល់', 'info');
+    });
+  }
+
+  // Admin Modal Controls
+  if (btnAdminUsers && adminUsersModal) {
+    btnAdminUsers.addEventListener('click', () => {
+      adminUsersModal.classList.remove('hidden');
+      loadAdminUsers();
+    });
+  }
+
+  if (closeAdminUsersBtn && adminUsersModal) {
+    closeAdminUsersBtn.addEventListener('click', () => {
+      adminUsersModal.classList.add('hidden');
+    });
+  }
+
+  if (closeAdminUsersBottomBtn && adminUsersModal) {
+    closeAdminUsersBottomBtn.addEventListener('click', () => {
+      adminUsersModal.classList.add('hidden');
+    });
+  }
+
+  // Load Admin Users List
+  async function loadAdminUsers() {
+    if (!adminUsersTableBody) return;
+    adminUsersTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#94a3b8; padding:24px;">កំពុងផ្ទុកបញ្ជីអ្នកប្រើប្រាស់...</td></tr>';
+
+    try {
+      const res = await fetch('/api/admin/users');
+      if (!res.ok) {
+        throw new Error('មិនអាចផ្ទុកទិន្នន័យ User បានទេ');
+      }
+      const data = await res.json();
+      const users = data.users || [];
+
+      // Stats
+      if (adminTotalUsersCount) adminTotalUsersCount.textContent = users.length;
+      if (adminPremiumUsersCount) adminPremiumUsersCount.textContent = users.filter(u => u.tier === 'premium' || u.role === 'admin').length;
+      if (adminFreeUsersCount) adminFreeUsersCount.textContent = users.filter(u => u.tier === 'free' && u.role !== 'admin').length;
+
+      if (users.length === 0) {
+        adminUsersTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#64748b; padding:24px;">មិនទាន់មានអ្នកប្រើប្រាស់ណាម្នាក់នៅឡើយទេ</td></tr>';
+        return;
+      }
+
+      adminUsersTableBody.innerHTML = '';
+      users.forEach(u => {
+        const tr = document.createElement('tr');
+
+        // Expiry text calculation
+        let expiryDisplay = 'គ្មាន';
+        let expiryClass = '';
+        if (u.role === 'admin') {
+          expiryDisplay = 'អចិន្ត្រៃយ៍ (Lifetime)';
+          expiryClass = 'lifetime';
+        } else if (u.tier === 'premium') {
+          if (!u.premium_expires_at) {
+            expiryDisplay = 'អចិន្ត្រៃយ៍ (Lifetime)';
+            expiryClass = 'lifetime';
+          } else {
+            const expDate = new Date(u.premium_expires_at);
+            const now = new Date();
+            if (now >= expDate) {
+              expiryDisplay = 'ផុតកំណត់';
+              expiryClass = 'expired';
+            } else {
+              const diffMs = expDate - now;
+              const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+              const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+              expiryDisplay = `${expDate.toLocaleDateString('km-KH')} (នៅសល់ ${days}ថ្ងៃ ${hours}ម៉ោង)`;
+            }
+          }
+        }
+
+        const tierClass = u.role === 'admin' ? 'badge-admin' : (u.tier === 'premium' ? 'badge-premium' : 'badge-free');
+        const tierLabel = u.role === 'admin' ? 'ADMIN' : (u.tier === 'premium' ? 'PREMIUM' : 'FREE');
+
+        tr.innerHTML = `
+          <td style="color:#94a3b8; font-weight:600;">#${u.id}</td>
+          <td style="font-weight:700; color:#ffffff;">${escapeHtml(u.username)}</td>
+          <td><span class="table-tier-badge ${u.role === 'admin' ? 'badge-admin' : 'badge-free'}">${u.role.toUpperCase()}</span></td>
+          <td><span class="table-tier-badge ${tierClass}">${tierLabel}</span></td>
+          <td><span class="table-expiry-text ${expiryClass}">${expiryDisplay}</span></td>
+          <td>
+            <div class="table-actions-cell">
+              ${u.role !== 'admin' ? `
+                <select class="select-premium-duration" id="duration_${u.id}">
+                  <option value="7">៧ ថ្ងៃ</option>
+                  <option value="15">១៥ ថ្ងៃ</option>
+                  <option value="30" selected>៣០ ថ្ងៃ (១ ខែ)</option>
+                  <option value="90">៩០ ថ្ងៃ (៣ ខែ)</option>
+                  <option value="365">១ ឆ្នាំ</option>
+                  <option value="-1">គ្មានដែនកំណត់</option>
+                </select>
+                <button type="button" class="btn-grant-prem" data-userid="${u.id}" title="កំណត់សិទ្ធិ Premium">⭐ ផ្តល់ Premium</button>
+                ${u.tier === 'premium' ? `<button type="button" class="btn-revoke-prem" data-revokeid="${u.id}" title="ដកសិទ្ធិ Premium">❌ ដក</button>` : ''}
+                <button type="button" class="btn-delete-u" data-deleteid="${u.id}" title="លុបគណនី">🗑️</button>
+              ` : '<span style="color:#fbbf24; font-size:0.75rem; font-weight:600;">👑 Master Admin</span>'}
+            </div>
+          </td>
+        `;
+        adminUsersTableBody.appendChild(tr);
+      });
+
+      // Wire row actions
+      adminUsersTableBody.querySelectorAll('.btn-grant-prem').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const uid = parseInt(btn.dataset.userid, 10);
+          const durSelect = document.getElementById(`duration_${uid}`);
+          const days = durSelect ? parseInt(durSelect.value, 10) : 30;
+          try {
+            const r = await fetch('/api/admin/set-premium', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ userId: uid, days })
+            });
+            if (!r.ok) throw new Error('បរាជ័យក្នុងការកំណត់ Premium');
+            showToast(`⭐ បានកំណត់ Premium សម្រាប់ User #${uid} រួចរាល់!`, 'success');
+            loadAdminUsers();
+          } catch (err) {
+            showToast('កំហុស៖ ' + err.message, 'error');
+          }
+        });
+      });
+
+      adminUsersTableBody.querySelectorAll('.btn-revoke-prem').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const uid = parseInt(btn.dataset.revokeid, 10);
+          if (!confirm(`តើអ្នកចង់ដក Premium ពី User #${uid} មែនទេ?`)) return;
+          try {
+            const r = await fetch('/api/admin/revoke-premium', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ userId: uid })
+            });
+            if (!r.ok) throw new Error('បរាជ័យក្នុងការដក Premium');
+            showToast(`❌ បានដក Premium ពី User #${uid} មកជា Free រួចរាល់!`, 'info');
+            loadAdminUsers();
+          } catch (err) {
+            showToast('កំហុស៖ ' + err.message, 'error');
+          }
+        });
+      });
+
+      adminUsersTableBody.querySelectorAll('.btn-delete-u').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const uid = parseInt(btn.dataset.deleteid, 10);
+          if (!confirm(`តើអ្នកប្រាកដជាចង់លុបគណនី User #${uid} នេះមែនទេ? សកម្មភាពនេះមិនអាចត្រឡប់វិញបានទេ។`)) return;
+          try {
+            const r = await fetch('/api/admin/delete-user', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ userId: uid })
+            });
+            if (!r.ok) throw new Error('បរាជ័យក្នុងការលុបគណនី');
+            showToast(`🗑️ បានលុបគណនី User #${uid} រួចរាល់!`, 'success');
+            loadAdminUsers();
+          } catch (err) {
+            showToast('កំហុស៖ ' + err.message, 'error');
+          }
+        });
+      });
+
+    } catch (err) {
+      adminUsersTableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#f87171; padding:24px;">កំហុស៖ ${err.message}</td></tr>`;
+    }
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  // Trigger Auth Check
+  checkAuthStatus();
+}
+
 
 

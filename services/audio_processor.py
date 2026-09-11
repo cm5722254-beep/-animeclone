@@ -2,11 +2,18 @@ import os
 import subprocess
 import math
 
-# Automatically ensure bundled FFmpeg bin/ directory is in PATH
+# Automatically ensure FFmpeg paths are in PATH (cross-platform Windows & macOS)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-BIN_DIR = os.path.join(BASE_DIR, 'bin')
-if os.path.exists(BIN_DIR) and BIN_DIR not in os.environ.get('PATH', ''):
-    os.environ['PATH'] = BIN_DIR + os.pathsep + os.environ.get('PATH', '')
+EXTRA_PATHS = [
+    os.path.join(BASE_DIR, 'bin'),
+    '/opt/homebrew/bin',      # Apple Silicon Mac (M1/M2/M3/M4) Homebrew
+    '/usr/local/bin',          # Intel Mac Homebrew & standard UNIX tools
+    '/opt/local/bin',          # MacPorts
+]
+for p in EXTRA_PATHS:
+    if os.path.exists(p) and p not in os.environ.get('PATH', ''):
+        os.environ['PATH'] = p + os.pathsep + os.environ.get('PATH', '')
+
 
 def run_command(cmd: str):
     """Run shell command synchronously using subprocess."""

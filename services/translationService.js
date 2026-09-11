@@ -36,8 +36,9 @@ class TranslationService {
     }
 
     const candidateModels = [
-      'gemini-3.6-flash',
-      'gemini-3.5-flash-lite',
+      'gemini-3.5-flash',
+      'gemini-3.1-flash-lite',
+      'gemini-3.7-flash',
       'gemini-flash-latest'
     ];
 
@@ -104,12 +105,15 @@ Khmer Spoken Dubbing Translation:`;
 
     for (const modelName of candidateModels) {
       try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${this.apiKey}`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
         const res = await axios.post(url, {
           contents: [{
             parts: [{ text: prompt }]
           }]
-        }, { timeout: 25000 });
+        }, {
+          headers: { 'x-goog-api-key': this.apiKey, 'Content-Type': 'application/json' },
+          timeout: 25000
+        });
 
         const rawTranslated = res.data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
         if (rawTranslated) {

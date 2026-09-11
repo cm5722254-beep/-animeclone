@@ -10,14 +10,18 @@ echo.
 
 cd /d "%~dp0"
 
-:: 1. Check if Node server is already running on port 3000
+:: 1. Check if Studio server is already running on port 3000
 netstat -ano | findstr :3000 >nul 2>&1
 if %errorlevel% neq 0 (
-    echo [1/2] 🚀 កំពុងចាប់ផ្ដើម Web Studio Server (Port 3000)...
-    start "Cheatz Dubbing Server" cmd /k "node server.js"
+    echo [1/2] 🚀 កំពុងចាប់ផ្ដើម Studio Server (Port 3000)...
+    if exist ".venv\Scripts\python.exe" (
+        start "Cheatz Dabber Server" cmd /k ".venv\Scripts\python.exe server.py"
+    ) else (
+        start "Cheatz Dabber Server" cmd /k "python server.py"
+    )
     timeout /t 3 >nul
 ) else (
-    echo [1/2] ✅ Web Studio Server កំពុងដំណើរការស្រាប់លើ http://localhost:3000!
+    echo [1/2] ✅ Studio Server កំពុងដំណើរការស្រាប់លើ http://localhost:3000!
 )
 
 echo.

@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  cheatz-dabber:
+    build: .
+    container_name: cheatz-dabber-studio
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - ./uploads:/app/uploads
+      - ./outputs:/app/outputs
+      - ./samples:/app/samples

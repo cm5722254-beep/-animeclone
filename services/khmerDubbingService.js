@@ -191,8 +191,9 @@ class KhmerDubbingService {
     if (!apiKey) return [];
 
     const candidateModels = [
-      'gemini-3.6-flash',
-      'gemini-3.5-flash-lite',
+      'gemini-3.5-flash',
+      'gemini-3.1-flash-lite',
+      'gemini-3.7-flash',
       'gemini-flash-latest'
     ];
 
@@ -292,7 +293,7 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
       for (let attempt = 1; attempt <= retries; attempt++) {
         try {
           const res = await axios.post(
-            `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`,
             {
               contents: [{
                 parts: [
@@ -306,7 +307,10 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
                 ]
               }]
             },
-            { timeout: 70000 }
+            {
+              headers: { 'x-goog-api-key': apiKey, 'Content-Type': 'application/json' },
+              timeout: 70000
+            }
           );
 
           const raw = res.data?.candidates?.[0]?.content?.parts?.[0]?.text;

@@ -1,4 +1,5 @@
 import os
+import sys
 import shutil
 import subprocess
 from services import audio_processor
@@ -22,8 +23,8 @@ def separate_with_demucs(audio_path: str, output_dir: str) -> dict:
     base_name = os.path.splitext(os.path.basename(audio_path))[0]
 
     # Run Demucs CLI in two-stems mode (vocals / no_vocals)
-    # python -m demucs.separate -n htdemucs --two-stems=vocals -o <output_dir> <audio_path>
-    cmd = f'python -m demucs.separate -n htdemucs --two-stems=vocals -o "{output_dir}" "{audio_path}"'
+    # Use sys.executable to ensure same Python/virtualenv is used on Windows and macOS
+    cmd = f'"{sys.executable}" -m demucs.separate -n htdemucs --two-stems=vocals -o "{output_dir}" "{audio_path}"'
     print(f"Running Meta Demucs AI Vocal Separation on: {audio_path}...")
     audio_processor.run_command(cmd)
 

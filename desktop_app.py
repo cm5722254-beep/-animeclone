@@ -14,9 +14,15 @@ if sys.platform == 'win32':
         pass
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-BIN_DIR = os.path.join(BASE_DIR, 'bin')
-if os.path.exists(BIN_DIR) and BIN_DIR not in os.environ.get('PATH', ''):
-    os.environ['PATH'] = BIN_DIR + os.pathsep + os.environ.get('PATH', '')
+EXTRA_PATHS = [
+    os.path.join(BASE_DIR, 'bin'),
+    '/opt/homebrew/bin',      # Apple Silicon Mac Homebrew
+    '/usr/local/bin',          # Intel Mac Homebrew & standard UNIX tools
+    '/opt/local/bin',          # MacPorts
+]
+for p in EXTRA_PATHS:
+    if os.path.exists(p) and p not in os.environ.get('PATH', ''):
+        os.environ['PATH'] = p + os.pathsep + os.environ.get('PATH', '')
 
 from server import app
 
@@ -32,7 +38,7 @@ def main():
     # Wait for server to bind
     time.sleep(1.2)
 
-    # 2. Launch Native Windows WebView Desktop Window
+    # 2. Launch Native Desktop Window (Windows Edge WebView2 or macOS Cocoa WebKit)
     window = webview.create_window(
         title='🎬 AI Voice Clone & Dubbing Studio (Khmer)',
         url='http://127.0.0.1:3000',
@@ -42,7 +48,10 @@ def main():
         text_select=True,
         zoomable=True
     )
-    webview.start(gui='edgechromium', debug=False)
+    if sys.platform == 'win32':
+        webview.start(gui='edgechromium', debug=False)
+    else:
+        webview.start(debug=False)
 
 if __name__ == '__main__':
     main()
