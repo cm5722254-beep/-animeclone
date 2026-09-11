@@ -440,7 +440,7 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
         }
 
         const chunkLen = Math.min(chunkSize, totalDuration - currentOffset);
-        if (chunkLen <= 5) break;
+        if (chunkLen <= 0.8) break;
 
         const progress = isFullPipeline
           ? Math.min(42, 15 + Math.round((currentOffset / Math.max(1, maxScanDuration)) * 25))
