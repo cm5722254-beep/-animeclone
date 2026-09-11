@@ -33,6 +33,7 @@ __pycache__/
 
 # Large Binaries & Desktop Builds
 bin/*.exe
+*.exe
 dist/
 build/
 *.spec

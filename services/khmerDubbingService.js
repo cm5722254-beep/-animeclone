@@ -184,8 +184,9 @@ class KhmerDubbingService {
   /**
    * Transcribe and Diarize an audio chunk using Gemini with multi-model fallback & 429 backoff
    * Supports ANY language (Chinese, English, Thai, Korean, Japanese, French, Spanish, etc., or Auto-Detect)
+   * Supports genre ('ancient', 'modern', 'xianxia', 'comedy') and emotion ('dramatic', 'deep_sorrow', 'fierce_battle', 'sweet_romance', 'heroic_command')
    */
-  async transcribeChunkWithGemini(chunkPath, chunkStartTime, retries = 2, sourceLang = 'auto') {
+  async transcribeChunkWithGemini(chunkPath, chunkStartTime, retries = 2, sourceLang = 'auto', genre = 'ancient', emotion = 'dramatic') {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) return [];
 
@@ -213,9 +214,46 @@ class KhmerDubbingService {
     };
     const langContext = langNames[sourceLang] || sourceLang;
 
+    let genreInstruction = '';
+    if (genre === 'modern') {
+      genreInstruction = `SETTING: MODERN CONTEMPORARY / URBAN DRAMA / MODERN ROMANCE & ACTION (រឿងចិនសម័យ).
+- Apply authentic modern Cambodian movie dubbing speech (បង, អូន, ឯង, ខ្ញុំ, លោក, អ្នកនាង, ចៅហ្វាយ, ប៉ូលីស, ពួកយើង...).
+- DO NOT use ancient royal/dynasty vocabulary (avoid: ទូលបង្គំ, ព្រះម្នាង, និកាយ).`;
+    } else if (genre === 'comedy') {
+      genreInstruction = `SETTING: COMEDY / LIGHTHEARTED ENTERTAINMENT (រឿងកំប្លែង).
+- Infuse funny, witty, hilarious spoken Khmer dialogue and theatrical comedic timing.`;
+    } else {
+      genreInstruction = `SETTING: ANCIENT CHINESE DYNASTY / IMPERIAL PALACE / WUXIA & XIANXIA MARTIAL ARTS (រឿងចិនបុរាណ / រាជវាំង / ក្បាច់គុន).
+- Strictly apply authentic ancient Cambodian dubbing honorifics and period titles:
+  * រាជវាំង/បុរាណ/ក្បាច់គុន/Donghua: ទូលបង្គំ, ព្រះអង្គ, ព្រះរាជបុត្រ, ម្ចាស់ក្សត្រិយ៍, និកាយ, លោកគ្រូ, សិស្សប្អូន, មេទ័ព, ស្ទ្រីម, បងធំ, តាព្រឹទ្ធាចារ្យ, លោកយាយ, ចៅស្រី...`;
+    }
+
+    let emotionInstruction = '';
+    if (emotion === 'deep_sorrow') {
+      emotionInstruction = `EMOTIONAL DELIVERY: DEEP SORROW, GRIEF & TEARS (មនោសញ្ចេតនាកម្សត់ ស្រក់ទឹកភ្នែក ឈឺចាប់ខ្លាំង).
+- Infuse heartbreaking anguish, mournful cries, and gasping grief ("ឱព្រះអើយ!", "កុំចាកចោលខ្ញុំអី...", "ហ៊ឺ...", "ឈឺចាប់ខ្លាំងណាស់!", "ហេតុអ្វីទៅ?").`;
+    } else if (emotion === 'fierce_battle') {
+      emotionInstruction = `EMOTIONAL DELIVERY: FIERCE ANGER & BATTLE THREAT (ខឹងសម្បារ គំរាមកំហែង ច្បាំងប្រយុទ្ធ).
+- Infuse fierce shouting, commanding fury, and intimidation ("ឈប់ភ្លាម!", "ឯងចង់ងាប់មែនទេ!", "កុំសង្ឃឹមថារួចខ្លួន!", "ឆាប់លើកដៃឡើង!").`;
+    } else if (emotion === 'sweet_romance') {
+      emotionInstruction = `EMOTIONAL DELIVERY: SWEET ROMANCE & TENDER PASSION (ស្នេហាផ្អែមល្ហែម ស្រទន់ រ៉ូមែនទិក).
+- Infuse gentle, intimate, deeply affectionate whispers ("អូនសម្លាញ់...", "បងស្រឡាញ់អូនរហូត", "កុំភ័យអី បងនៅក្បែរអូនជានិច្ច").`;
+    } else if (emotion === 'heroic_command') {
+      emotionInstruction = `EMOTIONAL DELIVERY: HEROIC AUTHORITY & GENERAL COMMAND (អង់អាចក្លាហាន បញ្ជាកងទ័ព).
+- Infuse commanding, fearless, resolute conviction.`;
+    } else {
+      emotionInstruction = `EMOTIONAL DELIVERY: TRUE THEATRICAL CINEMA ACTING (មនោសញ្ចេតនា និងអារម្មណ៍ពិតៗដូចរឿងកុន).
+- Match the character's exact emotional urgency and genuine human feeling (anger, sorrow, romance, terror, or grief).
+- Incorporate authentic emotional interjections: ឱ!, ឯង!, ឈប់ភ្លាម!, ហ៊ឺ..., ហេតុអ្វី?, មិនអាចទេ!, ព្រះអើយ!, ឆាប់ឡើង!`;
+    }
+
     const prompt = `You are an elite master cinematic movie dubbing director and chief dialogue scriptwriter for Cambodian cinema and television (ប្រធានដឹកនាំបញ្ចូលសំឡេងភាពយន្តនិយាយខ្មែរអាជីព).
 The audio clip can be from any movie, anime, donghua (Xianxia/Wuxia), drama, or series.
 Spoken language: ${langContext}.
+
+${genreInstruction}
+
+${emotionInstruction}
 
 Carefully listen to this video audio clip. Even when background music (BGM), battle cries, explosions, sword fighting, or sound effects are present, accurately extract all spoken dialogue lines, character speeches, shouting, whispered words, and conversations.
 
@@ -227,11 +265,7 @@ Instructions:
    - "speaker_role": one of "child_boy", "child_girl", "old_man", "old_woman", "male_lead", "female_lead", "warrior_general", "fierce_male", "fierce_female", "scholar_monk", "servant_female", "servant_male", "villager", "crowd".
    - "gender": "male" or "female".
 3. Masterclass Theatrical Khmer Dubbing (ភាសាភាពយន្តនិយាយខ្មែរពិរោះបំផុត):
-   - Translate into authentic, deeply poetic, emotional, dramatic Khmer matching veteran Cambodian movie voice actors.
-   - Strictly apply authentic honorifics and period/storyline titles:
-     * រាជវាំង/បុរាណ/ក្បាច់គុន/Donghua: ទូលបង្គំ, ព្រះអង្គ, ព្រះរាជបុត្រ, ម្ចាស់ក្សត្រិយ៍, និកាយ, លោកគ្រូ, សិស្សប្អូន, មេទ័ព, ស្ទ្រីម, បងធំ...
-     * សម័យ/ទូទៅ: លោក, អ្នកនាង, បង, អូន, ពូ, មីង, តា, យាយ...
-   - Infuse theatrical acting interjections and emotional delivery ("ឱ!", "ឯង!", "ឈប់ភ្លាម!", "ហ៊ឺ...", "ហេតុអ្វី?", "ព្រះអើយ!", "មិនអាចទេ!", "ឆាប់ឡើង!").
+   - Translate into authentic, deeply poetic, emotional, dramatic Khmer matching veteran Cambodian movie voice actors with 100% genuine human emotional passion.
    - Use dramatic acting punctuation (!, ?, ..., ~) to guide realistic breath pauses.
    - STRICT RULE: Pure Khmer script ONLY in "khmer_translation". NEVER output Thai characters, Chinese characters, or robotic literal translations.
 4. Accurate Timestamps: Relative start_time and end_time (in seconds).
@@ -363,7 +397,7 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
   /**
    * Extract dialogue timeline across the video with intelligent auto-seek past opening intro music
    */
-  async extractDialogueTimeline(audioPath, totalDuration, scope = 'full', onProgress = () => {}, sourceLang = 'auto', isFullPipeline = true) {
+  async extractDialogueTimeline(audioPath, totalDuration, scope = 'full', onProgress = () => {}, sourceLang = 'auto', isFullPipeline = true, genre = 'ancient', emotion = 'dramatic') {
     let startOffset = 0;
     let targetDuration = totalDuration;
 
@@ -418,7 +452,7 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
         const chunkPath = path.join(tempDir, `chunk_${chunkIndex}.mp3`);
         await runCmd(`ffmpeg -y -ss ${currentOffset} -t ${chunkLen} -i "${audioPath}" -vn -ac 1 -ar 16000 -b:a 32k "${chunkPath}"`);
 
-        const segs = await this.transcribeChunkWithGemini(chunkPath, currentOffset, 2, sourceLang);
+        const segs = await this.transcribeChunkWithGemini(chunkPath, currentOffset, 2, sourceLang, genre, emotion);
         if (segs.length > 0) {
           allSegments.push(...segs);
           console.log(`Chunk at ${currentOffset}s: Found ${segs.length} dialogue lines (Total: ${allSegments.length})`);
@@ -785,16 +819,18 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
       scope = 'full', // 'full', or number of seconds (e.g. 120, 300)
       referenceAudioPath = null,
       castingSafetyMode = 'safe_curated',
-      characterVoiceMap: userVoiceMap = {}
+      characterVoiceMap: userVoiceMap = {},
+      genre = 'ancient',
+      emotionIntensity = 'dramatic'
     } = options;
 
     const videoDuration = await audioProcessor.getMediaDuration(videoPath);
     const maxDuration = (scope === 'full' || !scope) ? null : parseInt(scope, 10);
 
-    onProgress(15, 'AI Gemini កំពុងវិភាគសាច់រឿង និងបកប្រែគ្រប់តួអង្គក្នុងវីដេអូ...');
+    onProgress(15, `AI Gemini កំពុងវិភាគសាច់រឿង (${genre === 'modern' ? 'រឿងសម័យ' : 'រឿងបុរាណ'}) និងបកប្រែគ្រប់តួអង្គក្នុងវីដេអូ...`);
 
     // 1. Transcribe & Diarize all dialogue segments across the storyline
-    const dialogueSegments = await this.extractDialogueTimeline(extractedAudioPath, videoDuration, scope, onProgress, sourceLang);
+    const dialogueSegments = await this.extractDialogueTimeline(extractedAudioPath, videoDuration, scope, onProgress, sourceLang, true, genre, emotionIntensity);
 
     console.log(`Total dialogue segments found: ${dialogueSegments.length}`);
 

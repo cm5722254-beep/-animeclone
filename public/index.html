@@ -217,6 +217,26 @@
             </div>
 
             <div class="form-group">
+              <label><i data-lucide="compass"></i> ប្រភេទរឿង & វប្បធម៌និយាយ (Movie Setting & Genre)</label>
+              <select id="movieGenre" class="form-input">
+                <option value="ancient" selected>🗡️ រឿងចិនបុរាណ / រាជវាំង / ក្បាច់គុន / Xianxia (ពាក្យរាជស័ព្ទ, និកាយ, លោកម្ចាស់, មេទ័ព...)</option>
+                <option value="modern">🏙️ រឿងចិនសម័យ / ស្នេហា / Action (ភាសានិយាយសម័យ បង-អូន, ចៅហ្វាយ, ប៉ូលីស...)</option>
+                <option value="comedy">😂 រឿងកំប្លែង / សើចសប្បាយ (ពាក្យកំប្លុកកំប្លែង ឆ្លើយឆ្លងលេងសើច)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label><i data-lucide="heart"></i> កម្រិតមនោសញ្ចេតនា & អារម្មណ៍សម្ដែង (Emotional Delivery)</label>
+              <select id="emotionIntensity" class="form-input">
+                <option value="dramatic" selected>🎭 មនោសញ្ចេតនាភាពយន្តពិតៗ (Theatrical Cinema Acting - អារម្មណ៍រស់រវើក)</option>
+                <option value="deep_sorrow">😭 កម្សត់ / ស្រក់ទឹកភ្នែក / ឈឺចាប់ខ្លាំង (Deep Sorrow & Grief)</option>
+                <option value="fierce_battle">😡 ខឹងសម្បារ / គំរាមកំហែង / ច្បាំង (Fierce Anger & Battle Cry)</option>
+                <option value="sweet_romance">💖 ស្នេហាផ្អែមល្ហែម / ស្រទន់ (Tender Passion & Sweet Romance)</option>
+                <option value="heroic_command">🛡️ អង់អាចក្លាហាន / បញ្ជាកងទ័ព (Heroic Authority & Command)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
               <label><i data-lucide="clock"></i> រយៈពេលបញ្ជូលសំឡេង</label>
               <select id="dubbingScope" class="form-input">
                 <option value="full" selected>🎬 ពេញមួយភាគ / រឿងទាំងមូល (ស្កេនគ្រប់ឈុតទាំងអស់ - មិនបាត់មួយឃ្លា)</option>
@@ -414,15 +434,28 @@
 
         <!-- Right Column: Timeline Dialogue List & Recording Studio -->
         <section class="panel manual-timeline-panel">
-          <div class="panel-header space-between">
+          <div class="panel-header space-between" style="flex-wrap: wrap; gap: 12px;">
             <div>
               <h2><i data-lucide="mic"></i> បន្ទប់បញ្ជូលសំឡេងម្ដងមួយឃ្លា</h2>
               <p class="panel-subtitle">អ្នកអាចចុចថតសំឡេងខ្លួនឯងផ្ទាល់ ឬជ្រើសរើសប្រើ AI សម្រាប់តួអង្គនីមួយៗតាមចិត្ត!</p>
             </div>
-            <button class="btn btn-secondary" id="scanTimelineBtn">
-              <i data-lucide="scan-text"></i>
-              <span>🔍 ស្កេនរកឃ្លាសន្ទនាគ្រប់តួអង្គ</span>
-            </button>
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+              <select id="manualMovieGenre" class="form-input" style="height:36px; padding:2px 8px; font-size:0.8rem; max-width:170px;">
+                <option value="ancient" selected>🗡️ រឿងចិនបុរាណ</option>
+                <option value="modern">🏙️ រឿងចិនសម័យ</option>
+                <option value="comedy">😂 រឿងកំប្លែង</option>
+              </select>
+              <select id="manualEmotionIntensity" class="form-input" style="height:36px; padding:2px 8px; font-size:0.8rem; max-width:175px;">
+                <option value="dramatic" selected>🎭 មនោសញ្ចេតនាពិតៗ</option>
+                <option value="deep_sorrow">😭 កម្សត់ / ស្រក់ទឹកភ្នែក</option>
+                <option value="fierce_battle">😡 ខឹងសម្បារ / ច្បាំង</option>
+                <option value="sweet_romance">💖 ស្នេហាផ្អែមល្ហែម</option>
+              </select>
+              <button class="btn btn-secondary" id="scanTimelineBtn">
+                <i data-lucide="scan-text"></i>
+                <span>🔍 ស្កេនរកឃ្លាសន្ទនាគ្រប់តួអង្គ</span>
+              </button>
+            </div>
           </div>
 
           <!-- Empty scan state -->
@@ -609,7 +642,18 @@
             </div>
           </div>
 
-          <div class="translator-actions">
+          <div class="translator-actions" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+            <select id="translatorMovieGenre" class="form-input" style="height:42px; max-width:200px;">
+              <option value="ancient" selected>🗡️ រឿងចិនបុរាណ / រាជវាំង</option>
+              <option value="modern">🏙️ រឿងចិនសម័យ / Action</option>
+              <option value="comedy">😂 រឿងកំប្លែង</option>
+            </select>
+            <select id="translatorEmotion" class="form-input" style="height:42px; max-width:210px;">
+              <option value="dramatic" selected>🎭 មនោសញ្ចេតនាពិតៗ</option>
+              <option value="deep_sorrow">😭 កម្សត់ / ស្រក់ទឹកភ្នែក</option>
+              <option value="fierce_battle">😡 ខឹងសម្បារ / ច្បាំង</option>
+              <option value="sweet_romance">💖 ស្នេហាផ្អែមល្ហែម</option>
+            </select>
             <button class="btn btn-primary" id="translateScriptBtn">
               <i data-lucide="sparkles"></i>
               <span>បកប្រែជាភាសាខ្មែរ</span>

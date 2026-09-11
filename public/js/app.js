@@ -414,6 +414,8 @@ function initDubbingActions() {
     const voiceId = document.getElementById('voiceChoice') ? document.getElementById('voiceChoice').value : 'voxcpm-voice-actor';
     const scope = document.getElementById('dubbingScope') ? document.getElementById('dubbingScope').value : 'full';
     const castingSafetyMode = document.getElementById('castingSafetyMode') ? document.getElementById('castingSafetyMode').value : 'safe_curated';
+    const genre = document.getElementById('movieGenre') ? document.getElementById('movieGenre').value : 'ancient';
+    const emotionIntensity = document.getElementById('emotionIntensity') ? document.getElementById('emotionIntensity').value : 'dramatic';
 
     try {
       const res = await fetch('/api/dubbing/start', {
@@ -426,7 +428,9 @@ function initDubbingActions() {
           voiceId,
           numSpeakers: speakerCount,
           scope,
-          castingSafetyMode
+          castingSafetyMode,
+          genre,
+          emotionIntensity
         })
       });
 
@@ -628,10 +632,15 @@ function initTranslator() {
     translateBtn.innerHTML = '<span>កំពុងបកប្រែ...</span>';
 
     try {
+      const genre = document.getElementById('translatorMovieGenre')?.value || 'ancient';
+      const emotion = document.getElementById('translatorEmotion')?.value || 'dramatic';
       const res = await fetch('/api/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text })
+        body: JSON.stringify({
+          text,
+          context: { genre, emotion }
+        })
       });
       const data = await res.json();
       output.value = data.translated;
@@ -962,10 +971,17 @@ function initManualStudio() {
     }, 600);
 
     try {
+      const manualGenre = document.getElementById('manualMovieGenre')?.value || 'ancient';
+      const manualEmotion = document.getElementById('manualEmotionIntensity')?.value || 'dramatic';
       const res = await fetch('/api/dubbing/scan-timeline', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename: currentUploadedFile.filename, scope: 'full' })
+        body: JSON.stringify({
+          filename: currentUploadedFile.filename,
+          scope: 'full',
+          genre: manualGenre,
+          emotion: manualEmotion
+        })
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.error || 'ស្កេនបរាជ័យ');

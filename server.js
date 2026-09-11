@@ -252,10 +252,11 @@ app.post('/api/dubbing/start', async (req, res) => {
     sourceLang = 'auto',
     targetLang = 'km',
     voiceId = 'voxcpm-voice-actor',
-    numSpeakers = 0,
     scope = 'full',
     castingSafetyMode = 'safe_curated',
-    characterVoiceMap = {}
+    characterVoiceMap = {},
+    genre = 'ancient',
+    emotionIntensity = 'dramatic'
   } = req.body;
   if (!filename) {
     return res.status(400).json({ error: 'Filename is required' });
@@ -263,8 +264,7 @@ app.post('/api/dubbing/start', async (req, res) => {
 
   let inputPath = path.join(UPLOADS_DIR, filename);
   if (!fs.existsSync(inputPath)) {
-    const rootPath = path.join(__dirname, filename);
-    if (fs.existsSync(rootPath)) inputPath = rootPath;
+    inputPath = path.join(OUTPUTS_DIR, filename);
   }
   if (!fs.existsSync(inputPath)) {
     return res.status(404).json({ error: 'Uploaded file not found' });
@@ -280,6 +280,8 @@ app.post('/api/dubbing/start', async (req, res) => {
     sourceLang,
     targetLang,
     scope,
+    genre,
+    emotionIntensity,
     created: new Date()
   };
   activeJobs.set(jobId, job);
@@ -303,13 +305,13 @@ app.post('/api/dubbing/start', async (req, res) => {
         // Multi-Character Khmer Real Human Voice Dubbing (Gemini 3.6 Flash + VoxCPM2 Zero-Shot + Timeline Assembly)
         job.progress = 15;
         job.status = 'dubbing_khmer';
-        job.message = 'AI Gemini កំពុងវិភាគ និងស្រង់តួអង្គគ្រប់តួក្នុងសាច់រឿង...';
+        job.message = `AI Gemini កំពុងវិភាគ និងស្រង់តួអង្គគ្រប់តួ (${genre === 'modern' ? 'រឿងសម័យ' : 'រឿងបុរាណ'})...`;
 
         const result = await khmerDubber.processKhmerDubbing(
           inputPath,
           extractedAudioPath,
           OUTPUTS_DIR,
-          { sourceLang, voiceId, scope, castingSafetyMode, characterVoiceMap },
+          { sourceLang, voiceId, scope, castingSafetyMode, characterVoiceMap, genre, emotionIntensity },
           (progress, message) => {
             job.progress = progress;
             job.message = message;
@@ -431,7 +433,7 @@ app.get('/api/dubbing/scan-progress', (req, res) => {
 // 1. Scan & Extract Dialogue Timeline for Manual Studio
 app.post('/api/dubbing/scan-timeline', async (req, res) => {
   try {
-    const { filename, scope = 'full' } = req.body;
+    const { filename, scope = 'full', genre = 'ancient', emotion = 'dramatic' } = req.body;
     if (!filename) return res.status(400).json({ error: 'Filename is required' });
 
     let inputPath = path.join(UPLOADS_DIR, filename);
@@ -444,7 +446,7 @@ app.post('/api/dubbing/scan-timeline', async (req, res) => {
     activeScanProgress = {
       active: true,
       progress: 5,
-      message: 'កំពុងដកសំឡេងចេញពីវីដេអូរឿងដើម...',
+      message: `កំពុងដកសំឡេងចេញពីវីដេអូរឿងដើម (${genre === 'modern' ? 'រឿងសម័យ' : 'រឿងបុរាណ'})...`,
       linesFound: 0,
       startedAt: Date.now()
     };
@@ -471,7 +473,9 @@ app.post('/api/dubbing/scan-timeline', async (req, res) => {
         if (typeof linesCount === 'number') activeScanProgress.linesFound = linesCount;
       },
       'auto',
-      false // isFullPipeline = false
+      false, // isFullPipeline = false
+      genre,
+      emotion
     );
     
     activeScanProgress.progress = 90;
