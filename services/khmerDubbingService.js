@@ -376,7 +376,7 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
 
     try {
       let currentOffset = startOffset;
-      const maxScanDuration = (scope === 'full') ? totalDuration : (startOffset + targetDuration);
+      let maxScanDuration = (scope === 'full') ? totalDuration : (startOffset + targetDuration);
 
       let chunkIndex = 0;
       while (currentOffset < totalDuration) {
