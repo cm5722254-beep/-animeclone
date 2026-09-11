@@ -625,13 +625,15 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
    * Build dynamic distinct voice map across all detected characters in the movie.
    * Covers all demographics: Child (ក្មេង), Elderly (ចាស់), Male (ប្រុស), Female (ស្រី)
    */
-  buildDistinctSpeakerVoiceMap(segments, userRoleMap = {}) {
+  buildDistinctSpeakerVoiceMap(segments, userRoleMap = {}, maleLeadVoice = 'hang_phleung_char_2_male.mp3', femaleLeadVoice = 'hang_phleung_char_6_female.mp3') {
     const samplesDir = path.join(__dirname, '../samples');
 
-    // 13 Distinct Male Voices Pool (Hero, General, Elder, Old Uncle, Fierce, Scholar, Villager, Servant)
+    // 13 Distinct Male Voices Pool (Lead, Hero, General, Elder, Old Uncle, Fierce, Scholar, Villager, Servant)
     const maleVoicesPool = [
+      maleLeadVoice,
       'hang_phleung_char_2_male.mp3', // 👑 តួឯកប្រុស (Heroic Lead)
       'hang_phleung_char_7_male.mp3', // 👑 តួប្រុសស្វាហាប់ / ព្រះអាទិទេព
+      'main_lead_male.mp3',           // 👑 តួឯកប្រុស រោងកុន
       'hang_phleung_char_8_male.mp3', // 🛡️ មេទ័ពវិញ្ញាណ / ក្លាហាន
       'hang_phleung_char_1_male.mp3', // 👴 តួអ៊ំចាស់ / តាចាស់ (Elderly Uncle)
       'vp_character_19_male.mp3',     // 📿 ព្រឹទ្ធាចារ្យ / គ្រូ / តាជី (Grand Master / Monk)
@@ -643,18 +645,20 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
       'vp_character_9_male.mp3',      // 🌾 អ្នកភូមិ (Villager)
       'vp_character_12_male.mp3',     // 👥 មហាជន / អ្នកប្រាជ្ញ
       'vp_character_2_male.mp3'       // 🍵 អ្នកបម្រើប្រុស (Male Servant)
-    ].filter(fn => fs.existsSync(path.join(samplesDir, fn)));
+    ].filter((fn, idx, arr) => fs.existsSync(path.join(samplesDir, fn)) && arr.indexOf(fn) === idx);
 
-    // 7 Distinct Female Voices Pool (Heroine, Maiden/Child, Grandma, Fierce, Villainess, Queen)
+    // 7 Distinct Female Voices Pool (Lead, Heroine, Maiden/Child, Grandma, Fierce, Villainess, Queen)
     const femaleVoicesPool = [
+      femaleLeadVoice,
       'hang_phleung_char_6_female.mp3', // 🌸 តួឯកស្រី (Sweet Lead Heroine)
+      'main_lead_female.mp3',           // 🌸 តួឯកស្រី រោងកុន
       'hang_phleung_char_5_female.mp3', // 👧 តួកុមារ / ក្មេង / ភីលៀង (Child / Maiden)
       'vp_character_1_female.mp3',      // 🌸 តួស្រីទន់ភ្លន់ (Gentle Female)
       'vp_character_21_female.mp3',     // 👵 យាយចាស់ / មេដោះ (Elderly Grandma)
       'vp_character_20_female.mp3',     // 👑 តួស្រីចាស់ទុំ / ព្រះមាតា (Queen Dowager / Matron)
       'vp_character_6_female.mp3',      // ⚡ តួស្រីកាច (Fierce Female)
       'vp_character_14_female.mp3'      // 🐍 តួកាចពិសពុល (Venomous Villainess)
-    ].filter(fn => fs.existsSync(path.join(samplesDir, fn)));
+    ].filter((fn, idx, arr) => fs.existsSync(path.join(samplesDir, fn)) && arr.indexOf(fn) === idx);
 
     const speakerMap = {};
     const usedMale = new Set();
@@ -752,9 +756,9 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
    * Cast voice reference for a character role according to strict curated rules:
    * Rule: Use curated roles; fallback to primary lead male/female
    */
-  resolveCuratedRoleVoice(seg, castingSafetyMode = 'safe_curated', userRoleMap = {}) {
-    const maleLead = path.join(__dirname, '../samples/hang_phleung_char_2_male.mp3');
-    const femaleLead = path.join(__dirname, '../samples/hang_phleung_char_6_female.mp3');
+  resolveCuratedRoleVoice(seg, castingSafetyMode = 'safe_curated', userRoleMap = {}, maleLeadVoice = 'hang_phleung_char_2_male.mp3', femaleLeadVoice = 'hang_phleung_char_6_female.mp3') {
+    const maleLead = path.join(__dirname, '../samples', maleLeadVoice);
+    const femaleLead = path.join(__dirname, '../samples', femaleLeadVoice);
 
     // 1. User manual override for this specific speaker
     if (userRoleMap && userRoleMap[seg.speaker_id]) {
@@ -821,7 +825,9 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
       castingSafetyMode = 'safe_curated',
       characterVoiceMap: userVoiceMap = {},
       genre = 'ancient',
-      emotionIntensity = 'dramatic'
+      emotionIntensity = 'dramatic',
+      maleLeadVoice = 'hang_phleung_char_2_male.mp3',
+      femaleLeadVoice = 'hang_phleung_char_6_female.mp3'
     } = options;
 
     const videoDuration = await audioProcessor.getMediaDuration(videoPath);
@@ -874,7 +880,7 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
     const autoExtractedVoiceMap = await this.extractCharacterVoiceSamples(extractedAudioPath, dialogueSegments, outputDir);
 
     // 2.5 Build dynamic distinct speaker voice map so no two characters share the same voice
-    const distinctSpeakerVoiceMap = this.buildDistinctSpeakerVoiceMap(dialogueSegments, userVoiceMap);
+    const distinctSpeakerVoiceMap = this.buildDistinctSpeakerVoiceMap(dialogueSegments, userVoiceMap, maleLeadVoice, femaleLeadVoice);
 
     onProgress(50, 'កំពុង Clone សំឡេងតួអង្គនីមួយៗតាមសាច់រឿង (Zero-Shot 48kHz Voice Cloning)...');
 
@@ -893,14 +899,14 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
             refVoice = autoExtractedVoiceMap[seg.speaker_id];
             console.log(`[Movie-Live-Clone] Line ${i} (${seg.speaker_id}) cloned directly from live movie snippet: ${refVoice}`);
           } else {
-            refVoice = distinctSpeakerVoiceMap[seg.speaker_id] || this.resolveCuratedRoleVoice(seg, castingSafetyMode, userVoiceMap);
+            refVoice = distinctSpeakerVoiceMap[seg.speaker_id] || this.resolveCuratedRoleVoice(seg, castingSafetyMode, userVoiceMap, maleLeadVoice, femaleLeadVoice);
           }
         } else if (voiceId && voiceId.startsWith('voxcpm:')) {
           const sampleName = voiceId.replace('voxcpm:', '');
           refVoice = path.join(__dirname, '../samples', sampleName);
         } else {
           // Use distinct voice per speaker so characters NEVER have the same voice
-          refVoice = distinctSpeakerVoiceMap[seg.speaker_id] || this.resolveCuratedRoleVoice(seg, castingSafetyMode, userVoiceMap);
+          refVoice = distinctSpeakerVoiceMap[seg.speaker_id] || this.resolveCuratedRoleVoice(seg, castingSafetyMode, userVoiceMap, maleLeadVoice, femaleLeadVoice);
         }
       }
 

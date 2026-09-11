@@ -416,6 +416,8 @@ function initDubbingActions() {
     const castingSafetyMode = document.getElementById('castingSafetyMode') ? document.getElementById('castingSafetyMode').value : 'safe_curated';
     const genre = document.getElementById('movieGenre') ? document.getElementById('movieGenre').value : 'ancient';
     const emotionIntensity = document.getElementById('emotionIntensity') ? document.getElementById('emotionIntensity').value : 'dramatic';
+    const maleLeadVoice = document.getElementById('maleLeadVoice') ? document.getElementById('maleLeadVoice').value : 'hang_phleung_char_2_male.mp3';
+    const femaleLeadVoice = document.getElementById('femaleLeadVoice') ? document.getElementById('femaleLeadVoice').value : 'hang_phleung_char_6_female.mp3';
 
     try {
       const res = await fetch('/api/dubbing/start', {
@@ -430,7 +432,9 @@ function initDubbingActions() {
           scope,
           castingSafetyMode,
           genre,
-          emotionIntensity
+          emotionIntensity,
+          maleLeadVoice,
+          femaleLeadVoice
         })
       });
 

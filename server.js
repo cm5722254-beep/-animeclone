@@ -256,7 +256,9 @@ app.post('/api/dubbing/start', async (req, res) => {
     castingSafetyMode = 'safe_curated',
     characterVoiceMap = {},
     genre = 'ancient',
-    emotionIntensity = 'dramatic'
+    emotionIntensity = 'dramatic',
+    maleLeadVoice = 'hang_phleung_char_2_male.mp3',
+    femaleLeadVoice = 'hang_phleung_char_6_female.mp3'
   } = req.body;
   if (!filename) {
     return res.status(400).json({ error: 'Filename is required' });
@@ -282,6 +284,8 @@ app.post('/api/dubbing/start', async (req, res) => {
     scope,
     genre,
     emotionIntensity,
+    maleLeadVoice,
+    femaleLeadVoice,
     created: new Date()
   };
   activeJobs.set(jobId, job);
@@ -311,7 +315,7 @@ app.post('/api/dubbing/start', async (req, res) => {
           inputPath,
           extractedAudioPath,
           OUTPUTS_DIR,
-          { sourceLang, voiceId, scope, castingSafetyMode, characterVoiceMap, genre, emotionIntensity },
+          { sourceLang, voiceId, scope, castingSafetyMode, characterVoiceMap, genre, emotionIntensity, maleLeadVoice, femaleLeadVoice },
           (progress, message) => {
             job.progress = progress;
             job.message = message;
