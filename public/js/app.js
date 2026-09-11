@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initQuickVoxcpmModal();
   initPresetChips();
   initManualSearch();
-  loadExtractedMovieCharacters();
+  initVoiceDashboard();
 });
 
 // 1. Navigation Tabs
@@ -591,12 +591,14 @@ function initCharacterLab() {
         return;
       }
 
+      const clonerEmotion = document.getElementById('clonerEmotionSelect')?.value || 'dramatic';
       const speakRes = await fetch('/api/character/speak', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           voiceId: cloneData.voiceId,
-          text: text
+          text: text,
+          emotion: clonerEmotion
         })
       });
       const speakData = await speakRes.json();
@@ -809,14 +811,27 @@ function initQuickVoxcpmModal() {
     });
   }
 
+  function normalizeVoxcpmUrl(raw) {
+    let url = (raw || '').trim();
+    if (!url) return '';
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://' + url;
+    }
+    if (!url.includes('.')) {
+      url = url.replace(/\/$/, '') + '.trycloudflare.com';
+    }
+    return url.replace(/\/$/, '');
+  }
+
   // Test Link button
   if (testBtn) {
     testBtn.addEventListener('click', async () => {
-      const testUrl = urlInput.value.trim();
+      let testUrl = normalizeVoxcpmUrl(urlInput.value);
       if (!testUrl) {
         statusMsg.innerHTML = '<span style="color:#f87171;">⚠️ សូមបញ្ចូល Link ជាមុនសិន!</span>';
         return;
       }
+      urlInput.value = testUrl;
       testBtn.disabled = true;
       statusMsg.innerHTML = '<span style="color:#38bdf8;"><i data-lucide="loader-2" class="spin"></i> កំពុងតេស្តភ្ជាប់ទៅកាន់ Server...</span>';
       if (window.lucide) lucide.createIcons();
@@ -847,7 +862,8 @@ function initQuickVoxcpmModal() {
   // Save Link button
   if (saveBtn) {
     saveBtn.addEventListener('click', async () => {
-      const newUrl = urlInput.value.trim();
+      const newUrl = normalizeVoxcpmUrl(urlInput.value);
+      if (newUrl) urlInput.value = newUrl;
       saveBtn.disabled = true;
       try {
         const res = await fetch('/api/config', {
@@ -1325,8 +1341,17 @@ function renderDialogueLines(segments) {
           <input type="file" accept="audio/*" class="hidden-file-input" style="display:none;" data-index="${idx}">
         </label>
 
-        <select class="btn-tool line-voice-select" id="voice-select-${idx}" title="ជ្រើសរើសសំឡេងតួអង្គសម្រាប់ឃ្លានេះ" style="max-width:180px; height:32px; padding:2px 6px; font-size:0.78rem;">
+        <select class="btn-tool line-voice-select" id="voice-select-${idx}" title="ជ្រើសរើសសំឡេងតួអង្គសម្រាប់ឃ្លានេះ" style="max-width:170px; height:32px; padding:2px 6px; font-size:0.78rem;">
           ${lineVoiceOptions}
+        </select>
+
+        <select class="btn-tool line-emotion-select" id="emotion-select-${idx}" title="ជ្រើសរើសទឹកដមអារម្មណ៍សម្រាប់ឃ្លានេះ" style="max-width:135px; height:32px; padding:2px 4px; font-size:0.75rem;">
+          <option value="dramatic" ${(seg.emotion==='dramatic'||!seg.emotion)?'selected':''}>🎭 មនោសញ្ចេតនា</option>
+          <option value="deep_sorrow" ${seg.emotion==='deep_sorrow'?'selected':''}>😭 កម្សត់ / ទឹកភ្នែក</option>
+          <option value="fierce_battle" ${seg.emotion==='fierce_battle'?'selected':''}>😡 ខឹង / ច្បាំង</option>
+          <option value="sweet_romance" ${seg.emotion==='sweet_romance'?'selected':''}>💖 ស្នេហាផ្អែម</option>
+          <option value="heroic_command" ${seg.emotion==='heroic_command'?'selected':''}>🛡️ អង់អាច / បញ្ជា</option>
+          <option value="neutral" ${seg.emotion==='neutral'?'selected':''}>😐 ធម្មតា</option>
         </select>
 
         <button class="btn-tool btn-apply-speaker" id="apply-speaker-${idx}" title="កំណត់សំឡេងនេះឱ្យគ្រប់ឃ្លារបស់ ${roleName}" style="padding:3px 7px; font-size:0.73rem;">
@@ -1398,6 +1423,15 @@ function renderDialogueLines(segments) {
       voiceSelectEl.value = seg.voiceId || defaultVoiceId;
       voiceSelectEl.addEventListener('change', (e) => {
         seg.voiceId = e.target.value;
+      });
+    }
+
+    // Event 6b: Emotion dropdown selection
+    const emotionSelectEl = card.querySelector(`#emotion-select-${idx}`);
+    if (emotionSelectEl) {
+      emotionSelectEl.value = seg.emotion || 'dramatic';
+      emotionSelectEl.addEventListener('change', (e) => {
+        seg.emotion = e.target.value;
       });
     }
 
@@ -1558,6 +1592,9 @@ async function handleGenerateLineAI(idx, btn, card) {
     const selectedLineVoice = (lineVoiceSelect && lineVoiceSelect.value !== 'auto') ? lineVoiceSelect.value : null;
     const voiceId = selectedLineVoice || (document.getElementById('manualVoiceChoice')?.value || 'voxcpm-voice-actor');
 
+    const lineEmotionSelect = card.querySelector(`#emotion-select-${idx}`);
+    const selectedEmotion = (lineEmotionSelect && lineEmotionSelect.value) || seg.emotion || (document.getElementById('manualEmotionIntensity')?.value || 'dramatic');
+
     const res = await fetch('/api/dubbing/generate-line', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1566,7 +1603,8 @@ async function handleGenerateLineAI(idx, btn, card) {
         lineIndex: idx,
         speakerId: seg.speaker_id,
         gender: seg.gender || 'male',
-        voiceId
+        voiceId,
+        emotion: selectedEmotion
       })
     });
     const data = await res.json();
@@ -1593,59 +1631,635 @@ async function handleGenerateLineAI(idx, btn, card) {
   }
 }
 
-// 7. Load Extracted Movie Characters (13 Curated Characters from videoplayback.mp4)
-async function loadExtractedMovieCharacters() {
+// ===================================================
+// 7. VOICE MANAGEMENT DASHBOARD (គ្រប់គ្រងសំឡេង)
+// ===================================================
+let allVoiceCharacters = [];
+let voiceFilterGender = 'all';
+let voiceFilterRole = 'all';
+let voiceSearchKeyword = '';
+let currentTestAuditionAudio = null;
+
+function initVoiceDashboard() {
+  // 1. Search Bar
+  const searchInput = document.getElementById('voiceSearchInput');
+  const clearSearchBtn = document.getElementById('voiceClearSearchBtn');
+
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      voiceSearchKeyword = e.target.value.trim();
+      if (clearSearchBtn) {
+        if (voiceSearchKeyword) clearSearchBtn.classList.remove('hidden');
+        else clearSearchBtn.classList.add('hidden');
+      }
+      filterAndRenderVoiceCards();
+    });
+  }
+
+  if (clearSearchBtn) {
+    clearSearchBtn.addEventListener('click', () => {
+      if (searchInput) searchInput.value = '';
+      voiceSearchKeyword = '';
+      clearSearchBtn.classList.add('hidden');
+      filterAndRenderVoiceCards();
+    });
+  }
+
+  // 2. Gender Filter Pills
+  const genderPills = document.querySelectorAll('#voiceGenderFilters .voice-filter-pill');
+  genderPills.forEach(pill => {
+    pill.addEventListener('click', () => {
+      genderPills.forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      voiceFilterGender = pill.getAttribute('data-filter') || 'all';
+      filterAndRenderVoiceCards();
+    });
+  });
+
+  // 3. Role Filter Dropdown
+  const roleFilter = document.getElementById('voiceRoleFilter');
+  if (roleFilter) {
+    roleFilter.addEventListener('change', (e) => {
+      voiceFilterRole = e.target.value;
+      filterAndRenderVoiceCards();
+    });
+  }
+
+  // 4. Reset Filter Button (in empty state)
+  const resetBtn = document.getElementById('resetVoiceFilterBtn');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      voiceFilterGender = 'all';
+      voiceFilterRole = 'all';
+      voiceSearchKeyword = '';
+      if (searchInput) searchInput.value = '';
+      if (clearSearchBtn) clearSearchBtn.classList.add('hidden');
+      if (roleFilter) roleFilter.value = 'all';
+      genderPills.forEach(p => {
+        if (p.getAttribute('data-filter') === 'all') p.classList.add('active');
+        else p.classList.remove('active');
+      });
+      filterAndRenderVoiceCards();
+    });
+  }
+
+  // 5. Reload / Refresh Vault
+  const refreshBtn = document.getElementById('refreshVoiceVaultBtn');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', async () => {
+      showToast('កំពុងផ្ទុកបញ្ជីសំឡេងឡើងវិញ...', 'info');
+      await loadVoiceDashboard();
+      showToast('ទិន្នន័យសំឡេងបានធ្វើបច្ចុប្បន្នភាពរួចរាល់!', 'success');
+    });
+  }
+
+  // 6. Add Voice Modal Controls
+  const openAddBtn = document.getElementById('openAddVoiceBtn');
+  const addModal = document.getElementById('addVoiceModal');
+  const closeAddBtn = document.getElementById('closeAddVoiceBtn');
+  const cancelAddBtn = document.getElementById('cancelAddVoiceBtn');
+  const saveAddBtn = document.getElementById('saveAddVoiceBtn');
+
+  if (openAddBtn && addModal) {
+    openAddBtn.addEventListener('click', () => {
+      document.getElementById('addVoiceLabel').value = '';
+      document.getElementById('addVoiceFileInput').value = '';
+      document.getElementById('addVoiceWords').value = '';
+      document.getElementById('addVoiceGender').value = 'male';
+      document.getElementById('addVoiceRole').value = 'male_lead';
+      addModal.classList.remove('hidden');
+      document.getElementById('addVoiceLabel').focus();
+    });
+  }
+
+  if (closeAddBtn && addModal) closeAddBtn.addEventListener('click', () => addModal.classList.add('hidden'));
+  if (cancelAddBtn && addModal) cancelAddBtn.addEventListener('click', () => addModal.classList.add('hidden'));
+  if (saveAddBtn) saveAddBtn.addEventListener('click', handleSaveNewVoice);
+
+  // 7. Edit Voice Modal Controls
+  const editModal = document.getElementById('editVoiceModal');
+  const closeEditBtn = document.getElementById('closeEditVoiceBtn');
+  const cancelEditBtn = document.getElementById('cancelEditVoiceBtn');
+  const saveEditBtn = document.getElementById('saveEditVoiceBtn');
+
+  if (closeEditBtn && editModal) closeEditBtn.addEventListener('click', () => {
+    const audioPreview = document.getElementById('editVoiceAudioPreview');
+    if (audioPreview) audioPreview.pause();
+    editModal.classList.add('hidden');
+  });
+
+  if (cancelEditBtn && editModal) cancelEditBtn.addEventListener('click', () => {
+    const audioPreview = document.getElementById('editVoiceAudioPreview');
+    if (audioPreview) audioPreview.pause();
+    editModal.classList.add('hidden');
+  });
+
+  if (saveEditBtn) saveEditBtn.addEventListener('click', handleSaveVoiceEdit);
+
+  // 8. Test Speak Modal Controls
+  const testSpeakModal = document.getElementById('testVoiceSpeakModal');
+  const closeTestSpeakBtn = document.getElementById('closeTestSpeakBtn');
+  const cancelTestSpeakBtn = document.getElementById('cancelTestSpeakBtn');
+  const runTestSpeakBtn = document.getElementById('runTestSpeakBtn');
+
+  if (closeTestSpeakBtn && testSpeakModal) closeTestSpeakBtn.addEventListener('click', () => {
+    const p = document.getElementById('testSpeakAudioPlayer');
+    if (p) p.pause();
+    testSpeakModal.classList.add('hidden');
+  });
+
+  if (cancelTestSpeakBtn && testSpeakModal) cancelTestSpeakBtn.addEventListener('click', () => {
+    const p = document.getElementById('testSpeakAudioPlayer');
+    if (p) p.pause();
+    testSpeakModal.classList.add('hidden');
+  });
+
+  if (runTestSpeakBtn) runTestSpeakBtn.addEventListener('click', handleRunTestSpeak);
+
+  // Test Speak phrase chips
+  const testChips = document.querySelectorAll('.test-phrase-chip');
+  testChips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      const phrase = chip.getAttribute('data-phrase');
+      const txt = document.getElementById('testSpeakCustomText');
+      if (txt && phrase) txt.value = phrase;
+    });
+  });
+
+  // 9. Collapsible Cloner Header Toggle
+  const toggleClonerHeader = document.getElementById('toggleClonerHeader');
+  const clonerBody = document.getElementById('clonerCollapsibleBody');
+  const clonerChevron = document.getElementById('clonerChevron');
+
+  if (toggleClonerHeader && clonerBody) {
+    toggleClonerHeader.addEventListener('click', () => {
+      const isHidden = clonerBody.classList.contains('hidden');
+      if (isHidden) {
+        clonerBody.classList.remove('hidden');
+        if (clonerChevron) clonerChevron.style.transform = 'rotate(180deg)';
+      } else {
+        clonerBody.classList.add('hidden');
+        if (clonerChevron) clonerChevron.style.transform = 'rotate(0deg)';
+      }
+    });
+  }
+
+  // Initial Load
+  loadVoiceDashboard();
+}
+
+// Load all characters from /api/characters/all
+async function loadVoiceDashboard() {
+  const vaultBadge = document.getElementById('vaultCountBadge');
+  if (vaultBadge) vaultBadge.textContent = 'កំពុងទាញយក...';
+
   try {
-    const res = await fetch('/api/characters/extracted');
+    const res = await fetch('/api/characters/all');
     const data = await res.json();
-    if (!data.success || !data.characters || data.characters.length === 0) return;
+    if (!data.success || !data.characters) return;
 
-    extractedMovieCharacters = data.characters;
+    allVoiceCharacters = data.characters;
+    extractedMovieCharacters = data.characters; // legacy support
 
-    // 1. Update Vault Grid in Character Lab
-    const vaultGrid = document.getElementById('charactersVaultGrid');
-    const vaultBadge = document.getElementById('vaultCountBadge');
-    if (vaultBadge) vaultBadge.textContent = `${extractedMovieCharacters.length} តួអង្គ`;
+    // Update Counter Badges
+    const total = allVoiceCharacters.length;
+    const maleCount = allVoiceCharacters.filter(c => c.gender === 'male').length;
+    const femaleCount = allVoiceCharacters.filter(c => c.gender === 'female').length;
+    const curatedCount = allVoiceCharacters.filter(c => c.is_curated).length;
 
-    if (vaultGrid) {
-      vaultGrid.innerHTML = extractedMovieCharacters.map(char => {
-        const isMaleLead = char.filename === 'hang_phleung_char_2_male.mp3';
-        const isFemaleLead = char.filename === 'hang_phleung_char_6_female.mp3';
-        const isFromHangPhleung = char.filename && char.filename.startsWith('hang_phleung_');
+    const elTotal = document.getElementById('statVoiceTotal');
+    const elMale = document.getElementById('statVoiceMale');
+    const elFemale = document.getElementById('statVoiceFemale');
+    const elCurated = document.getElementById('statVoiceCurated');
+    const elTabBadge = document.getElementById('tabVoiceCountBadge');
 
-        let badgeHtml = '';
-        if (isMaleLead) {
-          badgeHtml = '<span style="font-size:0.7rem; background:rgba(59,130,246,0.25); color:#60a5fa; border:1px solid rgba(59,130,246,0.4); padding:2px 6px; border-radius:4px; margin-left:4px;">👑 តួឯកប្រុស (សំឡេងពិត)</span>';
-        } else if (isFemaleLead) {
-          badgeHtml = '<span style="font-size:0.7rem; background:rgba(236,72,153,0.25); color:#f472b6; border:1px solid rgba(236,72,153,0.4); padding:2px 6px; border-radius:4px; margin-left:4px;">🌸 តួឯកស្រី (សំឡេងពិត)</span>';
-        } else if (isFromHangPhleung) {
-          badgeHtml = '<span style="font-size:0.7rem; background:rgba(234,179,8,0.25); color:#facc15; border:1px solid rgba(234,179,8,0.4); padding:2px 6px; border-radius:4px; margin-left:4px;">🔥 ដកស្រង់ពីរឿងពិត</span>';
-        } else if (char.is_curated) {
-          badgeHtml = '<span style="font-size:0.7rem; background:rgba(99,102,241,0.2); color:var(--primary); padding:2px 6px; border-radius:4px; margin-left:4px;">⭐ គំរូសាច់រឿង</span>';
-        }
+    if (elTotal) elTotal.textContent = total;
+    if (elMale) elMale.textContent = maleCount;
+    if (elFemale) elFemale.textContent = femaleCount;
+    if (elCurated) elCurated.textContent = curatedCount;
+    if (elTabBadge) elTabBadge.textContent = `${total}`;
+    if (vaultBadge) vaultBadge.textContent = `${total} សំឡេង`;
 
-        return `
-        <div class="char-vault-card ${char.gender}">
-          <div class="char-vault-top">
-            <div class="char-vault-icon">${char.gender === 'female' ? '🌸' : '🎙️'}</div>
-            <div class="char-vault-info">
-              <h4>${char.label} ${badgeHtml}</h4>
-              <span>${char.gender === 'female' ? 'តួស្រី' : 'តួប្រុស'} • ${char.filename}</span>
-            </div>
-          </div>
-          <div class="char-vault-words">"${char.words || 'សំឡេងសម្ដែងដើមក្នុងរឿង'}"</div>
-          <audio controls class="char-vault-audio" preload="none" src="${char.previewUrl}"></audio>
-        </div>
-      `;
-      }).join('');
-    }
+    // Render Cards in Vault Grid
+    filterAndRenderVoiceCards();
 
-    // 2. Render Quick Cast Bar in Manual Studio
-    renderQuickCastBar(extractedMovieCharacters);
+    // Render Quick Cast Bar in Manual Studio
+    renderQuickCastBar(allVoiceCharacters);
     const strip = document.getElementById('castStripSection');
     if (strip) strip.classList.remove('hidden');
+
+    // Update global dropdowns in Dubbing studio tab
+    refreshGlobalVoiceDropdowns();
+
   } catch (err) {
-    console.warn('Could not load extracted characters:', err.message);
+    console.error('Could not load voice dashboard:', err);
+    if (vaultBadge) vaultBadge.textContent = 'មានបញ្ហាទាញយក';
+  }
+}
+
+// Alias for backwards compatibility
+function loadExtractedMovieCharacters() {
+  return loadVoiceDashboard();
+}
+
+// Filter and render voice cards
+function filterAndRenderVoiceCards() {
+  const vaultGrid = document.getElementById('charactersVaultGrid');
+  const emptyState = document.getElementById('voiceEmptyState');
+  if (!vaultGrid) return;
+
+  const kw = (voiceSearchKeyword || '').toLowerCase().trim();
+
+  const filtered = allVoiceCharacters.filter(char => {
+    // Gender filter
+    if (voiceFilterGender !== 'all' && char.gender !== voiceFilterGender) {
+      return false;
+    }
+
+    // Role filter
+    if (voiceFilterRole !== 'all') {
+      const rk = (char.role_key || '').toLowerCase();
+      if (voiceFilterRole === 'male_lead' && !rk.includes('male_lead') && !rk.includes('lead_male')) return false;
+      if (voiceFilterRole === 'female_lead' && !rk.includes('female_lead') && !rk.includes('lead_female')) return false;
+      if (voiceFilterRole === 'general' && !rk.includes('general')) return false;
+      if (voiceFilterRole === 'elder' && !rk.includes('elder') && !rk.includes('old')) return false;
+      if (voiceFilterRole === 'villain' && !rk.includes('villain') && !rk.includes('fierce')) return false;
+      if (voiceFilterRole === 'servant' && !rk.includes('servant')) return false;
+    }
+
+    // Keyword search
+    if (kw) {
+      const matchLabel = (char.label || '').toLowerCase().includes(kw);
+      const matchWords = (char.words || '').toLowerCase().includes(kw);
+      const matchFilename = (char.filename || '').toLowerCase().includes(kw);
+      if (!matchLabel && !matchWords && !matchFilename) return false;
+    }
+
+    return true;
+  });
+
+  const vaultBadge = document.getElementById('vaultCountBadge');
+  if (vaultBadge) {
+    vaultBadge.textContent = `${filtered.length} / ${allVoiceCharacters.length} សំឡេង`;
+  }
+
+  if (filtered.length === 0) {
+    vaultGrid.innerHTML = '';
+    if (emptyState) emptyState.classList.remove('hidden');
+    return;
+  }
+
+  if (emptyState) emptyState.classList.add('hidden');
+
+  vaultGrid.innerHTML = filtered.map(char => {
+    const isFemale = char.gender === 'female';
+    const isCurated = char.is_curated;
+
+    let badgeHtml = '';
+    if (char.filename === 'hang_phleung_char_2_male.mp3') {
+      badgeHtml = '<span style="font-size:0.7rem; background:rgba(59,130,246,0.25); color:#60a5fa; border:1px solid rgba(59,130,246,0.4); padding:2px 6px; border-radius:4px;">👑 តួឯកប្រុស</span>';
+    } else if (char.filename === 'hang_phleung_char_6_female.mp3') {
+      badgeHtml = '<span style="font-size:0.7rem; background:rgba(236,72,153,0.25); color:#f472b6; border:1px solid rgba(236,72,153,0.4); padding:2px 6px; border-radius:4px;">🌸 តួឯកស្រី</span>';
+    } else if (char.filename && char.filename.includes('star7')) {
+      badgeHtml = '<span style="font-size:0.7rem; background:rgba(234,179,8,0.25); color:#facc15; border:1px solid rgba(234,179,8,0.4); padding:2px 6px; border-radius:4px;">⭐ ផ្កាយ៧</span>';
+    } else if (char.filename && char.filename.includes('tactics')) {
+      badgeHtml = '<span style="font-size:0.7rem; background:rgba(14,165,233,0.25); color:#38bdf8; border:1px solid rgba(14,165,233,0.4); padding:2px 6px; border-radius:4px;">⚔️ យុទ្ធសាស្ត្រ</span>';
+    } else if (char.filename && char.filename.includes('palace')) {
+      badgeHtml = '<span style="font-size:0.7rem; background:rgba(236,72,153,0.25); color:#f472b6; border:1px solid rgba(236,72,153,0.4); padding:2px 6px; border-radius:4px;">🌸 ដំណាក់រាជវាំង</span>';
+    } else if (isCurated) {
+      badgeHtml = '<span style="font-size:0.7rem; background:rgba(99,102,241,0.2); color:var(--primary); padding:2px 6px; border-radius:4px;">⭐ គំរូសាច់រឿង</span>';
+    }
+
+    const safeId = encodeURIComponent(char.id || char.filename);
+    const quote = char.words ? `"${char.words}"` : '<em style="color:var(--text-muted);">គ្មានឃ្លាកត់ត្រា</em>';
+    const sizeKb = char.sizeBytes ? `${Math.round(char.sizeBytes / 1024)} KB` : '';
+
+    return `
+      <div class="char-vault-card ${char.gender || 'male'}" data-char-id="${safeId}">
+        <div class="char-vault-top">
+          <div class="char-vault-icon">${isFemale ? '🌸' : '🎙️'}</div>
+          <div class="char-vault-info">
+            <h4>${char.label}</h4>
+            <div class="char-vault-badge-row">
+              ${badgeHtml}
+              <span class="char-vault-file-tag">${char.filename}</span>
+              ${sizeKb ? `<span style="font-size:0.7rem; color:var(--text-muted);">${sizeKb}</span>` : ''}
+            </div>
+          </div>
+        </div>
+
+        <div class="char-vault-words">${quote}</div>
+
+        <audio controls class="char-vault-audio" preload="none" src="${char.previewUrl || ''}"></audio>
+
+        <div class="char-vault-actions">
+          <button class="btn-vault-action edit" type="button" onclick="window.openEditVoiceModal('${safeId}')" title="កែប្រែឈ្មោះសំឡេង">
+            <i data-lucide="edit-3" style="width:13px; height:13px;"></i>
+            <span>កែប្រែឈ្មោះ</span>
+          </button>
+          <button class="btn-vault-action speak" type="button" onclick="window.openTestSpeakModal('${safeId}')" title="សាកល្បងឱ្យតួអង្គនិយាយ">
+            <i data-lucide="volume-2" style="width:13px; height:13px;"></i>
+            <span>តេស្តនិយាយ</span>
+          </button>
+          <button class="btn-vault-action delete" type="button" onclick="window.deleteVoiceCard('${safeId}')" title="លុបសំឡេង">
+            <i data-lucide="trash-2" style="width:13px; height:13px;"></i>
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  if (window.lucide) lucide.createIcons();
+}
+
+// ----------------------------------------------------
+// EDIT VOICE MODAL LOGIC
+// ----------------------------------------------------
+window.openEditVoiceModal = function(safeId) {
+  const charId = decodeURIComponent(safeId);
+  const char = allVoiceCharacters.find(c => c.id === charId || c.filename === charId);
+  if (!char) {
+    showToast('រកមិនឃើញតួអង្គនេះឡើយ', 'error');
+    return;
+  }
+
+  document.getElementById('editVoiceId').value = char.id || '';
+  document.getElementById('editVoiceFilename').value = char.filename || '';
+  document.getElementById('editVoiceLabel').value = char.label || '';
+  document.getElementById('editVoiceGender').value = char.gender || 'male';
+  document.getElementById('editVoiceRole').value = char.role_key || (char.gender === 'female' ? 'female_lead' : 'male_lead');
+  document.getElementById('editVoiceWords').value = char.words || '';
+
+  const fileBadge = document.getElementById('editVoiceFileBadge');
+  if (fileBadge) fileBadge.textContent = char.filename;
+
+  const preview = document.getElementById('editVoiceAudioPreview');
+  if (preview) {
+    preview.src = char.previewUrl || '';
+    preview.load();
+  }
+
+  const modal = document.getElementById('editVoiceModal');
+  if (modal) modal.classList.remove('hidden');
+
+  const labelInput = document.getElementById('editVoiceLabel');
+  if (labelInput) {
+    labelInput.focus();
+    labelInput.select();
+  }
+};
+
+async function handleSaveVoiceEdit() {
+  const saveBtn = document.getElementById('saveEditVoiceBtn');
+  const id = document.getElementById('editVoiceId').value;
+  const filename = document.getElementById('editVoiceFilename').value;
+  const label = document.getElementById('editVoiceLabel').value.trim();
+  const gender = document.getElementById('editVoiceGender').value;
+  const role_key = document.getElementById('editVoiceRole').value;
+  const words = document.getElementById('editVoiceWords').value.trim();
+
+  if (!label) {
+    alert('សូមបញ្ចូលឈ្មោះសំឡេងតួអង្គ!');
+    return;
+  }
+
+  saveBtn.disabled = true;
+  saveBtn.innerHTML = '<i data-lucide="loader-2"></i><span>កំពុងរក្សាទុក...</span>';
+  if (window.lucide) lucide.createIcons();
+
+  try {
+    const res = await fetch('/api/characters/update', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, filename, label, gender, role_key, words })
+    });
+
+    const data = await res.json();
+    if (!data.success) {
+      throw new Error(data.error || 'ការកែប្រែបានបរាជ័យ');
+    }
+
+    showToast(`🎉 បានកែប្រែឈ្មោះជា៖ "${label}" ដោយជោគជ័យ!`, 'success');
+
+    // Pause preview
+    const preview = document.getElementById('editVoiceAudioPreview');
+    if (preview) preview.pause();
+
+    // Close Modal
+    document.getElementById('editVoiceModal').classList.add('hidden');
+
+    // Reload Dashboard & update Dropdowns
+    await loadVoiceDashboard();
+
+  } catch (err) {
+    console.error('Save voice edit error:', err);
+    showToast(`កំហុស៖ ${err.message}`, 'error');
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = '<i data-lucide="check"></i><span>💾 រក្សាទុកការកែប្រែ</span>';
+    if (window.lucide) lucide.createIcons();
+  }
+}
+
+// ----------------------------------------------------
+// ADD NEW VOICE MODAL LOGIC
+// ----------------------------------------------------
+async function handleSaveNewVoice() {
+  const saveBtn = document.getElementById('saveAddVoiceBtn');
+  const label = document.getElementById('addVoiceLabel').value.trim();
+  const fileInput = document.getElementById('addVoiceFileInput');
+  const gender = document.getElementById('addVoiceGender').value;
+  const role_key = document.getElementById('addVoiceRole').value;
+  const words = document.getElementById('addVoiceWords').value.trim();
+
+  if (!label) {
+    alert('សូមបញ្ចូលឈ្មោះសំឡេងតួអង្គថ្មី!');
+    return;
+  }
+
+  if (!fileInput.files || fileInput.files.length === 0) {
+    alert('សូមជ្រើសរើសឯកសារសំឡេង ឬវីដេអូសម្រាប់សំឡេងនេះ!');
+    return;
+  }
+
+  saveBtn.disabled = true;
+  saveBtn.innerHTML = '<i data-lucide="loader-2"></i><span>កំពុងបង្កើតសំឡេង...</span>';
+  if (window.lucide) lucide.createIcons();
+
+  const formData = new FormData();
+  formData.append('audioFile', fileInput.files[0]);
+  formData.append('label', label);
+  formData.append('gender', gender);
+  formData.append('role_key', role_key);
+  formData.append('words', words);
+
+  try {
+    const res = await fetch('/api/characters/create', {
+      method: 'POST',
+      body: formData
+    });
+
+    const data = await res.json();
+    if (!data.success) {
+      throw new Error(data.error || 'ការបន្ថែមសំឡេងបានបរាជ័យ');
+    }
+
+    showToast(`🎉 បានបន្ថែមសំឡេងថ្មី "${label}" ជោគជ័យ!`, 'success');
+
+    // Close modal
+    document.getElementById('addVoiceModal').classList.add('hidden');
+
+    // Reload Dashboard
+    await loadVoiceDashboard();
+
+  } catch (err) {
+    console.error('Create voice error:', err);
+    showToast(`កំហុស៖ ${err.message}`, 'error');
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = '<i data-lucide="plus-circle"></i><span>➕ បង្កើត & រក្សាទុកសំឡេង</span>';
+    if (window.lucide) lucide.createIcons();
+  }
+}
+
+// ----------------------------------------------------
+// DELETE VOICE LOGIC
+// ----------------------------------------------------
+window.deleteVoiceCard = async function(safeId) {
+  const charId = decodeURIComponent(safeId);
+  const char = allVoiceCharacters.find(c => c.id === charId || c.filename === charId);
+  const charName = char ? char.label : charId;
+
+  const confirmed = confirm(`តើអ្នកប្រាកដជាចង់លុបសំឡេង "${charName}" នេះចេញពីផ្ទាំងគ្រប់គ្រងមែនទេ?`);
+  if (!confirmed) return;
+
+  try {
+    const res = await fetch(`/api/characters/delete/${encodeURIComponent(charId)}`, {
+      method: 'DELETE'
+    });
+
+    const data = await res.json();
+    if (!data.success) {
+      throw new Error(data.error || 'ការលុបបានបរាជ័យ');
+    }
+
+    showToast(`🗑️ បានលុបសំឡេង "${charName}" ដោយជោគជ័យ`, 'success');
+    await loadVoiceDashboard();
+
+  } catch (err) {
+    console.error('Delete voice error:', err);
+    showToast(`កំហុស៖ ${err.message}`, 'error');
+  }
+};
+
+// ----------------------------------------------------
+// TEST SPEAK MODAL LOGIC
+// ----------------------------------------------------
+window.openTestSpeakModal = function(safeId) {
+  const charId = decodeURIComponent(safeId);
+  const char = allVoiceCharacters.find(c => c.id === charId || c.filename === charId);
+  if (!char) return;
+
+  document.getElementById('testSpeakVoiceId').value = char.id || `voxcpm:${char.filename}`;
+  document.getElementById('testSpeakVoiceFilename').value = char.filename || '';
+
+  const labelEl = document.getElementById('testSpeakVoiceLabel');
+  const subEl = document.getElementById('testSpeakVoiceSub');
+  const avatarEl = document.getElementById('testSpeakVoiceAvatar');
+
+  if (labelEl) labelEl.textContent = char.label;
+  if (subEl) subEl.textContent = `${char.gender === 'female' ? 'តួស្រី' : 'តួប្រុស'} • ${char.filename}`;
+  if (avatarEl) avatarEl.textContent = char.gender === 'female' ? '🌸' : '🎙️';
+
+  const customText = document.getElementById('testSpeakCustomText');
+  if (customText) {
+    customText.value = char.words || 'បងមិនអាចបោះបង់អូនចោលក្នុងគ្រាដ៏គ្រោះថ្នាក់នេះបានទេ!';
+  }
+
+  const resultBox = document.getElementById('testSpeakResultBox');
+  if (resultBox) resultBox.classList.add('hidden');
+
+  const modal = document.getElementById('testVoiceSpeakModal');
+  if (modal) modal.classList.remove('hidden');
+};
+
+async function handleRunTestSpeak() {
+  const runBtn = document.getElementById('runTestSpeakBtn');
+  const voiceId = document.getElementById('testSpeakVoiceId').value;
+  const filename = document.getElementById('testSpeakVoiceFilename').value;
+  const text = document.getElementById('testSpeakCustomText').value.trim();
+
+  const emotion = document.getElementById('testSpeakEmotion')?.value || 'dramatic';
+
+  if (!text) {
+    alert('សូមសរសេរឃ្លាជាភាសាខ្មែរសម្រាប់ឱ្យតួអង្គនិយាយ!');
+    return;
+  }
+
+  runBtn.disabled = true;
+  runBtn.innerHTML = '<i data-lucide="loader-2"></i><span>កំពុងសំយោគសំឡេង...</span>';
+  if (window.lucide) lucide.createIcons();
+
+  try {
+    const res = await fetch('/api/character/speak', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        voiceId: voiceId || `voxcpm:${filename}`,
+        text: text,
+        emotion: emotion
+      })
+    });
+
+    const data = await res.json();
+    if (!data.success) {
+      throw new Error(data.error || 'ការសំយោគសំឡេងបរាជ័យ');
+    }
+
+    const resultBox = document.getElementById('testSpeakResultBox');
+    const audioPlayer = document.getElementById('testSpeakAudioPlayer');
+
+    if (resultBox && audioPlayer) {
+      resultBox.classList.remove('hidden');
+      audioPlayer.src = data.audioUrl;
+      audioPlayer.play().catch(e => console.log('Audio autoplay prevented:', e));
+    }
+
+    showToast('🎉 សំយោគសំឡេងសាកល្បងបានជោគជ័យ!', 'success');
+
+  } catch (err) {
+    console.error('Test speak error:', err);
+    showToast(`កំហុស៖ ${err.message}`, 'error');
+  } finally {
+    runBtn.disabled = false;
+    runBtn.innerHTML = '<i data-lucide="play"></i><span>▶️ សំយោគសំឡេងភ្លាមៗ</span>';
+    if (window.lucide) lucide.createIcons();
+  }
+}
+
+// ----------------------------------------------------
+// SYNC WITH GLOBAL DROPDOWNS
+// ----------------------------------------------------
+function refreshGlobalVoiceDropdowns() {
+  const maleSelect = document.getElementById('maleLeadVoice');
+  const femaleSelect = document.getElementById('femaleLeadVoice');
+
+  if (maleSelect && allVoiceCharacters.length > 0) {
+    const currentVal = maleSelect.value;
+    const maleChars = allVoiceCharacters.filter(c => c.gender === 'male');
+    maleSelect.innerHTML = maleChars.map((c, i) => {
+      const isSelected = c.filename === currentVal || (i === 0 && !currentVal);
+      return `<option value="${c.filename}" ${isSelected ? 'selected' : ''}>${c.label}</option>`;
+    }).join('');
+  }
+
+  if (femaleSelect && allVoiceCharacters.length > 0) {
+    const currentVal = femaleSelect.value;
+    const femaleChars = allVoiceCharacters.filter(c => c.gender === 'female');
+    femaleSelect.innerHTML = femaleChars.map((c, i) => {
+      const isSelected = c.filename === currentVal || (i === 0 && !currentVal);
+      return `<option value="${c.filename}" ${isSelected ? 'selected' : ''}>${c.label}</option>`;
+    }).join('');
   }
 }
 

@@ -112,9 +112,10 @@
         <span>សារ៉េទឹកដម & ល្បឿន</span>
         <span class="tab-badge new">ថ្មី</span>
       </button>
-      <button class="nav-tab" data-tab="tab-character">
+      <button class="nav-tab" data-tab="tab-character" id="navTabCharacter">
         <i data-lucide="mic-2"></i>
-        <span>បណ្ណាល័យសំឡេង</span>
+        <span>គ្រប់គ្រងសំឡេង</span>
+        <span class="tab-badge pro" id="tabVoiceCountBadge">២៥+</span>
       </button>
       <button class="nav-tab" data-tab="tab-translator">
         <i data-lucide="languages"></i>
@@ -202,6 +203,8 @@
                 <label><i data-lucide="user-check"></i> 👑 សំឡេងតួឯកប្រុស (Male Lead Voice)</label>
                 <select id="maleLeadVoice" class="form-input">
                   <option value="hang_phleung_char_2_male.mp3" selected>👑 តួឯកប្រុស ទី១ (ហង្សភ្លើង - សំឡេងកម្លោះសង្ហា)</option>
+                  <option value="char_male_lead_star7.mp3">👑 តួប្រុស ផ្កាយ៧ (ក្បួនផ្កាយ៧ - ម៉ឺងម៉ាត់អង់អាច)</option>
+                  <option value="char_male_tactics.mp3">👑 តួប្រុស យុទ្ធសាស្ត្រ (សំឡេងច្បាស់ល្អ)</option>
                   <option value="hang_phleung_char_7_male.mp3">👑 តួឯកប្រុស ទី២ (ព្រះអាទិទេព ស៊ីងជឺ - ម៉ឺងម៉ាត់អង់អាច)</option>
                   <option value="main_lead_male.mp3">👑 តួឯកប្រុស ទី៣ (សំឡេងខ្មែររោងកុនច្បាស់)</option>
                   <option value="vp_character_17_male.mp3">👑 តួឯកប្រុស ទី៤ (ទន់ភ្លន់ សុភាពបុរស)</option>
@@ -212,6 +215,8 @@
                 <label><i data-lucide="user-check"></i> 🌸 សំឡេងតួឯកស្រី (Female Lead Voice)</label>
                 <select id="femaleLeadVoice" class="form-input">
                   <option value="hang_phleung_char_6_female.mp3" selected>🌸 តួឯកស្រី ទី១ (ហង្សភ្លើង - ស្រទន់ពីរោះ)</option>
+                  <option value="char_female_lead_palace.mp3">🌸 តួឯកស្រី ដំណាក់រាជវាំង (សំឡេងច្បាស់ល្អឥតខ្ចោះ)</option>
+                  <option value="char_female_calm.mp3">🌸 តួស្រី សុភាពស្ងប់ស្ងាត់ (សំឡេងធម្មជាតិ)</option>
                   <option value="vp_character_1_female.mp3">🌸 តួឯកស្រី ទី២ (រឹងមាំ ក្លាហាន)</option>
                   <option value="main_lead_female.mp3">🌸 តួឯកស្រី ទី៣ (សំឡេងខ្មែររោងកុនច្បាស់)</option>
                   <option value="vp_character_14_female.mp3">🌸 តួឯកស្រី ទី៤ (ស្រទន់ ផ្អែមល្ហែម)</option>
@@ -573,72 +578,175 @@
       </div>
     </main>
 
-    <!-- TAB 2: Character Voice Lab (Single Voice Cloning) -->
+    <!-- TAB 2: Voice Management Dashboard (គ្រប់គ្រងសំឡេង) -->
     <main class="tab-content" id="tab-character">
-      <div class="character-lab-container">
-        <div class="panel">
-          <div class="panel-header">
-            <h2><i data-lucide="fingerprint"></i> បង្កើតគំរូ Clone សំឡេងតួអង្គ</h2>
-            <p class="panel-subtitle">កាត់យកសំឡេងតួអង្គពី ៣ ទៅ ១០ វិនាទី រួចសាកល្បងឱ្យតួអង្គនោះនិយាយឃ្លាខ្មែរអ្វីក៏បាន!</p>
-          </div>
-
-          <div class="clone-form-grid">
-            <!-- Voice Sample Input -->
-            <div class="form-group">
-              <label><i data-lucide="mic"></i> ឈ្មោះតួអង្គ</label>
-              <input type="text" id="charNameInput" class="form-input" placeholder="ឧ. តួឯកប្រុស លីមិញ, តួស្រី សៀវឡុងនី...">
+      <div class="voice-dashboard-container">
+        <!-- Dashboard Header -->
+        <div class="panel voice-dashboard-header-panel">
+          <div class="voice-dashboard-title-row">
+            <div>
+              <h2><i data-lucide="layout-dashboard"></i> ផ្ទាំងគ្រប់គ្រងសំឡេង (Voice Management Dashboard)</h2>
+              <p class="panel-subtitle">ដាក់ឈ្មោះសំឡេង កែប្រែឈ្មោះ កំណត់តួនាទី ចាក់ស្ដាប់សាកល្បង និងគ្រប់គ្រងសំឡេងទាំងអស់ក្នុងស្ទូឌីយោ</p>
             </div>
-
-            <div class="form-group">
-              <label><i data-lucide="file-audio"></i> ឯកសារសំឡេងគំរូរបស់តួអង្គ (ពី ៣ ទៅ ១០ វិនាទី)</label>
-              <input type="file" id="voiceSampleFile" accept="audio/*,video/*" class="form-input">
-              <span class="help-text">ជ្រើសរើសសំឡេងកាត់ចេញពីរឿង ដែលតួអង្គនោះនិយាយច្បាស់ មិនសូវមានភ្លេងកំដរ</span>
-            </div>
-
-            <div class="form-group full-width">
-              <label><i data-lucide="message-square"></i> សរសេរអក្សរខ្មែរដែលចង់ឱ្យតួអង្គនេះនិយាយ</label>
-              <textarea id="khmerSpeakText" class="form-input textarea" rows="3" placeholder="ឧទាហរណ៍៖ បងមិនអាចបោះបង់អូនចោលក្នុងគ្រាដ៏គ្រោះថ្នាក់នេះបានទេ! ទោះបីជាត្រូវស្លាប់ ក៏បងត្រូវតែការពារអូនដែរ!"></textarea>
-              <div class="preset-phrases-group" style="margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap;">
-                <span style="font-size: 0.8rem; color: var(--text-muted); align-self: center;">ឃ្លាគំរូសាកល្បង៖</span>
-                <button type="button" class="btn-tool phrase-chip" data-phrase="បងមិនអាចបោះបង់អូនចោលក្នុងគ្រាដ៏គ្រោះថ្នាក់នេះបានទេ!">⚔️ ស្នេហា / ក្លាហាន</button>
-                <button type="button" class="btn-tool phrase-chip" data-phrase="មនុស្សថ្លើមធំ ហ៊ានប្រព្រឹត្តល្មើសច្បាប់ក្នុងរាជវាំង ត្រូវប្រហារជីវិត!">👑 អំណាចរាជវាំង</button>
-                <button type="button" class="btn-tool phrase-chip" data-phrase="មិនប្រញាប់ជួយខ្ញុំមកលឿនឡើងមក? ល្អណាស់ ចាំមើលទៅ!">⚡ កាច / គំរាម</button>
-                <button type="button" class="btn-tool phrase-chip" data-phrase="លោកពិតជាមិនស្គាល់ខ្ញុំមែនទេ កាលពីមុនពួកយើងធ្លាប់បានជួបគ្នារួចហើយ!">🌸 ស្រទន់ / អារម្មណ៍</button>
-              </div>
-            </div>
-
-            <div class="button-row full-width">
-              <button class="btn btn-primary btn-glow" id="cloneAndSpeakBtn">
-                <i data-lucide="volume-2"></i>
-                <span>Clone សំឡេង & បញ្ចេញសំឡេងខ្មែរភ្លាមៗ</span>
+            <div class="voice-dashboard-top-actions">
+              <button class="btn btn-primary btn-glow" id="openAddVoiceBtn" type="button">
+                <i data-lucide="plus-circle"></i>
+                <span>➕ បន្ថែមសំឡេងថ្មី (Add Voice)</span>
+              </button>
+              <button class="btn btn-tool" id="refreshVoiceVaultBtn" type="button" title="ទាញយកបញ្ជីសំឡេងឡើងវិញ">
+                <i data-lucide="rotate-cw"></i>
+                <span>ផ្ទុកឡើងវិញ</span>
               </button>
             </div>
           </div>
 
-          <!-- Character Voice Audio Result -->
-          <div class="audio-result-box hidden" id="charAudioResultBox">
-            <div class="audio-result-header">
-              <div class="char-avatar"><i data-lucide="user-check"></i></div>
-              <div>
-                <h4 id="charResultTitle">តួអង្គ៖ លីមិញ</h4>
-                <p>សំឡេងខ្មែរដែលបាន Clone ចេញពីសំឡេងដើម</p>
+          <!-- Statistics Counters -->
+          <div class="voice-stats-grid">
+            <div class="voice-stat-card total">
+              <div class="stat-icon"><i data-lucide="volume-2"></i></div>
+              <div class="stat-meta">
+                <span class="stat-val" id="statVoiceTotal">0</span>
+                <span class="stat-title">សំឡេងសរុប (Total)</span>
               </div>
             </div>
-            <audio id="charAudioPlayer" controls class="audio-player-element"></audio>
+            <div class="voice-stat-card male">
+              <div class="stat-icon"><i data-lucide="user"></i></div>
+              <div class="stat-meta">
+                <span class="stat-val" id="statVoiceMale">0</span>
+                <span class="stat-title">👑 តួប្រុស (Male)</span>
+              </div>
+            </div>
+            <div class="voice-stat-card female">
+              <div class="stat-icon"><i data-lucide="heart"></i></div>
+              <div class="stat-meta">
+                <span class="stat-val" id="statVoiceFemale">0</span>
+                <span class="stat-title">🌸 តួស្រី (Female)</span>
+              </div>
+            </div>
+            <div class="voice-stat-card curated">
+              <div class="stat-icon"><i data-lucide="sparkles"></i></div>
+              <div class="stat-meta">
+                <span class="stat-val" id="statVoiceCurated">0</span>
+                <span class="stat-title">⭐ គំរូសាច់រឿង (Curated)</span>
+              </div>
+            </div>
           </div>
 
-          <!-- Characters Vault: Extracted from videoplayback.mp4 -->
-          <div class="characters-vault-section">
-            <div class="characters-vault-header">
-              <div>
-                <h3><i data-lucide="sparkles"></i> បណ្ណាល័យសំឡេងគ្រប់តួអង្គចម្បងក្នុងរឿង</h3>
-                <p class="panel-subtitle">សំឡេងពិតរបស់តួឯកប្រុស-ស្រី ព្រះរាជបុត្រ មន្ត្រី និងតួអង្គបន្ទាប់បន្សំទាំងអស់ ដែលបានដកស្រង់រួចរាល់</p>
-              </div>
-              <span class="badge badge-purple" id="vaultCountBadge">១៣ តួអង្គ</span>
+          <!-- Filter & Search Toolbar -->
+          <div class="voice-toolbar-row">
+            <div class="voice-search-box">
+              <i data-lucide="search"></i>
+              <input type="text" id="voiceSearchInput" placeholder="🔍 ស្វែងរកតាមឈ្មោះសំឡេង ឬឃ្លានិយាយ...">
+              <button id="voiceClearSearchBtn" class="clear-search-btn hidden" type="button"><i data-lucide="x"></i></button>
             </div>
 
-            <div class="characters-vault-grid" id="charactersVaultGrid">
-              <!-- Dynamically populated via JS -->
+            <div class="voice-filter-group">
+              <div class="filter-pills" id="voiceGenderFilters">
+                <button class="voice-filter-pill active" data-filter="all" type="button">🎭 ទាំងអស់</button>
+                <button class="voice-filter-pill male" data-filter="male" type="button">👑 តួប្រុស</button>
+                <button class="voice-filter-pill female" data-filter="female" type="button">🌸 តួស្រី</button>
+              </div>
+
+              <select id="voiceRoleFilter" class="form-input voice-role-select">
+                <option value="all">🎭 គ្រប់តួនាទី (All Roles)</option>
+                <option value="male_lead">👑 តួឯកប្រុស (Male Lead)</option>
+                <option value="female_lead">🌸 តួឯកស្រី (Female Lead)</option>
+                <option value="general">🛡️ មេទ័ព (General)</option>
+                <option value="elder">📿 ព្រឹទ្ធាចារ្យ / អ៊ំចាស់</option>
+                <option value="villain">⚔️ តួកាច / ពិសពុល</option>
+                <option value="servant">🍵 អ្នកបម្រើ / កូនចៅ</option>
+                <option value="other">👥 តួផ្សេងៗ (Other)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Voice Vault Cards Grid -->
+        <div class="panel voice-grid-panel">
+          <div class="voice-grid-header">
+            <h3><i data-lucide="mic-2"></i> បញ្ជីសំឡេងតួអង្គក្នុងស្ទូឌីយោ</h3>
+            <span class="badge badge-purple" id="vaultCountBadge">កំពុងទាញយក...</span>
+          </div>
+
+          <!-- Grid Container for Character Cards -->
+          <div class="characters-vault-grid" id="charactersVaultGrid">
+            <!-- Dynamically populated via JS -->
+          </div>
+
+          <!-- Empty State (if no results match search) -->
+          <div class="voice-empty-state hidden" id="voiceEmptyState">
+            <i data-lucide="inbox"></i>
+            <h4>រកមិនឃើញសំឡេងត្រូវតាមលក្ខខណ្ឌស្វែងរកឡើយ</h4>
+            <p>សូមសាកល្បងវាយឈ្មោះផ្សេង ឬចុចសម្អាតការស្វែងរក</p>
+            <button class="btn btn-secondary btn-sm" id="resetVoiceFilterBtn" type="button">សម្អាត Filter</button>
+          </div>
+        </div>
+
+        <!-- Collapsible Cloner Section: Quick Single Voice Experiment -->
+        <div class="panel voice-cloner-collapsible">
+          <div class="collapsible-header" id="toggleClonerHeader">
+            <div class="header-left">
+              <h3><i data-lucide="fingerprint"></i> បង្កើតគំរូ Clone សំឡេងតួអង្គទោល (Single Voice Cloner)</h3>
+              <p class="panel-subtitle">កាត់យកសំឡេងតួអង្គ ៣-១០ វិនាទី រួចសាកល្បងឱ្យតួអង្គនោះនិយាយឃ្លាខ្មែរភ្លាមៗ</p>
+            </div>
+            <button class="btn-toggle-collapse" type="button"><i data-lucide="chevron-down" id="clonerChevron"></i></button>
+          </div>
+
+          <div class="collapsible-content hidden" id="clonerCollapsibleBody">
+            <div class="clone-form-grid" style="margin-top: 16px;">
+              <div class="form-group">
+                <label><i data-lucide="mic"></i> ឈ្មោះតួអង្គ</label>
+                <input type="text" id="charNameInput" class="form-input" placeholder="ឧ. តួឯកប្រុស លីមិញ, តួស្រី សៀវឡុងនី...">
+              </div>
+
+              <div class="form-group">
+                <label><i data-lucide="file-audio"></i> ឯកសារសំឡេងគំរូរបស់តួអង្គ (ពី ៣ ទៅ ១០ វិនាទី)</label>
+                <input type="file" id="voiceSampleFile" accept="audio/*,video/*" class="form-input">
+                <span class="help-text">ជ្រើសរើសសំឡេងកាត់ចេញពីរឿង ដែលតួអង្គនោះនិយាយច្បាស់ មិនសូវមានភ្លេងកំដរ</span>
+              </div>
+
+              <div class="form-group full-width">
+                <label><i data-lucide="message-square"></i> សរសេរអក្សរខ្មែរដែលចង់ឱ្យតួអង្គនេះនិយាយ</label>
+                <textarea id="khmerSpeakText" class="form-input textarea" rows="3" placeholder="ឧទាហរណ៍៖ បងមិនអាចបោះបង់អូនចោលក្នុងគ្រាដ៏គ្រោះថ្នាក់នេះបានទេ! ទោះបីជាត្រូវស្លាប់ ក៏បងត្រូវតែការពារអូនដែរ!"></textarea>
+                <div class="preset-phrases-group" style="margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap;">
+                  <span style="font-size: 0.8rem; color: var(--text-muted); align-self: center;">ឃ្លាគំរូសាកល្បង៖</span>
+                  <button type="button" class="btn-tool phrase-chip" data-phrase="បងមិនអាចបោះបង់អូនចោលក្នុងគ្រាដ៏គ្រោះថ្នាក់នេះបានទេ!">⚔️ ស្នេហា / ក្លាហាន</button>
+                  <button type="button" class="btn-tool phrase-chip" data-phrase="មនុស្សថ្លើមធំ ហ៊ានប្រព្រឹត្តល្មើសច្បាប់ក្នុងរាជវាំង ត្រូវប្រហារជីវិត!">👑 អំណាចរាជវាំង</button>
+                  <button type="button" class="btn-tool phrase-chip" data-phrase="មិនប្រញាប់ជួយខ្ញុំមកលឿនឡើងមក? ល្អណាស់ ចាំមើលទៅ!">⚡ កាច / គំរាម</button>
+                  <button type="button" class="btn-tool phrase-chip" data-phrase="លោកពិតជាមិនស្គាល់ខ្ញុំមែនទេ កាលពីមុនពួកយើងធ្លាប់បានជួបគ្នារួចហើយ!">🌸 ស្រទន់ / អារម្មណ៍</button>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label><i data-lucide="heart"></i> ជ្រើសរើសទឹកដមអារម្មណ៍សម្ដែង (Emotional Delivery)</label>
+                <select id="clonerEmotionSelect" class="form-input">
+                  <option value="dramatic" selected>🎭 មនោសញ្ចេតនារឿងកុន (Dramatic)</option>
+                  <option value="deep_sorrow">😭 កម្សត់ / ស្រក់ទឹកភ្នែក (Deep Sorrow & Tears)</option>
+                  <option value="fierce_battle">😡 ខឹងសម្បារ / គំរាមកំហែង (Fierce Battle & Anger)</option>
+                  <option value="sweet_romance">💖 ស្នេហាផ្អែមល្ហែម / ស្រទន់ (Sweet Romance)</option>
+                  <option value="heroic_command">🛡️ អង់អាចក្លាហាន / បញ្ជាទ័ព (Heroic Command)</option>
+                  <option value="neutral">😐 ធម្មជាតិធម្មតា (Neutral)</option>
+                </select>
+              </div>
+
+              <div class="button-row full-width">
+                <button class="btn btn-primary btn-glow" id="cloneAndSpeakBtn" type="button">
+                  <i data-lucide="volume-2"></i>
+                  <span>Clone សំឡេង & បញ្ចេញសំឡេងខ្មែរភ្លាមៗ</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Character Voice Audio Result -->
+            <div class="audio-result-box hidden" id="charAudioResultBox" style="margin-top: 16px;">
+              <div class="audio-result-header">
+                <div class="char-avatar"><i data-lucide="user-check"></i></div>
+                <div>
+                  <h4 id="charResultTitle">តួអង្គ៖ លីមិញ</h4>
+                  <p>សំឡេងខ្មែរដែលបាន Clone ចេញពីសំឡេងដើម</p>
+                </div>
+              </div>
+              <audio id="charAudioPlayer" controls class="audio-player-element"></audio>
             </div>
           </div>
         </div>
@@ -1078,6 +1186,197 @@
             <i data-lucide="check"></i>
             <span>រក្សាទុក Link ថ្មី</span>
           </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Voice Modal -->
+    <div class="modal-overlay hidden" id="editVoiceModal">
+      <div class="modal-box" style="max-width: 540px;">
+        <div class="modal-header">
+          <h3><i data-lucide="edit-3" style="color: #60a5fa;"></i> កែប្រែឈ្មោះ & ព័ត៌មានសំឡេង</h3>
+          <button class="modal-close-btn" id="closeEditVoiceBtn" type="button"><i data-lucide="x"></i></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="editVoiceId">
+          <input type="hidden" id="editVoiceFilename">
+
+          <div class="form-group">
+            <label><i data-lucide="tag"></i> ឈ្មោះសំឡេងតួអង្គ (Voice Name / Label)</label>
+            <input type="text" id="editVoiceLabel" class="form-input" placeholder="ឧ. 👑 តួប្រុស ផ្កាយ៧ (ម៉ឺងម៉ាត់អង់អាច)">
+            <span class="field-hint">ឈ្មោះនេះនឹងបង្ហាញលើគ្រប់ Dropdown ទាំងអស់ក្នុងស្ទូឌីយោ</span>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label><i data-lucide="user"></i> ភេទ (Gender)</label>
+              <select id="editVoiceGender" class="form-input">
+                <option value="male">👑 តួប្រុស (Male)</option>
+                <option value="female">🌸 តួស្រី (Female)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label><i data-lucide="shield"></i> តួនាទីក្នុងរឿង (Role)</label>
+              <select id="editVoiceRole" class="form-input">
+                <option value="male_lead">👑 តួឯកប្រុស (Male Lead)</option>
+                <option value="female_lead">🌸 តួឯកស្រី (Female Lead)</option>
+                <option value="general">🛡️ មេទ័ព (General)</option>
+                <option value="elder">📿 ព្រឹទ្ធាចារ្យ (Elder)</option>
+                <option value="old_man">👴 តួអ៊ំចាស់ (Old Uncle)</option>
+                <option value="old_woman">👵 យាយចាស់ (Old Woman)</option>
+                <option value="villain">⚔️ តួកាច (Villain)</option>
+                <option value="villain_female">🐍 តួកាចស្រី (Fierce Female)</option>
+                <option value="servant">🍵 អ្នកបម្រើ / កូនចៅ</option>
+                <option value="narrator">🎙️ អ្នករៀបរាប់ (Narrator)</option>
+                <option value="crowd">👥 មហាជន / អ្នកភូមិ</option>
+                <option value="other">🎭 ផ្សេងៗ (Other)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label><i data-lucide="message-square"></i> ឃ្លាសម្ដែងដើមរបស់តួអង្គ (Spoken Words / Quote)</label>
+            <textarea id="editVoiceWords" class="form-input textarea" rows="2" placeholder="ឃ្លាដែលតួអង្គនេះនិយាយក្នុងរឿង..."></textarea>
+          </div>
+
+          <div class="form-group" style="background: rgba(0,0,0,0.25); padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-color);">
+            <label style="font-size: 0.82rem; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+              <span><i data-lucide="volume-2"></i> ចាក់ស្ដាប់សំឡេងដើម (Audio Preview):</span>
+              <span id="editVoiceFileBadge" style="font-family: monospace; font-size: 0.75rem; color: var(--text-muted);">filename.mp3</span>
+            </label>
+            <audio id="editVoiceAudioPreview" controls style="width: 100%; height: 36px;"></audio>
+          </div>
+
+          <div class="modal-actions" style="margin-top: 18px;">
+            <button class="btn btn-secondary" id="cancelEditVoiceBtn" type="button">បោះបង់</button>
+            <button class="btn btn-primary btn-glow" id="saveEditVoiceBtn" type="button">
+              <i data-lucide="check"></i>
+              <span>💾 រក្សាទុកការកែប្រែ</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add New Voice Modal -->
+    <div class="modal-overlay hidden" id="addVoiceModal">
+      <div class="modal-box" style="max-width: 540px;">
+        <div class="modal-header">
+          <h3><i data-lucide="plus-circle" style="color: #10b981;"></i> បន្ថែមសំឡេងតួអង្គថ្មី (Add Voice)</h3>
+          <button class="modal-close-btn" id="closeAddVoiceBtn" type="button"><i data-lucide="x"></i></button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label><i data-lucide="tag"></i> ឈ្មោះសំឡេងថ្មី (Voice Name / Label) <span style="color:#ef4444;">*</span></label>
+            <input type="text" id="addVoiceLabel" class="form-input" placeholder="ឧ. 👑 តួឯកប្រុស រ៉ាជានី, 🌸 តួស្រី ម៉ាលី...">
+          </div>
+
+          <div class="form-group">
+            <label><i data-lucide="file-audio"></i> ជ្រើសរើសឯកសារសំឡេង ឬវីដេអូ (.mp3, .wav, .mp4) <span style="color:#ef4444;">*</span></label>
+            <input type="file" id="addVoiceFileInput" accept="audio/*,video/*" class="form-input">
+            <span class="field-hint">សំឡេងពី ៣ ទៅ ១៥ វិនាទី ដែលនិយាយច្បាស់ មិនសូវមានភ្លេងកំដរ</span>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label><i data-lucide="user"></i> ភេទ (Gender)</label>
+              <select id="addVoiceGender" class="form-input">
+                <option value="male" selected>👑 តួប្រុស (Male)</option>
+                <option value="female">🌸 តួស្រី (Female)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label><i data-lucide="shield"></i> តួនាទីក្នុងរឿង (Role)</label>
+              <select id="addVoiceRole" class="form-input">
+                <option value="male_lead" selected>👑 តួឯកប្រុស (Male Lead)</option>
+                <option value="female_lead">🌸 តួឯកស្រី (Female Lead)</option>
+                <option value="general">🛡️ មេទ័ព (General)</option>
+                <option value="elder">📿 ព្រឹទ្ធាចារ្យ (Elder)</option>
+                <option value="old_man">👴 តួអ៊ំចាស់ (Old Uncle)</option>
+                <option value="villain">⚔️ តួកាច (Villain)</option>
+                <option value="villain_female">🐍 តួកាចស្រី (Fierce Female)</option>
+                <option value="servant">🍵 អ្នកបម្រើ / កូនចៅ</option>
+                <option value="other">🎭 ផ្សេងៗ (Other)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label><i data-lucide="message-square"></i> ឃ្លានិយាយគំរូ (Spoken Words / Quote)</label>
+            <textarea id="addVoiceWords" class="form-input textarea" rows="2" placeholder="ឃ្លាដែលតួអង្គនោះនិយាយក្នុងសំឡេងនេះ..."></textarea>
+          </div>
+
+          <div class="modal-actions" style="margin-top: 18px;">
+            <button class="btn btn-secondary" id="cancelAddVoiceBtn" type="button">បោះបង់</button>
+            <button class="btn btn-primary btn-glow" id="saveAddVoiceBtn" type="button">
+              <i data-lucide="plus-circle"></i>
+              <span>➕ បង្កើត & រក្សាទុកសំឡេង</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Test Speak Modal -->
+    <div class="modal-overlay hidden" id="testVoiceSpeakModal">
+      <div class="modal-box" style="max-width: 520px;">
+        <div class="modal-header">
+          <h3><i data-lucide="volume-2" style="color: #a855f7;"></i> សាកល្បងឱ្យតួអង្គនិយាយ (Voice Audition)</h3>
+          <button class="modal-close-btn" id="closeTestSpeakBtn" type="button"><i data-lucide="x"></i></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="testSpeakVoiceId">
+          <input type="hidden" id="testSpeakVoiceFilename">
+
+          <div style="background: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; display: flex; align-items: center; gap: 10px;">
+            <div id="testSpeakVoiceAvatar" style="font-size: 1.4rem;">🎙️</div>
+            <div>
+              <div id="testSpeakVoiceLabel" style="font-weight: 700; color: #e2e8f0; font-size: 0.95rem;">-</div>
+              <div id="testSpeakVoiceSub" style="font-size: 0.78rem; color: var(--text-muted);">-</div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label><i data-lucide="edit"></i> សរសេរអក្សរខ្មែរដែលចង់ឱ្យតួអង្គនេះនិយាយសាកល្បង៖</label>
+            <textarea id="testSpeakCustomText" class="form-input textarea" rows="3" placeholder="វាយអត្ថបទខ្មែរនៅទីនេះ..."></textarea>
+            <div class="preset-phrases-group" style="margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap;">
+              <button type="button" class="btn-tool test-phrase-chip" data-phrase="បងមិនអាចបោះបង់អូនចោលក្នុងគ្រាដ៏គ្រោះថ្នាក់នេះបានទេ!">⚔️ ស្នេហា / ក្លាហាន</button>
+              <button type="button" class="btn-tool test-phrase-chip" data-phrase="មនុស្សថ្លើមធំ ហ៊ានប្រព្រឹត្តល្មើសច្បាប់ក្នុងរាជវាំង ត្រូវប្រហារជីវិត!">👑 អំណាចរាជវាំង</button>
+              <button type="button" class="btn-tool test-phrase-chip" data-phrase="តើលោកជាអ្នកណា ហេតុអ្វីបានជាមកលបលួចចូលដំណាក់របស់ខ្ញុំ?">🌸 ស្រទន់ / សង្ស័យ</button>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 10px;">
+            <label><i data-lucide="heart"></i> ជ្រើសរើសទឹកដមអារម្មណ៍សម្ដែង (Emotional Delivery)</label>
+            <select id="testSpeakEmotion" class="form-input">
+              <option value="dramatic" selected>🎭 មនោសញ្ចេតនាភាពយន្ត (Dramatic / Theatrical - រស់រវើក)</option>
+              <option value="deep_sorrow">😭 កម្សត់ / ស្រក់ទឹកភ្នែក / ឈឺចាប់ (Deep Sorrow & Grief)</option>
+              <option value="fierce_battle">😡 ខឹងសម្បារ / គំរាមកំហែង / ច្បាំង (Fierce Anger & Battle Cry)</option>
+              <option value="sweet_romance">💖 ស្នេហាផ្អែមល្ហែម / ស្រទន់ (Tender Passion & Sweet Romance)</option>
+              <option value="heroic_command">🛡️ អង់អាចក្លាហាន / បញ្ជាកងទ័ព (Heroic Authority & Command)</option>
+              <option value="neutral">😐 ធម្មជាតិធម្មតា (Neutral)</option>
+            </select>
+          </div>
+
+          <!-- Result Player inside test modal -->
+          <div class="audio-result-box hidden" id="testSpeakResultBox" style="margin-top: 14px;">
+            <div class="audio-result-header" style="margin-bottom: 8px;">
+              <div class="char-avatar" style="width:32px; height:32px; font-size:1rem;"><i data-lucide="check"></i></div>
+              <div>
+                <h4 style="font-size:0.88rem; margin:0;">សំឡេងសាកល្បងរួចរាល់!</h4>
+                <p style="font-size:0.75rem; margin:0; color:var(--text-muted);">ដំណើរការតាមរយៈ VoxCPM2 Voice Clone</p>
+              </div>
+            </div>
+            <audio id="testSpeakAudioPlayer" controls class="audio-player-element" style="width:100%; height:36px;"></audio>
+          </div>
+
+          <div class="modal-actions" style="margin-top: 18px;">
+            <button class="btn btn-secondary" id="cancelTestSpeakBtn" type="button">បិទ</button>
+            <button class="btn btn-primary btn-glow" id="runTestSpeakBtn" type="button">
+              <i data-lucide="play"></i>
+              <span>▶️ សំយោគសំឡេងភ្លាមៗ</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

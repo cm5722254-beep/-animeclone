@@ -1,5 +1,50 @@
 [
   {
+    "id": "voxcpm:char_male_casual.mp3",
+    "filename": "char_male_casual.mp3",
+    "label": "🎙️ តួប្រុស (សំឡេងធម្មជាតិ)",
+    "role_key": "male_lead",
+    "gender": "male",
+    "is_curated": true,
+    "words": "ជេការបើកទូរស័ព្ទ កុំឱ្យកូនកំពុងតែបើកប្រាស់ខ្ញុំ"
+  },
+  {
+    "id": "voxcpm:char_female_calm.mp3",
+    "filename": "char_female_calm.mp3",
+    "label": "🌸 តួស្រី (សំឡេងស្រទន់ស្ងប់)",
+    "role_key": "female_lead",
+    "gender": "female",
+    "is_curated": true,
+    "words": "ថ្នាក់ក្នុងចាក់ដីនេះ ជាប្តីរបស់ប្រតិចាចៅអ៊ី"
+  },
+  {
+    "id": "voxcpm:char_female_lead_palace.mp3",
+    "filename": "char_female_lead_palace.mp3",
+    "label": "🌸 តួឯកស្រី (ដំណាក់រាជវាំង - សុភាពរាបសារ)",
+    "role_key": "female_lead",
+    "gender": "female",
+    "is_curated": true,
+    "words": "បានទទួលកាលវិធីបានរំផ្សាយហើយ ខ្ញុំក៏បានជម្រាបអ្នកផ្សេងមិនឲ្យចូលដំណាក់នាងបើគ្មានការអនុញ្ញាត"
+  },
+  {
+    "id": "voxcpm:char_male_tactics.mp3",
+    "filename": "char_male_tactics.mp3",
+    "label": "👑 តួឯកប្រុស (យុទ្ធសាស្ត្រច្បាស់លាស់)",
+    "role_key": "male_lead",
+    "gender": "male",
+    "is_curated": true,
+    "words": "យកបាញ់យុទ្ធសាស្ត្រទើបបងចេញប្រាំបួននឹងរូបការងារក្រីដោចៃដន្យ ដើមឡើយចង់ប្រកួតវាឱ្យប្រាកដជាក់"
+  },
+  {
+    "id": "voxcpm:char_male_lead_star7.mp3",
+    "filename": "char_male_lead_star7.mp3",
+    "label": "👑 តួប្រុស (ក្បួនផ្កាយ៧ - ម៉ឺងម៉ាត់)",
+    "role_key": "male_lead",
+    "gender": "male",
+    "is_curated": true,
+    "words": "ត្រូវតែចងចាំក្បួនផ្កាយ ៧ ដែលយើងបង្រៀនដល់ឯង ឧស្សាហ៍សង្កេតមើលផ្កាយ ដើម្បីយល់អត្ថន័យនៅពីក្រោយរឿងនេះ"
+  },
+  {
     "id": "voxcpm:hang_phleung_char_2_male.mp3",
     "filename": "hang_phleung_char_2_male.mp3",
     "label": "👑 តួឯកប្រុស (វីរនារីហង្សភ្លើង)",

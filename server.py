@@ -83,6 +83,14 @@ class CharacterSpeakRequest(BaseModel):
     referenceAudio: Optional[str] = None
     emotion: Optional[str] = 'dramatic'
 
+class CharacterUpdateRequest(BaseModel):
+    id: Optional[str] = None
+    filename: Optional[str] = None
+    label: Optional[str] = None
+    role_key: Optional[str] = None
+    gender: Optional[str] = None
+    words: Optional[str] = None
+
 # --- API Endpoints ---
 
 @app.get('/api/config')
@@ -98,6 +106,25 @@ def get_config():
         'port': int(os.getenv('PORT', 3000))
     }
 
+@app.get('/api/voxcpm/status')
+def get_voxcpm_status():
+    url = os.getenv('VOXCPM_API_URL', '')
+    if not url or not url.strip():
+        return {'online': False, 'configured': False, 'message': 'មិនទាន់កំណត់ Link VoxCPM2'}
+
+    clean_url = url.strip()
+    if clean_url.startswith('http') and '.' not in clean_url:
+        clean_url = clean_url.rstrip('/') + '.trycloudflare.com'
+
+    import requests
+    try:
+        r = requests.get(clean_url, timeout=12)
+        if r.status_code == 200:
+            return {'online': True, 'configured': True, 'url': clean_url, 'message': 'GPU Server កំពុងដំណើរការល្អ (200 OK)'}
+        return {'online': False, 'configured': True, 'url': clean_url, 'message': f'ឆ្លើយតបកូដ HTTP {r.status_code}'}
+    except Exception as e:
+        return {'online': False, 'configured': True, 'url': clean_url, 'message': str(e)}
+
 @app.post('/api/config')
 def update_config(body: ConfigUpdate):
     env_path = os.path.join(BASE_DIR, '.env')
@@ -106,7 +133,10 @@ def update_config(body: ConfigUpdate):
     if body.geminiKey is not None:
         os.environ['GEMINI_API_KEY'] = body.geminiKey.strip()
     if body.voxcpmUrl is not None:
-        os.environ['VOXCPM_API_URL'] = body.voxcpmUrl.strip()
+        val = body.voxcpmUrl.strip()
+        if val.startswith('http') and '.' not in val:
+            val = val.rstrip('/') + '.trycloudflare.com'
+        os.environ['VOXCPM_API_URL'] = val
 
     port = os.getenv('PORT', '3000')
     env_content = (
@@ -590,6 +620,171 @@ def get_extracted_characters():
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
     return {'success': True, 'count': 0, 'characters': []}
+
+@app.get('/api/characters/all')
+def get_all_characters():
+    json_path = os.path.join(BASE_DIR, 'extracted_characters.json')
+    characters = []
+    if os.path.exists(json_path):
+        try:
+            with open(json_path, 'r', encoding='utf-8') as f:
+                characters = json.load(f)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    # Auto-discover unlisted audio samples in samples directory
+    if os.path.exists(SAMPLES_DIR):
+        existing_filenames = set(c.get('filename') for c in characters)
+        for f in os.listdir(SAMPLES_DIR):
+            if (f.endswith('.mp3') or f.endswith('.wav')) and f not in existing_filenames:
+                base_name = os.path.splitext(f)[0]
+                is_wav_pair = f.endswith('.wav') and any(os.path.splitext(c.get('filename', ''))[0] == base_name for c in characters)
+                if not is_wav_pair:
+                    is_female = 'female' in f.lower()
+                    characters.append({
+                        'id': f"voxcpm:{f}",
+                        'filename': f,
+                        'label': os.path.splitext(f)[0].replace('_', ' '),
+                        'role_key': 'female_lead' if is_female else 'male_lead',
+                        'gender': 'female' if is_female else 'male',
+                        'is_curated': False,
+                        'words': 'សំឡេងគំរូក្នុងស្ទូឌីយោ'
+                    })
+
+    enriched = []
+    for c in characters:
+        fp = os.path.join(SAMPLES_DIR, c.get('filename', ''))
+        exists = os.path.exists(fp)
+        size = os.path.getsize(fp) if exists else 0
+        enriched.append({
+            **c,
+            'exists': exists,
+            'previewUrl': f"/media/samples/{c.get('filename', '')}" if exists else None,
+            'sizeBytes': size
+        })
+
+    return {'success': True, 'count': len(enriched), 'characters': enriched}
+
+@app.put('/api/characters/update')
+def update_character(body: CharacterUpdateRequest):
+    json_path = os.path.join(BASE_DIR, 'extracted_characters.json')
+    if not os.path.exists(json_path):
+        raise HTTPException(status_code=404, detail='Characters database not found')
+
+    with open(json_path, 'r', encoding='utf-8') as f:
+        characters = json.load(f)
+
+    target_idx = -1
+    for i, c in enumerate(characters):
+        if (body.id and c.get('id') == body.id) or (body.filename and c.get('filename') == body.filename):
+            target_idx = i
+            break
+
+    if target_idx == -1:
+        new_entry = {
+            'id': body.id or f"voxcpm:{body.filename}",
+            'filename': body.filename or 'custom_voice.mp3',
+            'label': body.label.strip() if body.label else 'សំឡេងថ្មី',
+            'role_key': body.role_key or ('female_lead' if body.gender == 'female' else 'male_lead'),
+            'gender': body.gender or 'male',
+            'is_curated': True,
+            'words': body.words.strip() if body.words else ''
+        }
+        characters.insert(0, new_entry)
+        with open(json_path, 'w', encoding='utf-8') as f:
+            json.dump(characters, f, ensure_ascii=False, indent=2)
+        return {'success': True, 'character': new_entry}
+
+    if body.label is not None and body.label.strip():
+        characters[target_idx]['label'] = body.label.strip()
+    if body.role_key is not None:
+        characters[target_idx]['role_key'] = body.role_key
+    if body.gender is not None:
+        characters[target_idx]['gender'] = body.gender
+    if body.words is not None:
+        characters[target_idx]['words'] = body.words.strip()
+
+    with open(json_path, 'w', encoding='utf-8') as f:
+        json.dump(characters, f, ensure_ascii=False, indent=2)
+
+    return {'success': True, 'character': characters[target_idx]}
+
+@app.post('/api/characters/create')
+async def create_character(
+    audioFile: UploadFile = File(...),
+    label: str = Form(...),
+    gender: str = Form('male'),
+    role_key: str = Form('male_lead'),
+    words: Optional[str] = Form('')
+):
+    json_path = os.path.join(BASE_DIR, 'extracted_characters.json')
+    ext = os.path.splitext(audioFile.filename)[1].lower() or '.mp3'
+    safe_base = f"custom_voice_{int(time.time() * 1000)}"
+    target_filename = f"{safe_base}{ext}"
+    dest_path = os.path.join(SAMPLES_DIR, target_filename)
+
+    with open(dest_path, 'wb') as buffer:
+        shutil.copyfileobj(audioFile.file, buffer)
+
+    if ext != '.mp3':
+        mp3_name = f"{safe_base}.mp3"
+        mp3_path = os.path.join(SAMPLES_DIR, mp3_name)
+        try:
+            import subprocess
+            subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-i', dest_path, '-vn', '-c:a', 'libmp3lame', '-b:a', '192k', mp3_path], check=True)
+            target_filename = mp3_name
+        except Exception as e:
+            print(f"Could not transcode voice to mp3: {e}")
+
+    characters = []
+    if os.path.exists(json_path):
+        with open(json_path, 'r', encoding='utf-8') as f:
+            characters = json.load(f)
+
+    new_char = {
+        'id': f"voxcpm:{target_filename}",
+        'filename': target_filename,
+        'label': label.strip() if label else 'សំឡេងថ្មី',
+        'role_key': role_key,
+        'gender': gender,
+        'is_curated': True,
+        'words': words.strip() if words else 'សំឡេងគំរូថ្មី'
+    }
+
+    characters.insert(0, new_char)
+    with open(json_path, 'w', encoding='utf-8') as f:
+        json.dump(characters, f, ensure_ascii=False, indent=2)
+
+    return {
+        'success': True,
+        'character': {
+            **new_char,
+            'exists': True,
+            'previewUrl': f"/media/samples/{target_filename}"
+        }
+    }
+
+@app.delete('/api/characters/delete/{char_id:path}')
+def delete_character(char_id: str):
+    import urllib.parse
+    char_id = urllib.parse.unquote(char_id)
+    json_path = os.path.join(BASE_DIR, 'extracted_characters.json')
+    if not os.path.exists(json_path):
+        raise HTTPException(status_code=404, detail='Characters database not found')
+
+    with open(json_path, 'r', encoding='utf-8') as f:
+        characters = json.load(f)
+
+    initial_len = len(characters)
+    characters = [c for c in characters if c.get('id') != char_id and c.get('filename') != char_id]
+
+    if len(characters) == initial_len:
+        raise HTTPException(status_code=404, detail='Character not found')
+
+    with open(json_path, 'w', encoding='utf-8') as f:
+        json.dump(characters, f, ensure_ascii=False, indent=2)
+
+    return {'success': True, 'message': 'Character removed successfully'}
 
 @app.get('/api/system/network-info')
 def get_network_info():

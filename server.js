@@ -610,6 +610,190 @@ app.get('/api/characters/extracted', (req, res) => {
   }
 });
 
+// 3.2 Get all characters with full management metadata for Voice Dashboard
+app.get('/api/characters/all', (req, res) => {
+  try {
+    const jsonPath = path.join(__dirname, 'extracted_characters.json');
+    const samplesDir = path.join(__dirname, 'samples');
+    let characters = [];
+    if (fs.existsSync(jsonPath)) {
+      characters = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+    }
+
+    // Auto-discover any new audio samples in samples directory
+    if (fs.existsSync(samplesDir)) {
+      const allFiles = fs.readdirSync(samplesDir);
+      allFiles.forEach(f => {
+        if ((f.endsWith('.mp3') || f.endsWith('.wav')) && !characters.some(c => c.filename === f)) {
+          const baseName = path.parse(f).name;
+          const isWavPair = f.endsWith('.wav') && characters.some(c => path.parse(c.filename).name === baseName);
+          if (!isWavPair) {
+            const isFemale = f.toLowerCase().includes('female');
+            characters.push({
+              id: `voxcpm:${f}`,
+              filename: f,
+              label: f.replace(/\.[^/.]+$/, '').replace(/_/g, ' '),
+              role_key: isFemale ? 'female_lead' : 'male_lead',
+              gender: isFemale ? 'female' : 'male',
+              is_curated: false,
+              words: 'សំឡេងគំរូក្នុងស្ទូឌីយោ'
+            });
+          }
+        }
+      });
+    }
+
+    const enriched = characters.map(c => {
+      const filePath = path.join(samplesDir, c.filename);
+      const exists = fs.existsSync(filePath);
+      const stat = exists ? fs.statSync(filePath) : null;
+      return {
+        ...c,
+        exists,
+        previewUrl: exists ? `/media/samples/${c.filename}` : null,
+        sizeBytes: stat ? stat.size : 0,
+        updatedAt: stat ? stat.mtime : null
+      };
+    });
+
+    res.json({ success: true, count: enriched.length, characters: enriched });
+  } catch (err) {
+    console.error('Fetch characters all error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 3.3 Update character voice name & metadata
+app.put('/api/characters/update', (req, res) => {
+  try {
+    const { id, filename, label, role_key, gender, words } = req.body;
+    if (!id && !filename) {
+      return res.status(400).json({ error: 'Character ID or filename required' });
+    }
+    const jsonPath = path.join(__dirname, 'extracted_characters.json');
+    if (!fs.existsSync(jsonPath)) {
+      return res.status(404).json({ error: 'Characters database not found' });
+    }
+    let characters = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+    const index = characters.findIndex(c => (id && c.id === id) || (filename && c.filename === filename));
+
+    if (index === -1) {
+      const newEntry = {
+        id: id || `voxcpm:${filename}`,
+        filename: filename || path.basename(id),
+        label: label || 'សំឡេងថ្មី',
+        role_key: role_key || (gender === 'female' ? 'female_lead' : 'male_lead'),
+        gender: gender || 'male',
+        is_curated: true,
+        words: words || ''
+      };
+      characters.unshift(newEntry);
+      fs.writeFileSync(jsonPath, JSON.stringify(characters, null, 2), 'utf8');
+      return res.json({ success: true, character: newEntry });
+    }
+
+    if (label !== undefined && label.trim()) characters[index].label = label.trim();
+    if (role_key !== undefined) characters[index].role_key = role_key;
+    if (gender !== undefined) characters[index].gender = gender;
+    if (words !== undefined) characters[index].words = words.trim();
+
+    fs.writeFileSync(jsonPath, JSON.stringify(characters, null, 2), 'utf8');
+    res.json({ success: true, character: characters[index] });
+  } catch (err) {
+    console.error('Update character error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 3.4 Create / Add new character voice with upload or existing sample
+app.post('/api/characters/create', upload.single('audioFile'), async (req, res) => {
+  try {
+    const { label, role_key, gender, words, existingFilename } = req.body;
+    const jsonPath = path.join(__dirname, 'extracted_characters.json');
+    const samplesDir = path.join(__dirname, 'samples');
+
+    let targetFilename = '';
+    if (req.file) {
+      const ext = path.extname(req.file.originalname).toLowerCase() || '.mp3';
+      const safeBase = `custom_voice_${Date.now()}`;
+      targetFilename = `${safeBase}${ext}`;
+      const destPath = path.join(samplesDir, targetFilename);
+      fs.renameSync(req.file.path, destPath);
+
+      // Auto convert to standard MP3 if uploaded in another format
+      if (ext !== '.mp3') {
+        const mp3Name = `${safeBase}.mp3`;
+        const mp3Path = path.join(samplesDir, mp3Name);
+        try {
+          const { execSync } = require('child_process');
+          execSync(`ffmpeg -loglevel error -y -i "${destPath}" -vn -c:a libmp3lame -b:a 192k "${mp3Path}"`);
+          targetFilename = mp3Name;
+        } catch (e) {
+          console.warn('Could not auto-transcode uploaded voice to mp3:', e.message);
+        }
+      }
+    } else if (existingFilename) {
+      targetFilename = existingFilename;
+    } else {
+      return res.status(400).json({ error: 'Audio file or existing filename is required' });
+    }
+
+    let characters = [];
+    if (fs.existsSync(jsonPath)) {
+      characters = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+    }
+
+    const newChar = {
+      id: `voxcpm:${targetFilename}`,
+      filename: targetFilename,
+      label: label ? label.trim() : 'សំឡេងថ្មី',
+      role_key: role_key || (gender === 'female' ? 'female_lead' : 'male_lead'),
+      gender: gender || 'male',
+      is_curated: true,
+      words: words ? words.trim() : 'សំឡេងគំរូថ្មី'
+    };
+
+    characters.unshift(newChar);
+    fs.writeFileSync(jsonPath, JSON.stringify(characters, null, 2), 'utf8');
+
+    res.json({
+      success: true,
+      character: {
+        ...newChar,
+        exists: true,
+        previewUrl: `/media/samples/${targetFilename}`
+      }
+    });
+  } catch (err) {
+    console.error('Create character error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 3.5 Delete character from database
+app.delete('/api/characters/delete/:id', (req, res) => {
+  try {
+    const charId = decodeURIComponent(req.params.id);
+    const jsonPath = path.join(__dirname, 'extracted_characters.json');
+    if (!fs.existsSync(jsonPath)) {
+      return res.status(404).json({ error: 'Characters database not found' });
+    }
+    let characters = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+    const initialLen = characters.length;
+    characters = characters.filter(c => c.id !== charId && c.filename !== charId);
+
+    if (characters.length === initialLen) {
+      return res.status(404).json({ error: 'Character not found' });
+    }
+
+    fs.writeFileSync(jsonPath, JSON.stringify(characters, null, 2), 'utf8');
+    res.json({ success: true, message: 'Character removed successfully' });
+  } catch (err) {
+    console.error('Delete character error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // 4. Assemble Custom Timeline Video (User Recordings + AI Voices Mixed into Video)
 app.post('/api/dubbing/assemble-custom', async (req, res) => {
   try {
