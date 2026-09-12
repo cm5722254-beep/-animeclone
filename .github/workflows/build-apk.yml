@@ -26,18 +26,22 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Accept Android Licenses
+        run: yes | sdkmanager --licenses || true
+
       - name: Build Debug APK
         run: |
           cd android
           sed -i -e 's/\r$//' gradlew
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace --no-daemon 2>&1 | tee gradle.log || {
-            echo "### Gradle Failure Log" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            tail -n 60 gradle.log >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            exit 1
-          }
+          ./gradlew assembleDebug --stacktrace --no-daemon 2>&1 | tee ../gradle_build.log
+
+      - name: Upload Build Log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-build-log
+          path: gradle_build.log
 
       - name: Rename and Prepare APK
         run: |
