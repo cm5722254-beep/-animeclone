@@ -45,4 +45,11 @@ android/build/
 android/app/build/
 build_output/
 
+# Flutter & Dart Caches
+.dart_tool/
+flutter_app/.dart_tool/
+flutter_app/build/
+flutter_app/.flutter-plugins
+flutter_app/.flutter-plugins-dependencies
+
 
