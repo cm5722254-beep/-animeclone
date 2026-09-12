@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Image as ImageIcon,
   Camera,
@@ -18,63 +18,324 @@ import {
   Eye,
   Crosshair,
   RefreshCw,
+  Play,
+  Pause,
+  SkipBack,
+  SkipForward,
+  Film,
+  Video,
+  Volume2,
+  VolumeX,
+  FastForward,
+  Rewind,
+  CheckCircle,
+  Bookmark,
+  Save,
+  FolderOpen,
+  Trash2,
+  Copy,
+  Plus,
+  FileDown,
+  FileUp,
+  Check,
+  RotateCcw,
+  X,
 } from 'lucide-react';
-import { ThumbnailConfig, ProjectFile } from '../../types';
+import { ThumbnailConfig, ProjectFile, UserThumbnailTemplate } from '../../types';
 
 interface ThumbnailGeneratorProps {
   currentProject: ProjectFile | null;
+  videoUrl?: string;
   videoRef?: React.RefObject<HTMLVideoElement>;
   initialCapturedImage?: string | null;
   onShowToast: (msg: string, type: 'success' | 'error' | 'info') => void;
 }
 
+function formatTimecode(seconds: number): string {
+  if (isNaN(seconds) || seconds < 0) seconds = 0;
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  const ms = Math.floor((seconds % 1) * 10);
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return `${pad(m)}:${pad(s)}.${ms}`;
+}
+
+const DEFAULT_CONFIG: ThumbnailConfig = {
+  title: 'យានអវកាស',
+  subtitle: 'ដំណើរផ្សងព្រេងក្នុងពិភពមហិទ្ធិឫទ្ធិ',
+  badge: 'ភាគ ២២',
+  watermark: 'អាទិទេព DABBER PRO v3',
+  gradientStyle: 'gold',
+  vignette: true,
+  fontSize: 58,
+  subtitleFontSize: 24,
+  aspectRatio: '16:9',
+
+  // Free Positioning (% of canvas)
+  posX: 68,
+  posY: 74,
+  textAlign: 'center',
+  badgePosX: 4,
+  badgePosY: 5,
+
+  // Visual Effects
+  fontFamily: 'Koulen',
+  effectStyle: 'gold3d',
+  depth3D: 6,
+  glowIntensity: 22,
+  glowColor: '#eab308',
+  strokeWidth: 6,
+  strokeColor: '#000000',
+  rotationAngle: 0,
+  bgBanner: 'none',
+};
+
+const BUILTIN_TEMPLATES: UserThumbnailTemplate[] = [
+  {
+    id: 'preset-gold-vip',
+    name: '👑 មាស 3D VIP (Cinema Gold)',
+    createdAt: 1700000000000,
+    isBuiltin: true,
+    previewGradient: 'from-amber-400 via-yellow-500 to-amber-700',
+    config: {
+      title: 'យានអវកាស',
+      subtitle: 'ដំណើរផ្សងព្រេងក្នុងពិភពមហិទ្ធិឫទ្ធិ',
+      badge: 'ភាគ ២២',
+      watermark: 'អាទិទេព DABBER PRO v3',
+      gradientStyle: 'gold',
+      vignette: true,
+      fontSize: 58,
+      subtitleFontSize: 24,
+      aspectRatio: '16:9',
+      posX: 68,
+      posY: 74,
+      textAlign: 'center',
+      badgePosX: 4,
+      badgePosY: 5,
+      fontFamily: 'Koulen',
+      effectStyle: 'gold3d',
+      depth3D: 6,
+      glowIntensity: 22,
+      glowColor: '#eab308',
+      strokeWidth: 6,
+      strokeColor: '#000000',
+      rotationAngle: 0,
+      bgBanner: 'none',
+    },
+  },
+  {
+    id: 'preset-cyberpunk-neon',
+    name: '⚡ Cyberpunk Neon (Cyan & Pink)',
+    createdAt: 1700000001000,
+    isBuiltin: true,
+    previewGradient: 'from-cyan-400 via-sky-500 to-pink-500',
+    config: {
+      title: 'មហាសង្រ្គាម 2099',
+      subtitle: 'បច្ចេកវិទ្យាកំពូលសម័យអនាគត',
+      badge: 'ភាគ ០១ - ចប់',
+      watermark: 'អាទិទេព DABBER PRO v3',
+      gradientStyle: 'cyberpunk',
+      vignette: true,
+      fontSize: 60,
+      subtitleFontSize: 22,
+      aspectRatio: '16:9',
+      posX: 12,
+      posY: 80,
+      textAlign: 'left',
+      badgePosX: 4,
+      badgePosY: 5,
+      fontFamily: 'Koulen',
+      effectStyle: 'neon',
+      depth3D: 4,
+      glowIntensity: 28,
+      glowColor: '#06b6d4',
+      strokeWidth: 5,
+      strokeColor: '#0f172a',
+      rotationAngle: -1,
+      bgBanner: 'ribbon',
+    },
+  },
+  {
+    id: 'preset-inferno-fire',
+    name: '🔥 អគ្គិភ័យភ្លើង (Inferno Blaze)',
+    createdAt: 1700000002000,
+    isBuiltin: true,
+    previewGradient: 'from-orange-500 via-amber-500 to-red-600',
+    config: {
+      title: 'កំពូលអ្នកប្រយុទ្ធ',
+      subtitle: 'វាយប្រហារកក្រើកផែនដី',
+      badge: 'ភាគពិសេស',
+      watermark: 'អាទិទេព DABBER PRO v3',
+      gradientStyle: 'fire',
+      vignette: true,
+      fontSize: 62,
+      subtitleFontSize: 24,
+      aspectRatio: '16:9',
+      posX: 50,
+      posY: 82,
+      textAlign: 'center',
+      badgePosX: 80,
+      badgePosY: 5,
+      fontFamily: 'Bayon',
+      effectStyle: 'fire',
+      depth3D: 8,
+      glowIntensity: 24,
+      glowColor: '#f97316',
+      strokeWidth: 7,
+      strokeColor: '#431407',
+      rotationAngle: 0,
+      bgBanner: 'none',
+    },
+  },
+  {
+    id: 'preset-blood-horror',
+    name: '🩸 ភ័យរន្ធត់ (Blood Horror Dark)',
+    createdAt: 1700000003000,
+    isBuiltin: true,
+    previewGradient: 'from-red-600 via-rose-700 to-black',
+    config: {
+      title: 'ព្រលឹងខ្មោចព្រៃ',
+      subtitle: 'រឿងរ៉ាវអាថ៌កំបាំងយប់ជ្រៅ',
+      badge: '18+ HORROR',
+      watermark: 'អាទិទេព DABBER PRO v3',
+      gradientStyle: 'crimson',
+      vignette: true,
+      fontSize: 56,
+      subtitleFontSize: 22,
+      aspectRatio: '16:9',
+      posX: 10,
+      posY: 82,
+      textAlign: 'left',
+      badgePosX: 4,
+      badgePosY: 5,
+      fontFamily: 'Moul',
+      effectStyle: 'horror',
+      depth3D: 6,
+      glowIntensity: 20,
+      glowColor: '#dc2626',
+      strokeWidth: 6,
+      strokeColor: '#000000',
+      rotationAngle: 0,
+      bgBanner: 'gradient',
+    },
+  },
+  {
+    id: 'preset-emerald-jade',
+    name: '💎 ត្បូងមរកត (Emerald Fantasy)',
+    createdAt: 1700000004000,
+    isBuiltin: true,
+    previewGradient: 'from-emerald-400 via-teal-500 to-green-700',
+    config: {
+      title: 'អាណាចក្រទេវតា',
+      subtitle: 'អាថ៌កំបាំងកោះសួគ៌ា',
+      badge: 'ភាគ ០៥',
+      watermark: 'អាទិទេព DABBER PRO v3',
+      gradientStyle: 'emerald',
+      vignette: true,
+      fontSize: 58,
+      subtitleFontSize: 24,
+      aspectRatio: '16:9',
+      posX: 10,
+      posY: 82,
+      textAlign: 'left',
+      badgePosX: 4,
+      badgePosY: 5,
+      fontFamily: 'Koulen',
+      effectStyle: 'emerald',
+      depth3D: 5,
+      glowIntensity: 20,
+      glowColor: '#10b981',
+      strokeWidth: 5,
+      strokeColor: '#064e3b',
+      rotationAngle: 0,
+      bgBanner: 'glass',
+    },
+  },
+];
+
+const getInitialTemplates = (): UserThumbnailTemplate[] => {
+  try {
+    const raw = localStorage.getItem('dabber_thumbnail_saved_templates');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.warn('Error reading saved templates', e);
+  }
+  return BUILTIN_TEMPLATES;
+};
+
+const getInitialConfig = (): ThumbnailConfig => {
+  try {
+    const raw = localStorage.getItem('dabber_thumbnail_autosave');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        return { ...DEFAULT_CONFIG, ...parsed };
+      }
+    }
+  } catch (e) {
+    console.warn('Error reading autosaved config', e);
+  }
+  return DEFAULT_CONFIG;
+};
+
 export const ThumbnailGenerator: React.FC<ThumbnailGeneratorProps> = ({
   currentProject,
+  videoUrl,
   videoRef,
   initialCapturedImage,
   onShowToast,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [capturedImage, setCapturedImage] = useState<string | null>(initialCapturedImage || null);
-  const [isScanningFrame, setIsScanningFrame] = useState(false);
-  const [seekSecond, setSeekSecond] = useState<number>(2.0);
+  const internalVideoRef = useRef<HTMLVideoElement>(null);
 
-  // Settings tab: 'position' | 'effects' | 'content' | 'style'
-  const [activeTab, setActiveTab] = useState<'position' | 'effects' | 'content' | 'style'>('position');
+  // Live Video & Playback States
+  const [isLiveVideoMode, setIsLiveVideoMode] = useState<boolean>(true);
+  const [isVideoPlaying, setIsVideoPlaying] = useState<boolean>(false);
+  const [videoCurrentTime, setVideoCurrentTime] = useState<number>(2.0);
+  const [videoDuration, setVideoDuration] = useState<number>(0);
+  const [isVideoMuted, setIsVideoMuted] = useState<boolean>(true);
+
+  // Static Background Image & Cache
+  const [capturedImage, setCapturedImage] = useState<string | null>(initialCapturedImage || null);
+  const [cachedImageObj, setCachedImageObj] = useState<HTMLImageElement | null>(null);
+  const [isScanningFrame, setIsScanningFrame] = useState(false);
+
+  // Settings tab: 'position' | 'effects' | 'content' | 'style' | 'templates'
+  const [activeTab, setActiveTab] = useState<'position' | 'effects' | 'content' | 'style' | 'templates'>('position');
 
   // Dragging state on Canvas
   const [isDragging, setIsDragging] = useState(false);
   const [dragTarget, setDragTarget] = useState<'title' | 'badge'>('title');
 
-  const [config, setConfig] = useState<ThumbnailConfig>({
-    title: 'សង្គ្រាមអាទិទេព',
-    subtitle: 'ដំណើរផ្សងព្រេងក្នុងពិភពមហិទ្ធិឫទ្ធិ',
-    badge: 'ភាគ ០១ - ចប់',
-    watermark: 'CHEATH DABBER PRO v3',
-    gradientStyle: 'gold',
-    vignette: true,
-    fontSize: 58,
-    subtitleFontSize: 24,
-    aspectRatio: '16:9',
+  // Auto-saved & User Presets
+  const [config, setConfig] = useState<ThumbnailConfig>(getInitialConfig);
+  const [savedTemplates, setSavedTemplates] = useState<UserThumbnailTemplate[]>(getInitialTemplates);
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+  const [templateNameInput, setTemplateNameInput] = useState('');
+  const [hasAutoSaved, setHasAutoSaved] = useState(false);
 
-    // Free Positioning (% of canvas)
-    posX: 10,
-    posY: 82,
-    textAlign: 'left',
-    badgePosX: 4,
-    badgePosY: 5,
+  const activeVideoSrc =
+    videoUrl ||
+    currentProject?.url ||
+    (currentProject?.filename ? `/media/uploads/${currentProject.filename}` : '') ||
+    (videoRef?.current?.src || '');
 
-    // Visual Effects
-    fontFamily: 'Koulen',
-    effectStyle: 'gold3d',
-    depth3D: 6,
-    glowIntensity: 14,
-    glowColor: '#eab308',
-    strokeWidth: 6,
-    strokeColor: '#000000',
-    rotationAngle: 0,
-    bgBanner: 'none',
-  });
+  // Pre-cache static image when capturedImage changes
+  useEffect(() => {
+    if (capturedImage) {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => setCachedImageObj(img);
+      img.src = capturedImage;
+    } else {
+      setCachedImageObj(null);
+    }
+  }, [capturedImage]);
 
   // Sync initialCapturedImage
   useEffect(() => {
@@ -83,37 +344,187 @@ export const ThumbnailGenerator: React.FC<ThumbnailGeneratorProps> = ({
     }
   }, [initialCapturedImage]);
 
+  // Auto-save configuration to localStorage whenever config changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('dabber_thumbnail_autosave', JSON.stringify(config));
+      setHasAutoSaved(true);
+      const timer = setTimeout(() => setHasAutoSaved(false), 2500);
+      return () => clearTimeout(timer);
+    } catch (e) {
+      console.warn('Failed to auto-save thumbnail config', e);
+    }
+  }, [config]);
+
+  const handleSaveNewTemplate = (customName?: string) => {
+    const rawName = (customName || templateNameInput || '').trim();
+    const finalName = rawName || `គំរូ ${config.title || 'ភាពយន្ត'} (${new Date().toLocaleTimeString('km-KH', { hour: '2-digit', minute: '2-digit' })})`;
+    const newTemplate: UserThumbnailTemplate = {
+      id: `tpl_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      name: finalName,
+      createdAt: Date.now(),
+      isBuiltin: false,
+      previewGradient:
+        config.effectStyle === 'gold3d'
+          ? 'from-amber-400 via-yellow-500 to-amber-700'
+          : config.effectStyle === 'neon'
+          ? 'from-cyan-400 via-sky-500 to-pink-500'
+          : config.effectStyle === 'fire'
+          ? 'from-orange-500 via-amber-500 to-red-600'
+          : config.effectStyle === 'horror'
+          ? 'from-red-600 via-rose-700 to-black'
+          : config.effectStyle === 'emerald'
+          ? 'from-emerald-400 via-teal-500 to-green-700'
+          : 'from-amber-500 to-rose-600',
+      config: { ...config },
+    };
+    const updated = [newTemplate, ...savedTemplates];
+    setSavedTemplates(updated);
+    try {
+      localStorage.setItem('dabber_thumbnail_saved_templates', JSON.stringify(updated));
+    } catch (e) {
+      console.warn('Failed to save templates', e);
+    }
+    setTemplateNameInput('');
+    setIsSaveModalOpen(false);
+    onShowToast(`🎉 បានរក្សាទុកជាគំរូ "${finalName}" ដោយជោគជ័យ!`, 'success');
+  };
+
+  const handleApplyTemplate = (tpl: UserThumbnailTemplate, mode: 'all' | 'style_only') => {
+    if (mode === 'all') {
+      setConfig({ ...tpl.config });
+      onShowToast(`✨ បានអនុវត្តគំរូ "${tpl.name}" ទាំងស្រុង!`, 'success');
+    } else {
+      // Keep user's current title, subtitle and badge (for new episode), update styling & positions
+      setConfig((prev) => ({
+        ...tpl.config,
+        title: prev.title,
+        subtitle: prev.subtitle,
+        badge: prev.badge,
+        watermark: prev.watermark || tpl.config.watermark,
+      }));
+      onShowToast(`🎨 បានអនុវត្ត Style ពី "${tpl.name}" (រក្សាអក្សរ និងភាគដដែល)!`, 'success');
+    }
+  };
+
+  const handleDeleteTemplate = (id: string, name: string) => {
+    const updated = savedTemplates.filter((t) => t.id !== id);
+    setSavedTemplates(updated);
+    try {
+      localStorage.setItem('dabber_thumbnail_saved_templates', JSON.stringify(updated));
+    } catch (e) {
+      console.warn('Failed to delete template', e);
+    }
+    onShowToast(`🗑️ បានលុបគំរូ "${name}" រួចរាល់!`, 'info');
+  };
+
+  const handleExportTemplates = () => {
+    try {
+      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(savedTemplates, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute('href', dataStr);
+      downloadAnchor.setAttribute('download', `dabber_thumbnail_templates_${Date.now()}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      onShowToast('📥 បានទាញយក File គំរូ (Backup Templates) ដោយជោគជ័យ!', 'success');
+    } catch (e) {
+      onShowToast('❌ បរាជ័យក្នុងការ Export គំរូ!', 'error');
+    }
+  };
+
+  const handleImportTemplates = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const content = event.target?.result as string;
+        const parsed = JSON.parse(content);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const combined = [...parsed, ...savedTemplates.filter((t) => !parsed.some((p: any) => p.id === t.id))];
+          setSavedTemplates(combined);
+          localStorage.setItem('dabber_thumbnail_saved_templates', JSON.stringify(combined));
+          onShowToast(`📤 បានបញ្ចូលគំរូ ${parsed.length} ថ្មីដោយជោគជ័យ!`, 'success');
+        } else {
+          onShowToast('⚠️ ទម្រង់ File មិនត្រឹមត្រូវ!', 'error');
+        }
+      } catch (err) {
+        onShowToast('❌ បរាជ័យក្នុងការអាន File JSON!', 'error');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  // Load video metadata and default seek
+  useEffect(() => {
+    const v = internalVideoRef.current;
+    if (!v || !activeVideoSrc) return;
+    v.src = activeVideoSrc;
+    v.load();
+  }, [activeVideoSrc]);
+
+  // Video Playback Toggle
+  const togglePlay = () => {
+    const v = internalVideoRef.current;
+    if (!v) return;
+    if (v.paused) {
+      v.play()
+        .then(() => {
+          setIsVideoPlaying(true);
+          setIsLiveVideoMode(true);
+        })
+        .catch(() => {});
+    } else {
+      v.pause();
+      setIsVideoPlaying(false);
+    }
+  };
+
+  const seekVideo = (time: number) => {
+    const v = internalVideoRef.current;
+    if (!v) return;
+    v.currentTime = time;
+    setVideoCurrentTime(time);
+    if (!isVideoPlaying) {
+      requestAnimationFrame(() => renderScene());
+    }
+  };
+
+  const stepVideo = (delta: number) => {
+    const v = internalVideoRef.current;
+    if (!v) return;
+    const dur = videoDuration || 60;
+    const newTime = Math.max(0, Math.min(dur, v.currentTime + delta));
+    seekVideo(newTime);
+  };
+
   // Capture frame from active studio video OR project URL directly
   const handleCaptureFromVideo = async (targetSecond?: number) => {
     setIsScanningFrame(true);
 
-    // 1. Try from live videoRef if available
-    if (videoRef?.current && videoRef.current.videoWidth > 0 && typeof targetSecond !== 'number') {
+    const v = internalVideoRef.current || videoRef?.current;
+    if (v && v.videoWidth > 0) {
       try {
-        const video = videoRef.current;
         const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = video.videoWidth || 1280;
-        tempCanvas.height = video.videoHeight || 720;
+        tempCanvas.width = v.videoWidth || 1280;
+        tempCanvas.height = v.videoHeight || 720;
         const ctx = tempCanvas.getContext('2d');
         if (ctx) {
-          ctx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+          ctx.drawImage(v, 0, 0, tempCanvas.width, tempCanvas.height);
           const dataUrl = tempCanvas.toDataURL('image/jpeg', 0.95);
           setCapturedImage(dataUrl);
           setIsScanningFrame(false);
-          onShowToast('បានចាប់យករូបភាពពីវីដេអូ Studio ជោគជ័យ!', 'success');
+          onShowToast(`📸 បានចាប់យករូបភាពពីវីដេអូត្រង់ ${v.currentTime.toFixed(1)}s ជោគជ័យ!`, 'success');
           return;
         }
       } catch (err) {
-        console.warn('Direct video capture error, falling back to URL:', err);
+        console.warn('Direct video capture error, falling back:', err);
       }
     }
 
-    // 2. Fallback: Load directly from video project URL
-    const videoUrl =
-      currentProject?.url ||
-      (currentProject?.filename ? `/media/uploads/${currentProject.filename}` : null);
-
-    if (!videoUrl) {
+    if (!activeVideoSrc) {
       setIsScanningFrame(false);
       onShowToast('សូមបញ្ចូល ឬ Upload វីដេអូក្នុង Studio ជាមុនសិន!', 'error');
       return;
@@ -122,11 +533,11 @@ export const ThumbnailGenerator: React.FC<ThumbnailGeneratorProps> = ({
     try {
       const tempVideo = document.createElement('video');
       tempVideo.crossOrigin = 'anonymous';
-      tempVideo.src = videoUrl;
+      tempVideo.src = activeVideoSrc;
       tempVideo.muted = true;
       tempVideo.preload = 'auto';
 
-      const sec = typeof targetSecond === 'number' ? targetSecond : seekSecond;
+      const sec = typeof targetSecond === 'number' ? targetSecond : videoCurrentTime;
 
       await new Promise<void>((resolve, reject) => {
         const onLoaded = () => {
@@ -135,7 +546,7 @@ export const ThumbnailGenerator: React.FC<ThumbnailGeneratorProps> = ({
         tempVideo.onloadedmetadata = onLoaded;
         tempVideo.onseeked = () => resolve();
         tempVideo.onerror = () => reject(new Error('មិនអាចផ្ទុកវីដេអូបានឡើយ'));
-        setTimeout(() => resolve(), 3500); // 3.5s timeout safety
+        setTimeout(() => resolve(), 3500);
       });
 
       const tempCanvas = document.createElement('canvas');
@@ -146,9 +557,7 @@ export const ThumbnailGenerator: React.FC<ThumbnailGeneratorProps> = ({
         ctx.drawImage(tempVideo, 0, 0, tempCanvas.width, tempCanvas.height);
         const dataUrl = tempCanvas.toDataURL('image/jpeg', 0.95);
         setCapturedImage(dataUrl);
-        onShowToast(`បានស្កេនចាប់យករូបប្លង់វីដេអូត្រង់វិនាទីទី ${sec.toFixed(1)}s ជោគជ័យ!`, 'success');
-      } else {
-        throw new Error('រូបភាពទទេ');
+        onShowToast(`បានស្កេនចាប់យករូបប្លង់វីដេអូត្រង់ ${sec.toFixed(1)}s ជោគជ័យ!`, 'success');
       }
     } catch (e: any) {
       onShowToast(`បរាជ័យក្នុងការស្កេនរូប: ${e.message}`, 'error');
@@ -156,13 +565,6 @@ export const ThumbnailGenerator: React.FC<ThumbnailGeneratorProps> = ({
       setIsScanningFrame(false);
     }
   };
-
-  // Auto-load frame on mount if project is present and capturedImage is null
-  useEffect(() => {
-    if (!capturedImage && currentProject) {
-      handleCaptureFromVideo(2.0);
-    }
-  }, [currentProject]);
 
   // Upload custom background image
   const handleUploadImage = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -172,6 +574,7 @@ export const ThumbnailGenerator: React.FC<ThumbnailGeneratorProps> = ({
     reader.onload = (event) => {
       if (event.target?.result) {
         setCapturedImage(event.target.result as string);
+        setIsLiveVideoMode(false);
         onShowToast('បានបញ្ចូលរូបភាពផ្ទៃខាងក្រោយជោគជ័យ!', 'success');
       }
     };
@@ -375,24 +778,14 @@ export const ThumbnailGenerator: React.FC<ThumbnailGeneratorProps> = ({
     }
   };
 
-  // Render Thumbnail to HTML5 Canvas
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const width = config.aspectRatio === '16:9' ? 1280 : 720;
-    const height = config.aspectRatio === '16:9' ? 720 : 1280;
-    canvas.width = width;
-    canvas.height = height;
-
-    const renderCanvas = (imgElement?: HTMLImageElement) => {
+  // Full 3D Scene Drawing Routine onto HTML5 Canvas
+  const drawScene = useCallback(
+    (ctx: CanvasRenderingContext2D, width: number, height: number, mediaSource?: CanvasImageSource) => {
       ctx.clearRect(0, 0, width, height);
 
-      // 1. Draw Background Image or Default Studio Gradient
-      if (imgElement) {
-        ctx.drawImage(imgElement, 0, 0, width, height);
+      // 1. Draw Background: Live Video Frame OR Captured Image OR Cinema Gradient
+      if (mediaSource) {
+        ctx.drawImage(mediaSource, 0, 0, width, height);
       } else {
         const bgGrad = ctx.createLinearGradient(0, 0, width, height);
         bgGrad.addColorStop(0, '#0a0f1d');
@@ -404,7 +797,6 @@ export const ThumbnailGenerator: React.FC<ThumbnailGeneratorProps> = ({
 
       // 2. Cinematic Vignette & Gradient Overlays
       if (config.vignette) {
-        // Bottom dramatic gradient for text readability
         const bottomGrad = ctx.createLinearGradient(0, height * 0.45, 0, height);
         bottomGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
         bottomGrad.addColorStop(0.6, 'rgba(0, 0, 0, 0.7)');
@@ -412,7 +804,6 @@ export const ThumbnailGenerator: React.FC<ThumbnailGeneratorProps> = ({
         ctx.fillStyle = bottomGrad;
         ctx.fillRect(0, height * 0.45, width, height * 0.55);
 
-        // Top gradient for badge and watermark
         const topGrad = ctx.createLinearGradient(0, 0, 0, height * 0.3);
         topGrad.addColorStop(0, 'rgba(0, 0, 0, 0.75)');
         topGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
@@ -432,13 +823,11 @@ export const ThumbnailGenerator: React.FC<ThumbnailGeneratorProps> = ({
         const badgeX = (width * (config.badgePosX ?? 4)) / 100;
         const badgeY = (height * (config.badgePosY ?? 5)) / 100;
 
-        // Badge Shadow
         ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
         ctx.shadowBlur = 8;
         ctx.shadowOffsetX = 2;
         ctx.shadowOffsetY = 3;
 
-        // Badge Background (Red Banner with golden border)
         const badgeGrad = ctx.createLinearGradient(badgeX, badgeY, badgeX + badgeWidth, badgeY + badgeHeight);
         badgeGrad.addColorStop(0, '#dc2626');
         badgeGrad.addColorStop(1, '#991b1b');
@@ -456,7 +845,6 @@ export const ThumbnailGenerator: React.FC<ThumbnailGeneratorProps> = ({
         ctx.lineWidth = 1.5;
         ctx.stroke();
 
-        // Badge Text
         ctx.shadowBlur = 0;
         ctx.fillStyle = '#ffffff';
         ctx.fillText(badgeText, badgeX + 14, badgeY + 26);
@@ -482,7 +870,6 @@ export const ThumbnailGenerator: React.FC<ThumbnailGeneratorProps> = ({
         const titleActualX = (width * config.posX) / 100;
         const titleActualY = (height * config.posY) / 100;
 
-        // Apply Transform (Translation + Rotation)
         ctx.translate(titleActualX, titleActualY);
         if (config.rotationAngle !== 0) {
           ctx.rotate((config.rotationAngle * Math.PI) / 180);
@@ -492,11 +879,10 @@ export const ThumbnailGenerator: React.FC<ThumbnailGeneratorProps> = ({
         ctx.font = `bold ${config.fontSize}px "${fontFam}", "Kantumruy Pro", sans-serif`;
         ctx.textAlign = config.textAlign || 'left';
 
-        // Measure text for background banner if enabled
         const titleMetrics = ctx.measureText(config.title);
         const subFontSize = config.subtitleFontSize || Math.round(config.fontSize * 0.42);
 
-        // Optional Background Banner / Glass Box
+        // Optional Background Banner
         if (config.bgBanner && config.bgBanner !== 'none') {
           ctx.save();
           const paddingX = 24;
@@ -542,7 +928,7 @@ export const ThumbnailGenerator: React.FC<ThumbnailGeneratorProps> = ({
           ctx.restore();
         }
 
-        // Build Title Gradient Fill
+        // Title Gradient Fill
         let titleGrad: CanvasGradient | string;
         const gradTop = -config.fontSize;
         const gradBottom = 4;
@@ -619,17 +1005,22 @@ export const ThumbnailGenerator: React.FC<ThumbnailGeneratorProps> = ({
             titleGrad = '#facc15';
         }
 
-        // 1. Draw 3D Depth Extrusions (Layered Drop Shadow)
-        if (config.depth3D > 0) {
+        // Layer A: 3D Depth Extrusions
+        const depth = config.depth3D || 0;
+        if (depth > 0) {
           ctx.save();
-          ctx.fillStyle = '#05070c';
-          for (let d = config.depth3D; d > 0; d--) {
-            ctx.fillText(config.title, d * 1.4, d * 1.5);
+          ctx.fillStyle = '#0a0d14';
+          for (let d = depth; d >= 1; d--) {
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
+            ctx.shadowBlur = 4;
+            ctx.shadowOffsetX = d;
+            ctx.shadowOffsetY = d;
+            ctx.fillText(config.title, d, d);
           }
           ctx.restore();
         }
 
-        // 2. Draw Outer Glow (Bloom)
+        // Layer B: Outer Glow / Bloom
         if (config.glowIntensity > 0) {
           ctx.save();
           ctx.shadowColor = config.glowColor || '#eab308';
@@ -641,39 +1032,35 @@ export const ThumbnailGenerator: React.FC<ThumbnailGeneratorProps> = ({
           ctx.restore();
         }
 
-        // 3. Draw Heavy Stroke (Black / Custom outline)
+        // Layer C: Heavy Outer Stroke
         if (config.strokeWidth > 0) {
           ctx.save();
           ctx.strokeStyle = config.strokeColor || '#000000';
-          ctx.lineWidth = config.strokeWidth;
+          ctx.lineWidth = config.strokeWidth * 2;
           ctx.lineJoin = 'round';
           ctx.miterLimit = 2;
           ctx.strokeText(config.title, 0, 0);
           ctx.restore();
         }
 
-        // 4. Draw Crisp Main Title Fill
+        // Layer D: Front Gradient Fill
+        ctx.save();
         ctx.fillStyle = titleGrad;
         ctx.fillText(config.title, 0, 0);
+        ctx.restore();
 
-        // 5. Draw Subtitle / Tagline right under the title
+        // 5. Subtitle Tagline
         if (config.subtitle) {
           ctx.save();
           const subY = subFontSize + 14;
           ctx.font = `600 ${subFontSize}px "Kantumruy Pro", sans-serif`;
           ctx.textAlign = config.textAlign || 'left';
 
-          // Subtitle Shadow & Stroke
-          ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
-          ctx.shadowBlur = 8;
-          ctx.shadowOffsetX = 2;
-          ctx.shadowOffsetY = 2;
-
-          ctx.strokeStyle = 'rgba(0, 0, 0, 0.85)';
+          ctx.strokeStyle = '#000000';
           ctx.lineWidth = 4;
+          ctx.lineJoin = 'round';
           ctx.strokeText(config.subtitle, 0, subY);
 
-          // Soft golden-white or clean silver gradient
           const subGrad = ctx.createLinearGradient(0, subY - subFontSize, 0, subY);
           subGrad.addColorStop(0, '#ffffff');
           subGrad.addColorStop(1, '#cbd5e1');
@@ -684,17 +1071,56 @@ export const ThumbnailGenerator: React.FC<ThumbnailGeneratorProps> = ({
 
         ctx.restore();
       }
-    };
+    },
+    [config]
+  );
 
-    if (capturedImage) {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = () => renderCanvas(img);
-      img.src = capturedImage;
-    } else {
-      renderCanvas();
+  // High performance Render Dispatcher
+  const renderScene = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const width = config.aspectRatio === '16:9' ? 1280 : 720;
+    const height = config.aspectRatio === '16:9' ? 720 : 1280;
+    if (canvas.width !== width || canvas.height !== height) {
+      canvas.width = width;
+      canvas.height = height;
     }
-  }, [config, capturedImage]);
+
+    const v = internalVideoRef.current;
+    if (isLiveVideoMode && v && v.readyState >= 2) {
+      drawScene(ctx, width, height, v);
+    } else if (cachedImageObj) {
+      drawScene(ctx, width, height, cachedImageObj);
+    } else {
+      drawScene(ctx, width, height);
+    }
+  }, [config, isLiveVideoMode, cachedImageObj, drawScene]);
+
+  // Live Video Animation Frame Loop during active playback
+  useEffect(() => {
+    if (!isVideoPlaying || !isLiveVideoMode) return;
+    let animId: number;
+    const loop = () => {
+      const v = internalVideoRef.current;
+      if (v) {
+        setVideoCurrentTime(v.currentTime);
+        renderScene();
+      }
+      animId = requestAnimationFrame(loop);
+    };
+    animId = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(animId);
+  }, [isVideoPlaying, isLiveVideoMode, renderScene]);
+
+  // Static/Scrub Trigger
+  useEffect(() => {
+    if (!isVideoPlaying) {
+      renderScene();
+    }
+  }, [renderScene, isVideoPlaying, videoCurrentTime]);
 
   // 1-Click Export to PNG
   const handleDownloadThumbnail = () => {
@@ -704,11 +1130,35 @@ export const ThumbnailGenerator: React.FC<ThumbnailGeneratorProps> = ({
     link.download = `thumbnail_${config.title.replace(/\s+/g, '_')}_${Date.now()}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
-    onShowToast('បាន Export Thumbnail HD ដោយជោគជ័យ!', 'success');
+    onShowToast('🎉 បានទាញយក Thumbnail HD រចនារួចរាល់ដោយជោគជ័យ!', 'success');
   };
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-y-auto p-6 space-y-6 bg-[#07090e]">
+      {/* Hidden Master Video Element for Live Rendering */}
+      <video
+        ref={internalVideoRef}
+        crossOrigin="anonymous"
+        playsInline
+        muted={isVideoMuted}
+        className="hidden"
+        onLoadedMetadata={(e) => {
+          const v = e.currentTarget;
+          const dur = v.duration || 0;
+          setVideoDuration(dur);
+          if (v.currentTime === 0) {
+            v.currentTime = Math.min(2.0, dur > 4 ? 2.0 : dur / 2);
+          }
+          requestAnimationFrame(() => renderScene());
+        }}
+        onSeeked={() => {
+          renderScene();
+        }}
+        onEnded={() => {
+          setIsVideoPlaying(false);
+        }}
+      />
+
       {/* Top Banner */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-white/[0.08]">
         <div className="flex items-center gap-3">
@@ -723,12 +1173,43 @@ export const ThumbnailGenerator: React.FC<ThumbnailGeneratorProps> = ({
               </span>
             </h1>
             <p className="text-xs text-slate-400">
-              រចនា Poster និង Thumbnail ភាពយន្ត — អូសទាញអក្សរដាក់ទីតាំងសេរី និង Effects 3D / Glow ជាច្រើន
+              រចនា Poster និង Thumbnail ភាពយន្ត — Design ផ្ទាល់លើវីដេអូកំពុងដើរ អូសទាញអក្សរ និង Effects 3D
             </p>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+          {hasAutoSaved && (
+            <span className="text-[11px] text-emerald-400 font-mono flex items-center gap-1 bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-1 rounded-xl animate-fade-in shadow-sm">
+              <Check className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Auto-Saved</span>
+            </span>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setIsSaveModalOpen(true)}
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500/20 to-amber-600/20 hover:from-amber-500/30 hover:to-amber-600/30 text-amber-300 border border-amber-500/40 text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 shadow-md shadow-amber-500/10"
+            title="រក្សាទុកការ Design បច្ចុប្បន្ន (ពុម្ព, 3D, ពណ៌, ទីតាំង) ទុកប្រើលើកក្រោយ"
+          >
+            <Bookmark className="w-4 h-4 text-amber-400" />
+            <span>💾 រក្សាទុកជា Template</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('templates')}
+            className={`px-3.5 py-2 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all active:scale-95 ${
+              activeTab === 'templates'
+                ? 'bg-amber-500 text-black border-amber-400 font-bold'
+                : 'bg-white/[0.06] hover:bg-white/[0.1] text-slate-200 border-white/[0.1]'
+            }`}
+            title="មើលគំរូដែលបានរក្សាទុកទាំងអស់"
+          >
+            <FolderOpen className="w-4 h-4" />
+            <span>គំរូរបស់ខ្ញុំ ({savedTemplates.length})</span>
+          </button>
+
           <button
             onClick={() => handleCaptureFromVideo()}
             disabled={isScanningFrame}
@@ -738,11 +1219,13 @@ export const ThumbnailGenerator: React.FC<ThumbnailGeneratorProps> = ({
             {isScanningFrame ? <RefreshCw className="w-4 h-4 animate-spin text-sky-400" /> : <Camera className="w-4 h-4" />}
             <span>{isScanningFrame ? 'កំពុងស្កេនរូប...' : 'ចាប់យករូបពីវីដេអូ (Frame Grab)'}</span>
           </button>
+
           <label className="px-4 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-slate-200 border border-white/[0.1] text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all active:scale-95">
             <ImageIcon className="w-4 h-4" />
             <span>ផ្ទុករូបភាព (Upload)</span>
             <input type="file" accept="image/*" onChange={handleUploadImage} className="hidden" />
           </label>
+
           <button
             onClick={handleDownloadThumbnail}
             className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-white text-xs font-bold flex items-center gap-2 shadow-lg shadow-amber-500/25 transition-all active:scale-95"
@@ -753,9 +1236,65 @@ export const ThumbnailGenerator: React.FC<ThumbnailGeneratorProps> = ({
         </div>
       </div>
 
+      {/* Quick Preset Strip (Bar គំរូរហ័ស) */}
+      <div className="w-full bg-[#0a0f1d] border border-white/[0.08] rounded-xl px-4 py-2.5 flex items-center justify-between gap-3 overflow-x-auto shadow-inner">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-xs font-bold text-amber-400 flex items-center gap-1.5 whitespace-nowrap">
+            <Bookmark className="w-3.5 h-3.5 text-amber-400" />
+            គំរូរហ័ស (Quick Presets):
+          </span>
+          <div className="flex items-center gap-2 overflow-x-auto py-0.5">
+            {savedTemplates.slice(0, 5).map((tpl) => (
+              <div
+                key={tpl.id}
+                className="flex items-center rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-[11px] text-slate-300 transition-all overflow-hidden"
+              >
+                <button
+                  type="button"
+                  onClick={() => handleApplyTemplate(tpl, 'style_only')}
+                  className="px-2.5 py-1 hover:text-amber-300 flex items-center gap-1.5 font-medium whitespace-nowrap"
+                  title={`អនុវត្ត Style ពី "${tpl.name}" ដោយរក្សាអក្សរ និងភាគបច្ចុប្បន្ន`}
+                >
+                  <span className={`w-2.5 h-2.5 rounded-full bg-gradient-to-r ${tpl.previewGradient || 'from-amber-400 to-rose-500'} shadow-sm`} />
+                  <span className="truncate max-w-[130px]">{tpl.name}</span>
+                  <span className="text-[9px] px-1 py-0.2 bg-amber-500/20 text-amber-300 rounded font-mono">Style</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleApplyTemplate(tpl, 'all')}
+                  className="px-2 py-1 bg-white/[0.04] hover:bg-amber-500 hover:text-black text-slate-400 border-l border-white/[0.08] text-[10px] font-semibold transition-colors"
+                  title="យកទាំងអស់ (អក្សរ + ទីតាំង + Style)"
+                >
+                  All
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => setIsSaveModalOpen(true)}
+            className="px-3 py-1 rounded-lg bg-gradient-to-r from-amber-500/20 to-rose-500/20 hover:from-amber-500/30 hover:to-rose-500/30 text-amber-300 border border-amber-500/30 text-xs font-semibold flex items-center gap-1.5 transition-all active:scale-95 whitespace-nowrap shadow-sm"
+          >
+            <Plus className="w-3.5 h-3.5 text-amber-400" />
+            <span>+ រក្សាទុក Design នេះ</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('templates')}
+            className="px-2.5 py-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-slate-300 hover:text-white border border-white/[0.08] text-xs flex items-center gap-1"
+          >
+            <FolderOpen className="w-3.5 h-3.5" />
+            <span>មើលទាំងអស់ ({savedTemplates.length})</span>
+          </button>
+        </div>
+      </div>
+
       {/* Main Workspace Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left / Center: Interactive Live Canvas */}
+        {/* Left / Center: Interactive Live Canvas + Video Scrubber */}
         <div className="lg:col-span-7 flex flex-col items-center justify-center bg-[#0d121f] border border-white/[0.08] rounded-2xl p-5 relative overflow-hidden shadow-2xl">
           <div className="w-full flex items-center justify-between text-xs text-slate-400 mb-2 px-1">
             <div className="flex items-center gap-2">
@@ -763,13 +1302,13 @@ export const ThumbnailGenerator: React.FC<ThumbnailGeneratorProps> = ({
                 {config.aspectRatio === '16:9' ? '1280 × 720 (16:9)' : '720 × 1280 (9:16)'}
               </span>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-400 border border-sky-500/30 flex items-center gap-1">
-                <Move className="w-3 h-3" /> អូសលើរូបភាពដើម្បីផ្លាស់ប្តូរទីតាំង
+                <Move className="w-3 h-3" /> អូសលើរូបភាពដើម្បីផ្លាស់ប្តូរទីតាំងអក្សរផ្ទាល់
               </span>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-amber-400 font-semibold text-xs flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                Live Canvas
+                <span className={`w-2 h-2 rounded-full ${isVideoPlaying ? 'bg-rose-500 animate-ping' : 'bg-emerald-400 animate-pulse'}`} />
+                {isLiveVideoMode ? (isVideoPlaying ? '🎬 Live Video Playing' : '🎬 Live Video Ready') : '🖼️ Static Image'}
               </span>
             </div>
           </div>
@@ -787,11 +1326,11 @@ export const ThumbnailGenerator: React.FC<ThumbnailGeneratorProps> = ({
               onMouseUp={handleCanvasMouseUp}
               onMouseLeave={handleCanvasMouseUp}
               className="max-w-full max-h-[480px] object-contain rounded-lg cursor-grab active:cursor-grabbing"
-              title="ចុចហើយអូស (Click & Drag) ដើម្បីប្តូរទីតាំងអក្សរតាមចិត្ត!"
+              title="ចុចហើយអូស (Click & Drag) ដើម្បីប្តូរទីតាំងអក្សរតាមចិត្តលើវីដេអូ!"
             />
 
             {/* Target Selector Floating Pill */}
-            <div className="absolute bottom-3 left-3 bg-black/80 backdrop-blur border border-white/[0.15] px-2.5 py-1 rounded-lg flex items-center gap-2 text-xs">
+            <div className="absolute bottom-3 left-3 bg-black/85 backdrop-blur border border-white/[0.15] px-2.5 py-1 rounded-lg flex items-center gap-2 text-xs z-20">
               <span className="text-slate-400 text-[11px]">កំពុងអូស៖</span>
               <button
                 type="button"
@@ -814,8 +1353,149 @@ export const ThumbnailGenerator: React.FC<ThumbnailGeneratorProps> = ({
             </div>
           </div>
 
+          {/* Cinema Live Video Scrubber & Playback Controls */}
+          <div className="w-full bg-[#090d16] border border-white/[0.08] rounded-xl p-3 mt-3 flex flex-col gap-2.5">
+            {/* Top Bar: Mode Switcher & Timecode */}
+            <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsLiveVideoMode(true);
+                    onShowToast('🎬 បានបើករបៀប Live Video: Design ដើរលើវីដេអូផ្ទាល់!', 'info');
+                    renderScene();
+                  }}
+                  className={`px-3 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1.5 transition-all ${
+                    isLiveVideoMode
+                      ? 'bg-gradient-to-r from-amber-500 to-rose-600 text-white shadow-md'
+                      : 'bg-white/[0.05] text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Film className="w-3.5 h-3.5" />
+                  <span>ដើរលើវីដេអូផ្ទាល់ (Live Video)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsLiveVideoMode(false);
+                    onShowToast('🖼️ បានប្តូរទៅរបៀបរូបថត Snapshot', 'info');
+                    renderScene();
+                  }}
+                  className={`px-3 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1.5 transition-all ${
+                    !isLiveVideoMode
+                      ? 'bg-sky-500 text-black shadow-md'
+                      : 'bg-white/[0.05] text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <ImageIcon className="w-3.5 h-3.5" />
+                  <span>រូបថត (Snapshot)</span>
+                </button>
+              </div>
+
+              {/* Timecode Badge */}
+              <div className="font-mono text-[11px] font-bold text-amber-400 bg-black/60 px-2.5 py-0.5 rounded border border-white/[0.1]">
+                {formatTimecode(videoCurrentTime)} / {formatTimecode(videoDuration || 60)}
+              </div>
+            </div>
+
+            {/* Video Scrubber Slider */}
+            <div className="flex items-center gap-2">
+              <input
+                type="range"
+                min={0}
+                max={videoDuration > 0 ? videoDuration : 60}
+                step={0.1}
+                value={videoCurrentTime}
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value);
+                  seekVideo(val);
+                }}
+                className="flex-1 h-1.5 bg-slate-800 accent-amber-500 rounded-lg cursor-pointer"
+                title="អូសដើម្បីរំកិលប្លង់វីដេអូភ្លាមៗ"
+              />
+            </div>
+
+            {/* Bottom Transport Controls */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={togglePlay}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 border transition-all ${
+                    isVideoPlaying
+                      ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                      : 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border-amber-500/40'
+                  }`}
+                >
+                  {isVideoPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                  <span>{isVideoPlaying ? 'ផ្អាក (Pause)' : 'ចាក់វីដេអូ (Play)'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => stepVideo(-1)}
+                  className="p-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-white border border-white/[0.08]"
+                  title="ថយក្រោយ 1 វិនាទី"
+                >
+                  <SkipBack className="w-3.5 h-3.5" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => stepVideo(1)}
+                  className="p-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-white border border-white/[0.08]"
+                  title="ទៅមុខ 1 វិនាទី"
+                >
+                  <SkipForward className="w-3.5 h-3.5" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const v = internalVideoRef.current;
+                    if (v) {
+                      v.muted = !isVideoMuted;
+                      setIsVideoMuted(!isVideoMuted);
+                    }
+                  }}
+                  className="p-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-white border border-white/[0.08]"
+                  title={isVideoMuted ? 'បើកសំឡេង' : 'បិទសំឡេង (Mute)'}
+                >
+                  {isVideoMuted ? <VolumeX className="w-3.5 h-3.5 text-slate-500" /> : <Volume2 className="w-3.5 h-3.5 text-amber-400" />}
+                </button>
+              </div>
+
+              {/* Quick Jump Buttons */}
+              <div className="flex items-center gap-1.5 text-xs">
+                <span className="text-[10px] text-slate-500">ប្លង់រហ័ស៖</span>
+                <button
+                  type="button"
+                  onClick={() => seekVideo(videoDuration ? videoDuration * 0.1 : 5)}
+                  className="px-2 py-0.5 rounded bg-white/[0.04] hover:bg-white/[0.08] text-[10px] text-slate-300"
+                >
+                  ដើមរឿង
+                </button>
+                <button
+                  type="button"
+                  onClick={() => seekVideo(videoDuration ? videoDuration * 0.5 : 30)}
+                  className="px-2 py-0.5 rounded bg-white/[0.04] hover:bg-white/[0.08] text-[10px] text-slate-300"
+                >
+                  កណ្តាលរឿង
+                </button>
+                <button
+                  type="button"
+                  onClick={() => seekVideo(videoDuration ? videoDuration * 0.85 : 50)}
+                  className="px-2 py-0.5 rounded bg-white/[0.04] hover:bg-white/[0.08] text-[10px] text-slate-300"
+                >
+                  ចុងរឿង
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* Quick Position Status Info */}
-          <div className="w-full flex items-center justify-between text-[11px] text-slate-400 mt-3 px-2">
+          <div className="w-full flex items-center justify-between text-[11px] text-slate-400 mt-2 px-2">
             <span>
               កូអរដោនេអក្សរ៖ <strong className="text-amber-400 font-mono">X: {config.posX}%</strong> |{' '}
               <strong className="text-amber-400 font-mono">Y: {config.posY}%</strong>
@@ -829,12 +1509,13 @@ export const ThumbnailGenerator: React.FC<ThumbnailGeneratorProps> = ({
         {/* Right: Comprehensive Studio Controls */}
         <div className="lg:col-span-5 bg-[#0d121f] border border-white/[0.08] rounded-2xl p-5 flex flex-col gap-4 overflow-y-auto max-h-[660px]">
           {/* Tabs for Organization */}
-          <div className="grid grid-cols-4 gap-1 p-1 bg-[#07090e] rounded-xl border border-white/[0.08]">
+          <div className="grid grid-cols-5 gap-1 p-1 bg-[#07090e] rounded-xl border border-white/[0.08]">
             {[
-              { id: 'position', label: 'ទីតាំងអក្សរ', icon: Move },
+              { id: 'position', label: 'ទីតាំង', icon: Move },
               { id: 'effects', label: 'Effects 3D', icon: Sparkles },
-              { id: 'content', label: 'ខ្លឹមសារ & ពុម្ព', icon: Type },
-              { id: 'style', label: 'ផ្ទៃ & ទម្រង់', icon: Palette },
+              { id: 'content', label: 'ខ្លឹមសារ', icon: Type },
+              { id: 'style', label: 'ផ្ទៃ', icon: Palette },
+              { id: 'templates', label: 'គំរូ', icon: Bookmark, count: savedTemplates.length },
             ].map((tab) => {
               const Icon = tab.icon;
               return (
@@ -842,14 +1523,23 @@ export const ThumbnailGenerator: React.FC<ThumbnailGeneratorProps> = ({
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex flex-col items-center justify-center py-2 px-1 rounded-lg text-xs font-semibold transition-all ${
+                  className={`flex flex-col items-center justify-center py-2 px-0.5 rounded-lg text-xs font-semibold transition-all relative ${
                     activeTab === tab.id
-                      ? 'bg-amber-500 text-black shadow-md'
+                      ? 'bg-amber-500 text-black shadow-md font-bold'
                       : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
                   }`}
                 >
                   <Icon className="w-3.5 h-3.5 mb-0.5" />
                   <span className="text-[10px] truncate">{tab.label}</span>
+                  {tab.count !== undefined && (
+                    <span
+                      className={`absolute top-0.5 right-0.5 text-[8px] px-1 rounded-full font-mono ${
+                        activeTab === tab.id ? 'bg-black text-amber-300' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                      }`}
+                    >
+                      {tab.count}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -1319,7 +2009,7 @@ export const ThumbnailGenerator: React.FC<ThumbnailGeneratorProps> = ({
                   type="text"
                   value={config.watermark}
                   onChange={(e) => setConfig({ ...config, watermark: e.target.value })}
-                  placeholder="CHEATH DABBER PRO v3"
+                  placeholder="អាទិទេព DABBER PRO v3"
                   className="w-full px-3.5 py-2.5 rounded-xl bg-[#070b14] border border-white/[0.1] text-xs text-white focus:outline-none focus:border-amber-500 transition-all font-mono"
                 />
               </div>
@@ -1332,7 +2022,7 @@ export const ThumbnailGenerator: React.FC<ThumbnailGeneratorProps> = ({
                     title: 'សង្គ្រាមអាទិទេព',
                     subtitle: 'ដំណើរផ្សងព្រេងក្នុងពិភពមហិទ្ធិឫទ្ធិ',
                     badge: 'ភាគ ០១ - ចប់',
-                    watermark: 'CHEATH DABBER PRO v3',
+                    watermark: 'អាទិទេព DABBER PRO v3',
                     gradientStyle: 'gold',
                     vignette: true,
                     fontSize: 58,
@@ -1362,8 +2052,238 @@ export const ThumbnailGenerator: React.FC<ThumbnailGeneratorProps> = ({
               </button>
             </div>
           )}
+
+          {/* TAB 5: SAVED TEMPLATES & PRESETS (គំរូដែលបានរក្សាទុក) */}
+          {activeTab === 'templates' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between border-b border-white/[0.06] pb-2">
+                <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <Bookmark className="w-4 h-4 text-amber-400" />
+                  គ្រប់គ្រងគំរូ & Presets (Saved Templates)
+                </span>
+                <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
+                  <Check className="w-3 h-3 text-emerald-400" /> Auto-Save បើកជានិច្ច
+                </span>
+              </div>
+
+              {/* Box 1: Save Current Design Card */}
+              <div className="p-3.5 bg-[#070b14] rounded-xl border border-amber-500/20 flex flex-col gap-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                    <Save className="w-3.5 h-3.5" /> រក្សាទុកការ Design បច្ចុប្បន្នជាគំរូ
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-mono">
+                    Font: {config.fontFamily} | Style: {config.effectStyle}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={templateNameInput}
+                    onChange={(e) => setTemplateNameInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveNewTemplate();
+                    }}
+                    placeholder={`ឧ. គំរូ ${config.title || 'យានអវកាស'} (ភាគ ${config.badge || '២២'})`}
+                    className="flex-1 px-3 py-2 rounded-lg bg-black/40 border border-white/[0.1] text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleSaveNewTemplate()}
+                    className="px-3 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-white text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 shadow-md shadow-amber-500/20 whitespace-nowrap"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>រក្សាទុក</span>
+                  </button>
+                </div>
+                <p className="text-[10px] text-slate-400">
+                  💡 ពេលរក្សាទុកហើយ អ្នកអាចចុច <strong className="text-amber-300">«យកតែ Style»</strong> លើភាគបន្ទាប់បានភ្លាមៗ ដោយមិនបាច់រៀបចំ Effects ម្តងទៀតទេ!
+                </p>
+              </div>
+
+              {/* Box 2: Saved Templates List */}
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between text-xs text-slate-300 px-0.5">
+                  <span className="font-semibold">បញ្ជីគំរូទាំងអស់ ({savedTemplates.length})</span>
+                  <span className="text-[10px] text-slate-500">ចុច Style ឬ All ដើម្បីប្រើ</span>
+                </div>
+
+                <div className="flex flex-col gap-2 max-h-[380px] overflow-y-auto pr-1">
+                  {savedTemplates.map((tpl) => (
+                    <div
+                      key={tpl.id}
+                      className="p-3 rounded-xl bg-[#070a12] border border-white/[0.08] hover:border-white/[0.15] transition-all flex flex-col gap-2"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span
+                            className={`w-3.5 h-3.5 rounded-full shrink-0 bg-gradient-to-r ${
+                              tpl.previewGradient || 'from-amber-400 to-rose-500'
+                            } shadow-sm`}
+                          />
+                          <div className="min-w-0">
+                            <h4 className="text-xs font-bold text-white truncate">{tpl.name}</h4>
+                            <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-0.5 font-mono">
+                              <span className="text-amber-400">{tpl.config.fontFamily}</span>
+                              <span>•</span>
+                              <span className="capitalize text-sky-400">{tpl.config.effectStyle}</span>
+                              <span>•</span>
+                              <span>3D: {tpl.config.depth3D}px</span>
+                              <span>•</span>
+                              <span>Glow: {tpl.config.glowIntensity}px</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Delete button */}
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteTemplate(tpl.id, tpl.name)}
+                          className="p-1 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                          title="លុបគំរូនេះចោល"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="grid grid-cols-2 gap-2 mt-1">
+                        <button
+                          type="button"
+                          onClick={() => handleApplyTemplate(tpl, 'style_only')}
+                          className="py-1.5 px-2 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-xs font-semibold flex items-center justify-center gap-1 transition-all active:scale-95 shadow-sm"
+                          title="រក្សាទុកអក្សរ និងភាគបច្ចុប្បន្ន តែយកពុម្ព, ពណ៌, 3D, Glow, និងទីតាំងពីគំរូនេះ"
+                        >
+                          <Sparkles className="w-3 h-3 text-amber-400" />
+                          <span>⚡ យកតែ Style (រក្សាអក្សរ)</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleApplyTemplate(tpl, 'all')}
+                          className="py-1.5 px-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.1] text-slate-200 text-xs font-medium flex items-center justify-center gap-1 transition-all active:scale-95"
+                          title="យកទាំងអក្សរ ភាគ និង Style ទាំងអស់ពីគំរូនេះ"
+                        >
+                          <Check className="w-3 h-3" />
+                          <span>✨ យកទាំងអស់ (Apply All)</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Box 3: Backup & Share (JSON Import/Export) */}
+              <div className="pt-2 border-t border-white/[0.08] flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={handleExportTemplates}
+                  className="flex-1 py-2 px-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-slate-300 hover:text-white text-xs flex items-center justify-center gap-1.5 transition-all"
+                  title="ទាញយក file Backup គំរូទាំងអស់របស់អ្នក"
+                >
+                  <FileDown className="w-3.5 h-3.5 text-sky-400" />
+                  <span>Backup គំរូ (JSON)</span>
+                </button>
+
+                <label className="flex-1 py-2 px-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-slate-300 hover:text-white text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer">
+                  <FileUp className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>បញ្ចូលគំរូ (Import)</span>
+                  <input type="file" accept=".json" onChange={handleImportTemplates} className="hidden" />
+                </label>
+              </div>
+
+              {/* Reset Default */}
+              <button
+                type="button"
+                onClick={() => {
+                  setConfig(DEFAULT_CONFIG);
+                  onShowToast('បានកំណត់ឡើងវិញនូវទម្រង់ដើម!', 'info');
+                }}
+                className="w-full py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-400 hover:text-white border border-white/[0.06] text-xs flex items-center justify-center gap-1.5 transition-all"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>កំណត់ទម្រង់លំនាំដើមឡើងវិញ (Reset Defaults)</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Floating Save Template Modal Dialog */}
+      {isSaveModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="w-full max-w-md bg-[#0d121f] border border-amber-500/30 rounded-2xl p-5 shadow-2xl flex flex-col gap-4 relative">
+            <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30">
+                  <Bookmark className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">រក្សាទុកជាគំរូ Template ថ្មី</h3>
+                  <p className="text-[11px] text-slate-400">រក្សាទុកការរៀបចំ 3D, ពណ៌ និងពុម្ពអក្សរសម្រាប់ប្រើលើកក្រោយ</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsSaveModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.08]"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Current Config Snapshot Preview */}
+            <div className="p-3 rounded-xl bg-black/40 border border-white/[0.06] flex flex-col gap-1.5 text-xs">
+              <span className="text-[11px] font-semibold text-amber-400">ព័ត៌មានលម្អិតនៃគំរូ៖</span>
+              <div className="text-slate-300 font-medium">ចំណងជើង៖ <strong className="text-white">"{config.title}"</strong> ({config.badge})</div>
+              <div className="grid grid-cols-2 gap-1 text-[11px] text-slate-400 font-mono mt-1">
+                <div>ពុម្ព៖ <span className="text-amber-300">{config.fontFamily}</span></div>
+                <div>ស្ទាយ៖ <span className="text-sky-300">{config.effectStyle}</span></div>
+                <div>3D Depth៖ <span className="text-emerald-300">{config.depth3D}px</span></div>
+                <div>Glow Bloom៖ <span className="text-rose-300">{config.glowIntensity}px</span></div>
+                <div>ទីតាំង៖ <span className="text-white">X:{config.posX}% | Y:{config.posY}%</span></div>
+                <div>មុំបង្វិល៖ <span className="text-white">{config.rotationAngle}°</span></div>
+              </div>
+            </div>
+
+            {/* Template Name Input */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                ឈ្មោះគំរូ (Template Name)
+              </label>
+              <input
+                type="text"
+                value={templateNameInput}
+                onChange={(e) => setTemplateNameInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSaveNewTemplate();
+                }}
+                placeholder={`ឧ. គំរូ ${config.title || 'យានអវកាស'} (Gold 3D VIP)`}
+                autoFocus
+                className="w-full px-3.5 py-2.5 rounded-xl bg-black/50 border border-white/[0.15] text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
+              />
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/[0.08]">
+              <button
+                type="button"
+                onClick={() => setIsSaveModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-slate-300 text-xs font-semibold"
+              >
+                បោះបង់
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSaveNewTemplate()}
+                className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-amber-500/25 transition-all active:scale-95"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>រក្សាទុក (Save)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

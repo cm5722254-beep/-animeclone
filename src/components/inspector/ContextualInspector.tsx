@@ -10,19 +10,24 @@ import {
   CheckCircle2,
   Download,
   Music,
+  RefreshCw,
+  Timer,
+  Clock,
+  Play,
 } from 'lucide-react';
 import { ProjectFile } from '../../types';
 
 interface InspectorProps {
   uploadedFile: ProjectFile | null;
+  isUploadingFile?: boolean;
+  uploadProgress?: number;
+  uploadInfo?: { loadedMb: string; totalMb: string } | null;
   onUploadFile: (file: File) => void;
   onRemoveFile: () => void;
   voiceMode: string;
   onVoiceModeChange: (m: string) => void;
-  maleLeadVoice: string;
-  onMaleLeadChange: (v: string) => void;
-  femaleLeadVoice: string;
-  onFemaleLeadChange: (v: string) => void;
+  dubbingScope?: string;
+  onDubbingScopeChange?: (scope: string) => void;
   geminiModel: string;
   onGeminiModelChange: (m: string) => void;
   isDubbing: boolean;
@@ -36,14 +41,15 @@ interface InspectorProps {
 
 export const ContextualInspector: React.FC<InspectorProps> = ({
   uploadedFile,
+  isUploadingFile = false,
+  uploadProgress = 0,
+  uploadInfo,
   onUploadFile,
   onRemoveFile,
   voiceMode,
   onVoiceModeChange,
-  maleLeadVoice,
-  onMaleLeadChange,
-  femaleLeadVoice,
-  onFemaleLeadChange,
+  dubbingScope = '120',
+  onDubbingScopeChange,
   geminiModel,
   onGeminiModelChange,
   isDubbing,
@@ -95,7 +101,7 @@ export const ContextualInspector: React.FC<InspectorProps> = ({
             }}
           />
 
-          {!uploadedFile ? (
+          {!uploadedFile && !isUploadingFile ? (
             <div
               onClick={() => fileInputRef.current?.click()}
               onDragOver={(e) => e.preventDefault()}
@@ -106,24 +112,55 @@ export const ContextualInspector: React.FC<InspectorProps> = ({
                 <FileVideo className="w-5 h-5" />
               </div>
               <div className="text-xs font-semibold text-white">អូសទម្លាក់វីដេអូ ឬចុចជ្រើសរើស</div>
-              <div className="text-[10px] text-slate-400 mt-0.5">MP4, MKV, MOV, WebM (Up to 10GB)</div>
+              <div className="text-[10px] text-slate-400 mt-0.5">MP4, MKV, MOV, WebM (ផ្ទុកឡើងលឿនភ្លាមៗ)</div>
             </div>
           ) : (
-            <div className="bg-white/[0.04] border border-white/[0.08] rounded-lg p-2.5 flex items-center justify-between">
-              <div className="flex items-center gap-2 overflow-hidden">
-                <FileVideo className="w-4 h-4 text-sky-400 shrink-0" />
-                <div className="overflow-hidden">
-                  <div className="text-xs font-semibold text-white truncate">{uploadedFile.filename}</div>
-                  <div className="text-[10px] text-slate-400">{(uploadedFile.size / (1024 * 1024)).toFixed(1)} MB</div>
+            <div className="bg-white/[0.04] border border-white/[0.08] rounded-lg p-2.5 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 overflow-hidden">
+                  <FileVideo className="w-4 h-4 text-sky-400 shrink-0" />
+                  <div className="overflow-hidden">
+                    <div className="text-xs font-semibold text-white truncate">{uploadedFile?.filename || 'វីដេអូថ្មី'}</div>
+                    <div className="text-[10px] text-slate-400">
+                      {uploadedFile ? (uploadedFile.size / (1024 * 1024)).toFixed(1) : '0'} MB
+                    </div>
+                  </div>
                 </div>
+                {!isUploadingFile && (
+                  <button
+                    onClick={onRemoveFile}
+                    className="text-slate-400 hover:text-white p-1 transition-colors"
+                    title="លុបចេញ"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
-              <button
-                onClick={onRemoveFile}
-                className="text-slate-400 hover:text-white p-1 transition-colors"
-                title="លុបចេញ"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
+
+              {/* Real-time Upload Progress Bar */}
+              {isUploadingFile && (
+                <div className="space-y-1.5 pt-1 border-t border-white/[0.06]">
+                  <div className="flex items-center justify-between text-[10.5px]">
+                    <span className="text-sky-300 font-medium flex items-center gap-1">
+                      <RefreshCw className="w-3 h-3 animate-spin text-sky-400" />
+                      កំពុង Upload ទៅ Server...
+                    </span>
+                    <span className="font-mono font-bold text-sky-400">{uploadProgress}%</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-sky-500 to-indigo-500 transition-all duration-150"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                  {uploadInfo && (
+                    <div className="flex justify-between text-[9.5px] text-slate-400 font-mono">
+                      <span>{uploadInfo.loadedMb} MB / {uploadInfo.totalMb} MB</span>
+                      <span className="text-emerald-400">⚡ វីដេអូអាចលេង និងកាត់តបានភ្លាមៗ</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -139,59 +176,38 @@ export const ContextualInspector: React.FC<InspectorProps> = ({
             onChange={(e) => onVoiceModeChange(e.target.value)}
             className="w-full bg-[#07090e] border border-white/[0.08] text-slate-200 text-xs rounded-lg px-2.5 py-2 cursor-pointer focus:border-sky-400 outline-none"
           >
-            <option value="voxcpm-voice-actor">🎭 Auto Distinct Cast (២០+ សំឡេងតួអង្គ)</option>
+            <option value="voxcpm-voice-actor">🎭 Auto Distinct Cast (៣៨+ សំឡេងតួអង្គ)</option>
+            <option value="elevenlabs">🎙️ ElevenLabs AI Clone (Cloud Ultra-Realistic - មិនបាច់ប្រើ GPU/Colab)</option>
             <option value="movie-live-clone">🎯 Movie Live Clone (កាត់សំឡេងពីរឿងដើម)</option>
             <option value="lead-only">👑 ប្រើតែសំឡេងតួឯកប្រុស & តួស្រី</option>
           </select>
         </div>
 
-        {/* Male Lead Voice */}
+        {/* Test Generate Duration Option */}
         <div className="flex flex-col gap-1.5">
-          <div className="flex items-center justify-between text-[11px] font-semibold">
-            <span className="text-slate-300">👑 សំឡេងតួឯកប្រុស</span>
-            <button
-              onClick={() => onPreviewVoice(maleLeadVoice)}
-              className="text-sky-400 hover:text-sky-300 flex items-center gap-1 text-[10.5px]"
-            >
-              <Volume2 className="w-3 h-3" />
-              <span>ស្ដាប់</span>
-            </button>
-          </div>
+          <label className="text-[11px] font-semibold text-slate-300 flex items-center justify-between">
+            <span className="flex items-center gap-1">
+              <Timer className="w-3.5 h-3.5 text-amber-400" />
+              <span>ជម្រើសតេស្ត GENERATE (Test Scope)</span>
+            </span>
+            <span className="text-[10px] text-amber-400/80 bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-400/20 font-mono">
+              {dubbingScope === '120' ? '២ នាទី' : dubbingScope === '300' ? '៥ នាទី' : dubbingScope === '600' ? '១០ នាទី' : 'ពេញមួយរឿង'}
+            </span>
+          </label>
           <select
-            value={maleLeadVoice}
-            onChange={(e) => onMaleLeadChange(e.target.value)}
-            className="w-full bg-[#07090e] border border-white/[0.08] text-slate-200 text-xs rounded-lg px-2.5 py-2 cursor-pointer focus:border-sky-400 outline-none"
+            value={dubbingScope}
+            onChange={(e) => onDubbingScopeChange?.(e.target.value)}
+            className="w-full bg-[#07090e] border border-amber-500/30 text-amber-200 text-xs rounded-lg px-2.5 py-2 cursor-pointer focus:border-amber-400 outline-none font-medium shadow-inner"
           >
-            <option value="hang_phleung_char_2_male.mp3">👑 តួឯកប្រុស ទី១ (ហង្សភ្លើង - សង្ហា)</option>
-            <option value="char_male_lead_star7.mp3">👑 តួប្រុស ផ្កាយ៧ (ម៉ឺងម៉ាត់)</option>
-            <option value="char_male_tactics.mp3">👑 តួប្រុស យុទ្ធសាស្ត្រ (ច្បាស់)</option>
-            <option value="hang_phleung_char_7_male.mp3">👑 តួឯកប្រុស ទី២ (ស៊ីងជឺ)</option>
-            <option value="main_lead_male.mp3">👑 តួឯកប្រុស ទី៣ (រោងកុនច្បាស់)</option>
+            <option value="120">⚡ តេស្តរហ័ស ២ នាទី (Test 2 Minutes - 120s)</option>
+            <option value="300">🎬 តេស្តកម្រិតមធ្យម ៥ នាទី (Test 5 Minutes - 300s)</option>
+            <option value="600">⏱️ តេស្តកម្រិតវែង ១០ នាទី (Test 10 Minutes - 600s)</option>
+            <option value="auto_dialogue_2m">🎯 តេស្តកាត់ត្រង់ឈុតសន្ទនា ២ នាទី (Smart Dialogue 2m)</option>
+            <option value="full">🌟 ពេញមួយរឿងទាំងមូល (Full Movie / Episode)</option>
           </select>
-        </div>
-
-        {/* Female Lead Voice */}
-        <div className="flex flex-col gap-1.5">
-          <div className="flex items-center justify-between text-[11px] font-semibold">
-            <span className="text-slate-300">🌸 សំឡេងតួឯកស្រី</span>
-            <button
-              onClick={() => onPreviewVoice(femaleLeadVoice)}
-              className="text-purple-400 hover:text-purple-300 flex items-center gap-1 text-[10.5px]"
-            >
-              <Volume2 className="w-3 h-3" />
-              <span>ស្ដាប់</span>
-            </button>
-          </div>
-          <select
-            value={femaleLeadVoice}
-            onChange={(e) => onFemaleLeadChange(e.target.value)}
-            className="w-full bg-[#07090e] border border-white/[0.08] text-slate-200 text-xs rounded-lg px-2.5 py-2 cursor-pointer focus:border-sky-400 outline-none"
-          >
-            <option value="hang_phleung_char_6_female.mp3">🌸 តួឯកស្រី ទី១ (ហង្សភ្លើង - ស្រទន់)</option>
-            <option value="char_female_lead_palace.mp3">🌸 តួឯកស្រី ដំណាក់រាជវាំង</option>
-            <option value="hang_phleung_char_10_female.mp3">🌸 តួឯកស្រី ទី២ (រស់រវើក)</option>
-            <option value="main_lead_female.mp3">🌸 តួឯកស្រី ទី៣ (រោងកុន)</option>
-          </select>
+          <p className="text-[10px] text-slate-400 italic">
+            * ជ្រើសរើសតេស្ត ២នាទី ឬ ៥នាទី ដើម្បី Dubbing សាកល្បងយ៉ាងលឿនមុនពេលធ្វើពេញមួយរឿង
+          </p>
         </div>
 
         {/* Gemini Model */}

@@ -143,15 +143,20 @@ class KhmerDubbingService {
       }
     }
 
-    // 3. Fallback to Edge-TTS with gender-matched voice
+    // 3. Fallback to Edge-TTS with gender-matched voice & demographic pitch tuning
     const fallbackVoice = isFemale ? 'km-KH-SreymomNeural' : 'km-KH-PisethNeural';
-    return await this.synthesizeKhmerSpeech(text, outputPath, fallbackVoice);
+    return await this.synthesizeKhmerSpeech(text, outputPath, fallbackVoice, {
+      gender: isFemale ? 'female' : 'male',
+      age_group: options.age_group || 'adult'
+    });
   }
 
   /**
    * Synthesize Khmer text into an MP3 file via Edge-TTS
+   * With demographic pitch tuning (កុមារ, មនុស្សចាស់, យុវវ័យ)
    */
-  async synthesizeKhmerSpeech(khmerText, outputPath, voiceName = 'km-KH-PisethNeural') {
+  async synthesizeKhmerSpeech(khmerText, outputPath, voiceName = 'km-KH-PisethNeural', options = {}) {
+    const { age_group = 'adult', gender = 'male' } = options;
     const tts = new MsEdgeTTS();
     await tts.setMetadata(voiceName, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
     
@@ -163,12 +168,31 @@ class KhmerDubbingService {
     try {
       const result = await tts.toFile(targetDir, khmerText);
       if (fs.existsSync(result.audioFilePath)) {
-        if (outputPath.endsWith('.wav')) {
-          await runCmd(`ffmpeg -y -i "${result.audioFilePath}" -ar 44100 -ac 2 "${outputPath}"`);
-          try { if (fs.existsSync(result.audioFilePath)) fs.unlinkSync(result.audioFilePath); } catch (e) {}
+        // Apply pitch adjustments based on character demographic:
+        // Child: +4 semitones (youthful energetic tone)
+        // Elderly: -3 semitones (older deeper seasoned resonance)
+        let pitchAdjustment = 0;
+        let speedAdjustment = 1.0;
+        if (age_group === 'child') {
+          pitchAdjustment = 4;
+          speedAdjustment = 1.08;
+        } else if (age_group === 'elderly') {
+          pitchAdjustment = -3;
+          speedAdjustment = 0.92;
+        }
+
+        if (pitchAdjustment !== 0 || speedAdjustment !== 1.0) {
+          const rawWav = path.join(targetDir, 'raw.wav');
+          await runCmd(`ffmpeg -y -i "${result.audioFilePath}" -ar 44100 -ac 2 "${rawWav}"`);
+          await audioProcessor.tuneAudioPitchAndSpeed(rawWav, outputPath, speedAdjustment, pitchAdjustment);
+          try { if (fs.existsSync(rawWav)) fs.unlinkSync(rawWav); } catch (e) {}
         } else {
-          if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
-          fs.renameSync(result.audioFilePath, outputPath);
+          if (outputPath.endsWith('.wav')) {
+            await runCmd(`ffmpeg -y -i "${result.audioFilePath}" -ar 44100 -ac 2 "${outputPath}"`);
+          } else {
+            if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+            fs.renameSync(result.audioFilePath, outputPath);
+          }
         }
       }
       return outputPath;
@@ -368,6 +392,7 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
               speaker_name: seg.speaker_name || (seg.gender === 'female' ? 'តួស្រី' : 'តួប្រុស'),
               speaker_role: seg.speaker_role || (seg.gender === 'female' ? 'female_lead' : 'male_lead'),
               gender: seg.gender || (seg.speaker_role?.includes('female') ? 'female' : 'male'),
+              age_group: seg.age_group || (seg.speaker_role?.includes('child') ? 'child' : seg.speaker_role?.includes('old') || seg.speaker_role?.includes('elder') ? 'elderly' : 'adult'),
               start_time: Math.max(0, st + chunkStartTime),
               end_time: Math.max(st + chunkStartTime + 0.5, et + chunkStartTime),
               chinese_text: original,
@@ -473,6 +498,29 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
       try {
         if (fs.existsSync(tempDir)) fs.rmSync(tempDir, { recursive: true, force: true });
       } catch (e) {}
+    }
+
+    // Sort chronologically and de-overlap any collided segments cleanly
+    if (allSegments.length > 0) {
+      allSegments.sort((a, b) => (a.start_time || 0) - (b.start_time || 0));
+      const cleaned = [];
+      for (let i = 0; i < allSegments.length; i++) {
+        const seg = { ...allSegments[i], line_index: i };
+        let curStart = Math.max(0, seg.start_time || 0);
+        const curDur = Math.max(0.6, (seg.end_time || curStart + 2.0) - curStart);
+
+        if (cleaned.length > 0) {
+          const prevEnd = cleaned[cleaned.length - 1].end_time;
+          if (curStart < prevEnd + 0.2) {
+            curStart = prevEnd + 0.25;
+          }
+        }
+
+        seg.start_time = Number(curStart.toFixed(2));
+        seg.end_time = Number((curStart + curDur).toFixed(2));
+        cleaned.push(seg);
+      }
+      allSegments = cleaned;
     }
 
     return allSegments;
@@ -627,47 +675,90 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
 
   /**
    * Build dynamic distinct voice map across all detected characters in the movie.
-   * Covers all demographics: Child (ក្មេង), Elderly (ចាស់), Male (ប្រុស), Female (ស្រី)
+   * STRICT ENFORCEMENT:
+   * 1. One Character = One Voice (១ តួអង្គ = ១ សំឡេងដាច់ខាត មិនដូរចុះឡើង ឬ មួយតួអង្គច្រើនសំឡេងឡើយ)
+   * 2. Female characters MUST use female voices (ស្រី តាម ស្រី)
+   * 3. Male characters MUST use male voices (ប្រុស តាម ប្រុស)
+   * 4. Demographics matching:
+   *    - Child (ក្មេង/កុមារ): High-pitched youthful maiden/child tone
+   *    - Elderly (ចាស់/តា/យាយ): Deep elder/monk/grandma voice
+   *    - Leads/Warriors/Villains: Distinct individual voices for each
+   * 5. No overlapping voices between characters.
    */
   buildDistinctSpeakerVoiceMap(segments, userRoleMap = {}, maleLeadVoice = 'hang_phleung_char_2_male.mp3', femaleLeadVoice = 'hang_phleung_char_6_female.mp3') {
     const samplesDir = path.join(__dirname, '../samples');
 
-    // 13 Distinct Male Voices Pool (Lead, Hero, General, Elder, Old Uncle, Fierce, Scholar, Villager, Servant)
-    const maleVoicesPool = [
-      maleLeadVoice,
-      'hang_phleung_char_2_male.mp3', // 👑 តួឯកប្រុស (Heroic Lead)
-      'hang_phleung_char_7_male.mp3', // 👑 តួប្រុសស្វាហាប់ / ព្រះអាទិទេព
-      'main_lead_male.mp3',           // 👑 តួឯកប្រុស រោងកុន
-      'hang_phleung_char_8_male.mp3', // 🛡️ មេទ័ពវិញ្ញាណ / ក្លាហាន
-      'hang_phleung_char_1_male.mp3', // 👴 តួអ៊ំចាស់ / តាចាស់ (Elderly Uncle)
-      'vp_character_19_male.mp3',     // 📿 ព្រឹទ្ធាចារ្យ / គ្រូ / តាជី (Grand Master / Monk)
-      'vp_character_16_male.mp3',     // 👴 តួអ៊ំចាស់ទី២
-      'hang_phleung_char_4_male.mp3', // 🎙️ អ្នករៀបរាប់សាច់រឿង
-      'vp_character_7_male.mp3',      // ⚔️ តួប្រុសកាច / ចោរ / សត្រូវ (Fierce Villain)
-      'vp_character_17_male.mp3',     // 📜 តួចាហ្វាយខេត្ត / មន្ត្រី (Governor/Scholar)
-      'vp_character_10_male.mp3',     // 🛡️ មេទ័ពរាជវាំង
-      'vp_character_9_male.mp3',      // 🌾 អ្នកភូមិ (Villager)
-      'vp_character_12_male.mp3',     // 👥 មហាជន / អ្នកប្រាជ្ញ
-      'vp_character_2_male.mp3'       // 🍵 អ្នកបម្រើប្រុស (Male Servant)
-    ].filter((fn, idx, arr) => fs.existsSync(path.join(samplesDir, fn)) && arr.indexOf(fn) === idx);
+    // Dynamically discover and categorize ALL available samples in tool (60+ distinct voice actors)
+    // Organized with priorities: Leads & Heroes first, then Age/Role specialists, then all distinct character voices
+    const allFiles = fs.readdirSync(samplesDir).filter(f => f.endsWith('.mp3'));
 
-    // 7 Distinct Female Voices Pool (Lead, Heroine, Maiden/Child, Grandma, Fierce, Villainess, Queen)
-    const femaleVoicesPool = [
+    const femaleKeywords = ['female', 'girl', 'bride', 'wife', 'woman', 'sothea', 'queen', 'grandma', 'maid', 'lady'];
+    const isFemaleFile = (fn) => femaleKeywords.some(kw => fn.toLowerCase().includes(kw));
+
+    const preferredMale = [
+      maleLeadVoice,
+      'hang_phleung_char_2_male.mp3', // 👑 តួឯកប្រុស
+      'cfr_char_01_president_gu_male.mp3', // 👑 ប្រធានក្រុមហ៊ុន/តួឯកសម័យ
+      'hang_phleung_char_7_male.mp3', // 👑 តួប្រុសស្វាហាប់/ព្រះអាទិទេព
+      'main_lead_male.mp3',           // 👑 តួឯកប្រុស រោងកុន
+      'char_male_lead_star7.mp3',     // 👑 តួឯកផ្កាយ៧
+      'cfr_char_04_father_middleage_male.mp3', // 👨 ឪពុកវ័យកណ្តាល
+      'cfr_char_11_elder_storyteller_male.mp3', // 👴 ព្រឹទ្ធាចារ្យនិទានរឿង
+      'hang_phleung_char_1_male.mp3', // 👴 តួអ៊ំចាស់ / តាចាស់
+      'vp_character_19_male.mp3',     // 📿 ព្រឹទ្ធាចារ្យ / គ្រូ / តាជី
+      'vp_character_16_male.mp3',     // 👴 តួអ៊ំចាស់ទី២
+      'hang_phleung_char_8_male.mp3', // 🛡️ មេទ័ពវិញ្ញាណ / ក្លាហាន
+      'cfr_char_08_mediator_polite_male.mp3', // ⚖️ មេធាវី/អ្នកសម្រុះសម្រួល
+      'cfr_char_10_wedding_guest_uncle_male.mp3', // 👔 ភ្ញៀវកិត្តិយស
+      'cfr_char_07_hotel_staff_male.mp3', // 🛎️ បុគ្គលិកសណ្ឋាគារ
+      'vp_character_7_male.mp3',      // ⚔️ តួប្រុសកាច / ចោរ / សត្រូវ
+      'vp_character_17_male.mp3',     // 📜 តួចាហ្វាយខេត្ត / មន្ត្រី
+      'vp_character_10_male.mp3',     // 🛡️ មេទ័ពរាជវាំង
+      'vp_character_9_male.mp3',      // 🌾 អ្នកភូមិ
+      'vp_character_12_male.mp3',     // 👥 មហាជន / អ្នកប្រាជ្ញ
+      'vp_character_2_male.mp3',      // 🍵 អ្នកបម្រើប្រុស
+      'char_male_tactics.mp3',        // 🧠 យុទ្ធសាស្ត្រ
+      'char_male_casual.mp3',         // 🗣️ ធម្មតា
+      'hang_phleung_char_4_male.mp3'  // 🎙️ អ្នករៀបរាប់
+    ];
+
+    const preferredFemale = [
       femaleLeadVoice,
       'hang_phleung_char_6_female.mp3', // 🌸 តួឯកស្រី (Sweet Lead Heroine)
+      'cfr_char_02_sothea_female_lead.mp3', // 🌸 តួឯកស្រីសុធា
+      'cfr_char_03_sothea_emotional_female.mp3', // 😢 តួស្រីមនោសញ្ចេតនា
       'main_lead_female.mp3',           // 🌸 តួឯកស្រី រោងកុន
-      'hang_phleung_char_5_female.mp3', // 👧 តួកុមារ / ក្មេង / ភីលៀង (Child / Maiden)
-      'vp_character_1_female.mp3',      // 🌸 តួស្រីទន់ភ្លន់ (Gentle Female)
-      'vp_character_21_female.mp3',     // 👵 យាយចាស់ / មេដោះ (Elderly Grandma)
-      'vp_character_20_female.mp3',     // 👑 តួស្រីចាស់ទុំ / ព្រះមាតា (Queen Dowager / Matron)
-      'vp_character_6_female.mp3',      // ⚡ តួស្រីកាច (Fierce Female)
-      'vp_character_14_female.mp3'      // 🐍 តួកាចពិសពុល (Venomous Villainess)
-    ].filter((fn, idx, arr) => fs.existsSync(path.join(samplesDir, fn)) && arr.indexOf(fn) === idx);
+      'char_female_lead_palace.mp3',    // 👑 តួឯកស្រីរាជវាំង
+      'cfr_char_05_little_girl_child_female.mp3', // 👧 កុមារី / ក្មេងស្រីតូច
+      'hang_phleung_char_5_female.mp3', // 👧 តួកុមារ / ក្មេង / ភីលៀង
+      'cfr_char_09_bride_young_female.mp3', // 👰 កូនក្រមុំវ័យក្មេង
+      'cfr_char_12_school_teacher_host_female.mp3', // 👩‍🏫 គ្រូបង្រៀន / ពិធីការិនី
+      'cfr_char_06_fierce_wife_female.mp3', // ⚡ ភរិយាកាចឆ្នាស់
+      'vp_character_21_female.mp3',     // 👵 យាយចាស់ / មេដោះ
+      'vp_character_20_female.mp3',     // 👑 តួស្រីចាស់ទុំ / ព្រះមាតា
+      'vp_character_1_female.mp3',      // 🌸 តួស្រីទន់ភ្លន់
+      'vp_character_6_female.mp3',      // ⚡ តួស្រីកាច
+      'vp_character_14_female.mp3',     // 🐍 តួកាចពិសពុល
+      'char_female_calm.mp3'            // 🕊️ ស្រទន់
+    ];
+
+    // Combine preferred with all remaining male & female samples in directory (including kxev series)
+    const otherMale = allFiles.filter(f => !isFemaleFile(f) && !preferredMale.includes(f));
+    const otherFemale = allFiles.filter(f => isFemaleFile(f) && !preferredFemale.includes(f));
+
+    const maleVoicesPool = [...preferredMale, ...otherMale].filter(
+      (fn, idx, arr) => fs.existsSync(path.join(samplesDir, fn)) && arr.indexOf(fn) === idx
+    );
+
+    const femaleVoicesPool = [...preferredFemale, ...otherFemale].filter(
+      (fn, idx, arr) => fs.existsSync(path.join(samplesDir, fn)) && arr.indexOf(fn) === idx
+    );
 
     const speakerMap = {};
     const usedMale = new Set();
     const usedFemale = new Set();
 
+    // 1. Find all unique speakers in the scene
     const speakers = [];
     for (const seg of segments) {
       if (!speakers.includes(seg.speaker_id)) {
@@ -682,66 +773,82 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
         continue;
       }
 
-      const firstSeg = segments.find(s => s.speaker_id === sid) || {};
-      const isFemale = firstSeg.gender === 'female' || (firstSeg.speaker_name && (firstSeg.speaker_name.toLowerCase().includes('female') || firstSeg.speaker_name.includes('ស្រី')));
-      const name = ((firstSeg.speaker_name || '') + ' ' + (firstSeg.khmer_translation || '')).toLowerCase();
+      // Aggregate all lines spoken by this character to determine consistent identity
+      const speakerLines = segments.filter(s => s.speaker_id === sid);
+      const firstSeg = speakerLines[0] || {};
+      
+      // Determine gender accurately: if ANY line marked female or has female keywords, enforce female
+      const isFemale = speakerLines.some(l => 
+        l.gender === 'female' ||
+        (l.speaker_role && l.speaker_role.includes('female')) ||
+        (l.speaker_name && (l.speaker_name.toLowerCase().includes('female') || l.speaker_name.includes('ស្រី') || l.speaker_name.includes('នាង') || l.speaker_name.includes('យាយ') || l.speaker_name.includes('កុមារី')))
+      );
+
+      // Harmonize all lines for this speaker to have the exact same gender & name
+      speakerLines.forEach(l => {
+        l.gender = isFemale ? 'female' : 'male';
+      });
+
+      const allNamesText = speakerLines.map(l => `${l.speaker_name || ''} ${l.speaker_role || ''} ${l.khmer_translation || ''}`).join(' ').toLowerCase();
       const role = (firstSeg.speaker_role || '').toLowerCase();
       const age = (firstSeg.age_group || '').toLowerCase();
 
       let assigned = null;
       if (isFemale) {
-        // Child Demographic (ក្មេងស្រី / កុមារ)
-        if (age === 'child' || role === 'child' || role === 'child_girl' || name.includes('ក្មេង') || name.includes('កុមារ') || name.includes('កូនស្រី')) {
+        // Child Female (ក្មេងស្រី / កុមារ)
+        if (age === 'child' || role === 'child' || role === 'child_girl' || allNamesText.includes('ក្មេង') || allNamesText.includes('កុមារ') || allNamesText.includes('កូនស្រី')) {
           assigned = 'hang_phleung_char_5_female.mp3';
         }
-        // Elderly Demographic (យាយចាស់ / មេដោះ / ព្រះមាតាចាស់)
-        else if (age === 'elderly' || role === 'old_woman' || name.includes('យាយ') || name.includes('ចាស់') || name.includes('មេដោះ')) {
+        // Elderly Female (យាយចាស់ / មេដោះ / តាជីនារី)
+        else if (age === 'elderly' || role === 'old_woman' || allNamesText.includes('យាយ') || allNamesText.includes('ចាស់') || allNamesText.includes('មេដោះ')) {
           assigned = 'vp_character_21_female.mp3';
         }
-        // Royal Elder Female
-        else if (role === 'queen_dowager' || name.includes('ព្រះមាតា') || name.includes('មហេសី')) {
+        // Queen / Matron
+        else if (role === 'queen_dowager' || allNamesText.includes('ព្រះមាតា') || allNamesText.includes('មហេសី')) {
           assigned = 'vp_character_20_female.mp3';
         }
         // Fierce / Villainess
-        else if (role === 'fierce_female' || role === 'villain_female' || name.includes('កាច') || name.includes('ពិសពុល')) {
+        else if (role === 'fierce_female' || role === 'villain_female' || allNamesText.includes('កាច') || allNamesText.includes('ពិសពុល')) {
           assigned = 'vp_character_14_female.mp3';
         }
 
+        // If not matched or already used by another character, assign next unused female voice
         if (!assigned || usedFemale.has(assigned)) {
           const available = femaleVoicesPool.find(v => !usedFemale.has(v));
           assigned = available || femaleVoicesPool[usedFemale.size % femaleVoicesPool.length];
         }
         usedFemale.add(assigned);
       } else {
-        // Child Demographic (កុមារប្រុស / ក្មេងប្រុស)
-        if (age === 'child' || role === 'child' || role === 'child_boy' || name.includes('ក្មេង') || name.includes('កុមារ') || name.includes('កូនប្រុស')) {
+        // Child Male (កុមារប្រុស / ក្មេងប្រុស) -> high-pitch child sample
+        if (age === 'child' || role === 'child' || role === 'child_boy' || allNamesText.includes('ក្មេង') || allNamesText.includes('កុមារ') || allNamesText.includes('កូនប្រុស')) {
           assigned = 'hang_phleung_char_5_female.mp3';
         }
-        // Elderly Demographic (តា / អ៊ំចាស់ / ព្រឹទ្ធាចារ្យ / គ្រូ)
-        else if (age === 'elderly' || role === 'old_man' || role === 'elder' || name.includes('ព្រឹទ្ធាចារ្យ') || name.includes('គ្រូ') || name.includes('តាជី')) {
+        // Elderly Male (តា / អ៊ំចាស់ / ព្រឹទ្ធាចារ្យ / គ្រូ / តាជី)
+        else if (age === 'elderly' || role === 'old_man' || role === 'elder' || allNamesText.includes('ព្រឹទ្ធាចារ្យ') || allNamesText.includes('គ្រូ') || allNamesText.includes('តាជី') || allNamesText.includes('តា')) {
           assigned = 'vp_character_19_male.mp3';
-        } else if (role === 'old_uncle' || name.includes('អ៊ំ') || name.includes('តា')) {
+        } else if (role === 'old_uncle' || allNamesText.includes('អ៊ំ')) {
           assigned = 'hang_phleung_char_1_male.mp3';
         }
-        // General / Warrior
-        else if (role === 'warrior_general' || role === 'general' || name.includes('មេទ័ព')) {
+        // General / Commander (មេទ័ព)
+        else if (role === 'warrior_general' || role === 'general' || allNamesText.includes('មេទ័ព') || allNamesText.includes('មន្ត្រី')) {
           assigned = 'hang_phleung_char_8_male.mp3';
         }
         // Governor / Scholar
-        else if (role === 'scholar_monk' || role === 'governor' || name.includes('ចៅហ្វាយ') || name.includes('អ្នកប្រាជ្ញ')) {
+        else if (role === 'scholar_monk' || role === 'governor' || allNamesText.includes('ចៅហ្វាយ') || allNamesText.includes('អ្នកប្រាជ្ញ')) {
           assigned = 'vp_character_17_male.mp3';
         }
-        // Fierce / Villain
-        else if (role === 'fierce_male' || name.includes('ប្រុសកាច') || name.includes('សត្រូវ')) {
+        // Fierce Male / Villain
+        else if (role === 'fierce_male' || allNamesText.includes('ប្រុសកាច') || allNamesText.includes('សត្រូវ')) {
           assigned = 'vp_character_7_male.mp3';
         }
         // Villager / Servant
-        else if (role === 'servant_male' || name.includes('អ្នកបម្រើ')) {
+        else if (role === 'servant_male' || allNamesText.includes('អ្នកបម្រើ')) {
           assigned = 'vp_character_2_male.mp3';
-        } else if (role === 'villager' || name.includes('អ្នកភូមិ')) {
+        } else if (role === 'villager' || allNamesText.includes('អ្នកភូមិ')) {
           assigned = 'vp_character_9_male.mp3';
         }
 
+        // If not matched or already used by another character, assign next unused male voice
         if (!assigned || usedMale.has(assigned)) {
           const available = maleVoicesPool.find(v => !usedMale.has(v));
           assigned = available || maleVoicesPool[usedMale.size % maleVoicesPool.length];
@@ -750,7 +857,7 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
       }
 
       speakerMap[sid] = path.join(samplesDir, assigned);
-      console.log(`🎭 [Auto-Distinct Cast] Character "${firstSeg.speaker_name || sid}" (${isFemale ? 'Female' : 'Male'}, ${age || 'adult'}) assigned distinct voice: ${assigned}`);
+      console.log(`🎭 [1-Character-1-Voice] Speaker "${firstSeg.speaker_name || sid}" (${isFemale ? 'Female' : 'Male'}, age: ${age || 'adult'}) LOCKED to unique voice: ${assigned}`);
     }
 
     return speakerMap;
@@ -922,6 +1029,7 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
       try {
         await this.synthesizeRealisticSpeech(seg.khmer_translation, lineOutputPath, voiceId, refVoice, {
           gender: seg.gender,
+          age_group: seg.age_group || 'adult',
           emotion: seg.emotion || 'dramatic'
         });
         if (fs.existsSync(lineOutputPath) && fs.statSync(lineOutputPath).size > 1000) {
@@ -933,7 +1041,10 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
         console.warn(`Line ${i} primary synthesis failed, activating guaranteed Neural TTS fallback:`, err.message);
         try {
           const fallbackVoice = seg.gender === 'female' ? 'km-KH-SreymomNeural' : 'km-KH-PisethNeural';
-          await this.synthesizeKhmerSpeech(seg.khmer_translation, lineOutputPath, fallbackVoice);
+          await this.synthesizeKhmerSpeech(seg.khmer_translation, lineOutputPath, fallbackVoice, {
+            gender: seg.gender,
+            age_group: seg.age_group || 'adult'
+          });
           seg.audioPath = lineOutputPath;
         } catch (fbErr) {
           console.error(`Line ${i} secondary fallback error:`, fbErr.message);

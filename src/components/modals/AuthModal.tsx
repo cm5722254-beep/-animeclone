@@ -51,7 +51,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <Sparkles className="w-6 h-6" />
           </div>
           <h2 className="text-base font-bold text-white font-ui">
-            CHEATH DABBER <span className="text-sky-400">PRO</span>
+            អាទិទេព DABBER <span className="text-amber-400">PRO</span>
           </h2>
           <p className="text-xs text-slate-400">AI Video & Multi-Character Khmer Dubbing Studio</p>
         </div>

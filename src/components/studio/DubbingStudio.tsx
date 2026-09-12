@@ -8,14 +8,19 @@ import { Sliders, Sparkles, X } from 'lucide-react';
 
 interface DubbingStudioProps {
   uploadedFile: ProjectFile | null;
+  isUploadingFile?: boolean;
+  uploadProgress?: number;
+  uploadInfo?: { loadedMb: string; totalMb: string } | null;
   onUploadFile: (file: File) => void;
   onRemoveFile: () => void;
   voiceMode: string;
   onVoiceModeChange: (m: string) => void;
-  maleLeadVoice: string;
-  onMaleLeadChange: (v: string) => void;
-  femaleLeadVoice: string;
-  onFemaleLeadChange: (v: string) => void;
+  maleLeadVoice?: string;
+  onMaleLeadChange?: (v: string) => void;
+  femaleLeadVoice?: string;
+  onFemaleLeadChange?: (v: string) => void;
+  dubbingScope?: string;
+  onDubbingScopeChange?: (scope: string) => void;
   geminiModel: string;
   onGeminiModelChange: (m: string) => void;
   isDubbing: boolean;
@@ -26,6 +31,7 @@ interface DubbingStudioProps {
   onStartDubbing: () => void;
   onPreviewVoice: (filename: string) => void;
   segments: TimelineSegment[];
+  onChangeSegments?: (segments: TimelineSegment[]) => void;
   selectedSegmentIndex: number;
   onSelectSegment: (index: number) => void;
   onScanTimeline: () => void;
@@ -42,6 +48,9 @@ interface DubbingStudioProps {
 
 export const DubbingStudio: React.FC<DubbingStudioProps> = ({
   uploadedFile,
+  isUploadingFile = false,
+  uploadProgress = 0,
+  uploadInfo,
   onUploadFile,
   onRemoveFile,
   voiceMode,
@@ -50,6 +59,8 @@ export const DubbingStudio: React.FC<DubbingStudioProps> = ({
   onMaleLeadChange,
   femaleLeadVoice,
   onFemaleLeadChange,
+  dubbingScope = '120',
+  onDubbingScopeChange,
   geminiModel,
   onGeminiModelChange,
   isDubbing,
@@ -60,6 +71,7 @@ export const DubbingStudio: React.FC<DubbingStudioProps> = ({
   onStartDubbing,
   onPreviewVoice,
   segments,
+  onChangeSegments,
   selectedSegmentIndex,
   onSelectSegment,
   onScanTimeline,
@@ -80,6 +92,7 @@ export const DubbingStudio: React.FC<DubbingStudioProps> = ({
   const [playbackRate, setPlaybackRate] = useState(1.0);
   const [zoom, setZoom] = useState(100);
   const [showEffectsDrawer, setShowEffectsDrawer] = useState(false);
+  const [showSubtitles, setShowSubtitles] = useState(true);
 
   // Video source: prioritize dubbed result, then uploaded media
   const activeVideoSrc = dubbingOutputVideo || uploadedFile?.url || '';
@@ -103,6 +116,8 @@ export const DubbingStudio: React.FC<DubbingStudioProps> = ({
             isMuted={isMuted}
             playbackRate={playbackRate}
             currentSubtitle={currentSubtitle}
+            showSubtitles={showSubtitles}
+            onToggleSubtitles={() => setShowSubtitles((prev) => !prev)}
             videoEffects={videoEffects}
             subtitleStyle={subtitleStyle}
             videoRef={videoRef}
@@ -113,13 +128,19 @@ export const DubbingStudio: React.FC<DubbingStudioProps> = ({
             onRateChange={setPlaybackRate}
             onStep={(delta) => setCurrentTime(Math.max(0, Math.min(duration, currentTime + delta)))}
             onOpenThumbnailStudio={onOpenThumbnailStudio}
+            onShowToast={onShowToast}
           />
 
-          {/* Floating Button to Toggle Video Effects & Subtitle styling */}
-          <div className="absolute top-4 right-4 z-20">
+          {/* Button to Toggle Video Effects & Subtitle styling (top-right controls bar offset) */}
+          <div className="absolute top-3 right-3 z-30">
             <button
               onClick={() => setShowEffectsDrawer(!showEffectsDrawer)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0b0f19]/90 backdrop-blur-md border border-white/[0.12] text-xs font-semibold text-slate-200 hover:text-white shadow-xl hover:bg-white/[0.08] transition-all"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl backdrop-blur-md border text-xs font-semibold shadow-xl transition-all ${
+                showEffectsDrawer
+                  ? 'bg-sky-500/20 border-sky-400 text-sky-200 ring-2 ring-sky-400/30'
+                  : 'bg-[#0b0f19]/90 border-white/[0.15] text-slate-200 hover:text-white hover:bg-white/[0.1]'
+              }`}
+              title="កំណត់ Watermark, 3D Effect, Color Grade & អក្សររត់"
             >
               <Sliders className="w-3.5 h-3.5 text-sky-400" />
               <span>Video Effects & Subtitles</span>
@@ -150,14 +171,15 @@ export const DubbingStudio: React.FC<DubbingStudioProps> = ({
 
         <ContextualInspector
           uploadedFile={uploadedFile}
+          isUploadingFile={isUploadingFile}
+          uploadProgress={uploadProgress}
+          uploadInfo={uploadInfo}
           onUploadFile={onUploadFile}
           onRemoveFile={onRemoveFile}
           voiceMode={voiceMode}
           onVoiceModeChange={onVoiceModeChange}
-          maleLeadVoice={maleLeadVoice}
-          onMaleLeadChange={onMaleLeadChange}
-          femaleLeadVoice={femaleLeadVoice}
-          onFemaleLeadChange={onFemaleLeadChange}
+          dubbingScope={dubbingScope}
+          onDubbingScopeChange={onDubbingScopeChange}
           geminiModel={geminiModel}
           onGeminiModelChange={onGeminiModelChange}
           isDubbing={isDubbing}
@@ -175,14 +197,18 @@ export const DubbingStudio: React.FC<DubbingStudioProps> = ({
         duration={duration}
         currentTime={currentTime}
         segments={segments}
+        onChangeSegments={onChangeSegments}
         selectedSegmentIndex={selectedSegmentIndex}
         onSelectSegment={onSelectSegment}
         onSeek={setCurrentTime}
+        isPlaying={isPlaying}
+        onTogglePlay={() => setIsPlaying(!isPlaying)}
         onScan={onScanTimeline}
         isScanning={isScanningTimeline}
         onAssemble={onAssemble}
         zoom={zoom}
         onZoomChange={setZoom}
+        onShowToast={onShowToast}
       />
     </div>
   );

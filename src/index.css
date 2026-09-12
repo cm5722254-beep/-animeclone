@@ -34,3 +34,279 @@
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.26);
 }
+
+/* =========================================================
+   3D EFFECTS ENGINE - 3D KEYFRAME ANIMATIONS & SPATIAL OVERLAYS
+   ========================================================= */
+
+@keyframes breathe3d {
+  0%, 100% { transform: perspective(900px) rotateX(2deg) rotateY(-2deg) scale(1); }
+  50% { transform: perspective(900px) rotateX(-2deg) rotateY(2deg) scale(1.025); }
+}
+.animate-3d-breathe { animation: breathe3d 6s ease-in-out infinite; }
+
+@keyframes push3d {
+  0% { transform: perspective(900px) scale(1) translateZ(0px); }
+  50% { transform: perspective(900px) scale(1.05) translateZ(25px) rotateX(2deg); }
+  100% { transform: perspective(900px) scale(1) translateZ(0px); }
+}
+.animate-3d-push { animation: push3d 8s ease-in-out infinite; }
+
+@keyframes orbit3d {
+  0% { transform: perspective(900px) rotateY(0deg) rotateX(2deg); }
+  25% { transform: perspective(900px) rotateY(4deg) rotateX(-2deg); }
+  50% { transform: perspective(900px) rotateY(0deg) rotateX(-3deg); }
+  75% { transform: perspective(900px) rotateY(-4deg) rotateX(1deg); }
+  100% { transform: perspective(900px) rotateY(0deg) rotateX(2deg); }
+}
+.animate-3d-orbit { animation: orbit3d 10s ease-in-out infinite; }
+
+@keyframes vertigo3d {
+  0%, 100% { transform: perspective(1000px) scale(1) rotateX(0deg); }
+  50% { transform: perspective(550px) scale(1.06) rotateX(3deg); }
+}
+.animate-3d-vertigo { animation: vertigo3d 5s ease-in-out infinite; }
+
+@keyframes rumble3d {
+  0%, 100% { transform: perspective(900px) translate(0, 0) rotate(0deg); }
+  20% { transform: perspective(900px) translate(-3px, 2px) rotate(-0.5deg); }
+  40% { transform: perspective(900px) translate(3px, -2px) rotate(0.5deg); }
+  60% { transform: perspective(900px) translate(-2px, -1px) rotate(-0.3deg); }
+  80% { transform: perspective(900px) translate(2px, 1px) rotate(0.3deg); }
+}
+.animate-3d-rumble { animation: rumble3d 0.35s ease-in-out infinite; }
+
+@keyframes flythrough3d {
+  0%, 100% { transform: perspective(800px) scale(1) translateZ(0px) rotateX(2deg); }
+  50% { transform: perspective(800px) scale(1.07) translateZ(40px) rotateX(-3deg); }
+}
+.animate-3d-flythrough { animation: flythrough3d 7s ease-in-out infinite; }
+
+@keyframes roll3d {
+  0%, 100% { transform: perspective(900px) rotateZ(0deg) rotateX(2deg); }
+  50% { transform: perspective(900px) rotateZ(3.5deg) rotateX(-2deg); }
+}
+.animate-3d-roll { animation: roll3d 6s ease-in-out infinite; }
+
+@keyframes bullet3d {
+  0%, 100% { transform: perspective(900px) scale(1) rotateY(0deg); }
+  50% { transform: perspective(700px) scale(1.05) rotateY(6deg) rotateX(3deg); }
+}
+.animate-3d-bullet { animation: bullet3d 7s cubic-bezier(0.25, 1, 0.5, 1) infinite; }
+
+@keyframes heartbeat3d {
+  0%, 100% { transform: perspective(900px) scale(1); }
+  15% { transform: perspective(850px) scale(1.035) translateZ(15px); }
+  30% { transform: perspective(900px) scale(1); }
+  45% { transform: perspective(850px) scale(1.02) translateZ(8px); }
+}
+.animate-3d-heartbeat { animation: heartbeat3d 1.8s ease-in-out infinite; }
+
+@keyframes zerog3d {
+  0%, 100% { transform: perspective(900px) rotateX(3deg) rotateY(-3deg) translate(0, 0); }
+  33% { transform: perspective(900px) rotateX(-2deg) rotateY(4deg) translate(4px, -4px); }
+  66% { transform: perspective(900px) rotateX(2deg) rotateY(-2deg) translate(-4px, 3px); }
+}
+.animate-3d-zerog { animation: zerog3d 11s ease-in-out infinite; }
+
+@keyframes flip3d {
+  0%, 100% { transform: perspective(900px) rotateY(0deg); }
+  50% { transform: perspective(900px) rotateY(12deg) scale(0.97); }
+}
+.animate-3d-flip { animation: flip3d 5s ease-in-out infinite; }
+
+@keyframes whip3d {
+  0%, 85%, 100% { transform: perspective(900px) rotateY(0deg); }
+  90% { transform: perspective(900px) rotateY(-8deg) scale(1.02); }
+  95% { transform: perspective(900px) rotateY(6deg) scale(1.01); }
+}
+.animate-3d-whip { animation: whip3d 4s ease-in-out infinite; }
+
+@keyframes heropan3d {
+  0%, 100% { transform: perspective(850px) rotateX(-6deg) scale(1.02); }
+  50% { transform: perspective(850px) rotateX(-3deg) rotateY(3deg) scale(1.03); }
+}
+.animate-3d-heropan { animation: heropan3d 8s ease-in-out infinite; }
+
+@keyframes birdglide3d {
+  0%, 100% { transform: perspective(850px) rotateX(12deg) scale(0.97); }
+  50% { transform: perspective(850px) rotateX(8deg) rotateY(-4deg) scale(0.99); }
+}
+.animate-3d-birdglide { animation: birdglide3d 9s ease-in-out infinite; }
+
+@keyframes glitch3d {
+  0%, 92%, 100% { transform: perspective(900px) translate(0, 0); filter: none; }
+  93% { transform: perspective(900px) translate(-4px, 2px) skewX(2deg); filter: drop-shadow(2px 0 #ef4444); }
+  95% { transform: perspective(900px) translate(4px, -2px) skewX(-2deg); filter: drop-shadow(-2px 0 #06b6d4); }
+}
+.animate-3d-glitch { animation: glitch3d 3.5s ease-in-out infinite; }
+
+@keyframes wave3d {
+  0%, 100% { transform: perspective(900px) rotateX(3deg) scaleY(1); }
+  50% { transform: perspective(900px) rotateX(-3deg) scaleY(1.02); }
+}
+.animate-3d-wave { animation: wave3d 4.5s ease-in-out infinite; }
+
+@keyframes fisheye3d {
+  0%, 100% { transform: perspective(600px) scale(1); }
+  50% { transform: perspective(500px) scale(1.04); }
+}
+.animate-3d-fisheye { animation: fisheye3d 6s ease-in-out infinite; }
+
+@keyframes kaleido3d {
+  0% { transform: perspective(900px) rotateZ(0deg) scale(1); }
+  50% { transform: perspective(900px) rotateZ(2deg) scale(1.03); }
+  100% { transform: perspective(900px) rotateZ(0deg) scale(1); }
+}
+.animate-3d-kaleido { animation: kaleido3d 12s linear infinite; }
+
+@keyframes warpdrive3d {
+  0%, 100% { transform: perspective(600px) scale(1) translateZ(0); }
+  50% { transform: perspective(400px) scale(1.08) translateZ(50px); }
+}
+.animate-3d-warpdrive { animation: warpdrive3d 4s cubic-bezier(0.4, 0, 0.2, 1) infinite; }
+
+@keyframes vortex3d {
+  0%, 100% { transform: perspective(800px) rotateZ(0deg) scale(1); }
+  50% { transform: perspective(650px) rotateZ(-3deg) scale(1.04); }
+}
+.animate-3d-vortex { animation: vortex3d 7s ease-in-out infinite; }
+
+@keyframes jcut3d {
+  0%, 100% { transform: perspective(900px) rotateX(4deg) rotateY(-4deg); }
+  50% { transform: perspective(900px) rotateX(6deg) rotateY(-6deg); }
+}
+.animate-3d-jcut { animation: jcut3d 5s ease-in-out infinite; }
+
+@keyframes strobe3d {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.94; }
+}
+.animate-3d-strobe { animation: strobe3d 0.15s ease-in-out infinite; }
+
+@keyframes seasway3d {
+  0%, 100% { transform: perspective(900px) rotateZ(-2deg) rotateY(1.5deg); }
+  50% { transform: perspective(900px) rotateZ(2deg) rotateY(-1.5deg); }
+}
+.animate-3d-seasway { animation: seasway3d 6s ease-in-out infinite; }
+
+@keyframes cybersweep3d {
+  0%, 100% { transform: perspective(900px) rotateX(0deg); }
+  50% { transform: perspective(900px) rotateX(6deg); }
+}
+.animate-3d-cybersweep { animation: cybersweep3d 4s ease-in-out infinite; }
+
+@keyframes mirage3d {
+  0%, 100% { transform: perspective(900px) scale(1); opacity: 1; }
+  50% { transform: perspective(800px) scale(1.025) translateZ(20px); opacity: 0.92; }
+}
+.animate-3d-mirage { animation: mirage3d 5s ease-in-out infinite; }
+
+@keyframes pendulum3d {
+  0%, 100% { transform: perspective(900px) rotateZ(-3deg); }
+  50% { transform: perspective(900px) rotateZ(3deg); }
+}
+.animate-3d-pendulum { animation: pendulum3d 3.5s ease-in-out infinite; }
+
+/* 3D Overlays */
+.overlay-cyber-grid {
+  background-image: 
+    linear-gradient(to right, rgba(6, 182, 212, 0.25) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(6, 182, 212, 0.25) 1px, transparent 1px);
+  background-size: 36px 36px;
+  transform: perspective(400px) rotateX(60deg) translateY(20%);
+  transform-origin: bottom center;
+}
+
+.overlay-starfield {
+  background-image: 
+    radial-gradient(circle at 50% 50%, white 1px, transparent 1.5px),
+    radial-gradient(circle at 20% 30%, #38bdf8 1.5px, transparent 2px),
+    radial-gradient(circle at 80% 70%, #f472b6 1.2px, transparent 1.8px),
+    radial-gradient(circle at 40% 80%, #facc15 1px, transparent 1.5px);
+  background-size: 80px 80px, 140px 140px, 110px 110px, 95px 95px;
+  animation: starfieldMove 12s linear infinite;
+}
+@keyframes starfieldMove {
+  0% { transform: scale(1) translateZ(0); opacity: 0.6; }
+  50% { transform: scale(1.1) translateZ(30px); opacity: 0.9; }
+  100% { transform: scale(1) translateZ(0); opacity: 0.6; }
+}
+
+.overlay-embers {
+  background-image: 
+    radial-gradient(circle at 50% 80%, #f97316 2px, transparent 3px),
+    radial-gradient(circle at 25% 60%, #eab308 1.5px, transparent 2.5px),
+    radial-gradient(circle at 75% 70%, #ef4444 2px, transparent 3px);
+  background-size: 60px 100px, 80px 120px, 90px 140px;
+  animation: emberRise 5s linear infinite;
+}
+@keyframes emberRise {
+  0% { background-position: 0 0, 0 0, 0 0; }
+  100% { background-position: 0 -100px, 0 -120px, 0 -140px; }
+}
+
+.overlay-god-rays {
+  background: linear-gradient(135deg, rgba(254, 240, 138, 0.22) 0%, transparent 40%, rgba(254, 240, 138, 0.15) 65%, transparent 100%);
+  mix-blend-mode: screen;
+}
+
+.overlay-sakura-depth {
+  background-image: 
+    radial-gradient(circle at 30% 20%, #fda4af 3px, transparent 4px),
+    radial-gradient(circle at 70% 50%, #f43f5e 2.5px, transparent 3.5px),
+    radial-gradient(circle at 50% 80%, #fb7185 2px, transparent 3px);
+  background-size: 90px 130px, 120px 160px, 110px 150px;
+  animation: sakuraFall 7s linear infinite;
+}
+@keyframes sakuraFall {
+  0% { background-position: 0 0, 0 0, 0 0; }
+  100% { background-position: 20px 130px, -25px 160px, 15px 150px; }
+}
+
+.overlay-snow-depth {
+  background-image: 
+    radial-gradient(circle at 20% 20%, #ffffff 2px, transparent 3px),
+    radial-gradient(circle at 80% 40%, #e0f2fe 1.5px, transparent 2.5px),
+    radial-gradient(circle at 50% 80%, #bae6fd 1px, transparent 2px);
+  background-size: 70px 90px, 110px 130px, 95px 120px;
+  animation: snowFall 4s linear infinite;
+}
+@keyframes snowFall {
+  0% { background-position: 0 0, 0 0, 0 0; }
+  100% { background-position: 0 90px, -10px 130px, 10px 120px; }
+}
+
+.overlay-matrix-cube {
+  background-image: repeating-linear-gradient(0deg, rgba(34, 197, 94, 0.2) 0px, rgba(34, 197, 94, 0.2) 2px, transparent 2px, transparent 8px);
+  background-size: 100% 20px;
+  animation: matrixScroll 3s linear infinite;
+}
+@keyframes matrixScroll {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 100px; }
+}
+
+.overlay-anaglyph {
+  mix-blend-mode: screen;
+  box-shadow: inset 3px 0 0 rgba(239, 68, 68, 0.45), inset -3px 0 0 rgba(6, 182, 212, 0.45);
+}
+
+.overlay-hologram-rings {
+  background: radial-gradient(circle at 50% 50%, transparent 20%, rgba(6, 182, 212, 0.2) 21%, transparent 22%, transparent 40%, rgba(6, 182, 212, 0.15) 41%, transparent 42%);
+  animation: ringPulse 4s ease-in-out infinite;
+}
+@keyframes ringPulse {
+  0%, 100% { transform: scale(1); opacity: 0.7; }
+  50% { transform: scale(1.05); opacity: 1; }
+}
+
+.overlay-lens-flare {
+  background: linear-gradient(90deg, transparent 0%, rgba(56, 189, 248, 0.35) 48%, rgba(255, 255, 255, 0.7) 50%, rgba(56, 189, 248, 0.35) 52%, transparent 100%);
+  height: 2px;
+  width: 100%;
+  position: absolute;
+  top: 40%;
+  mix-blend-mode: screen;
+}
+

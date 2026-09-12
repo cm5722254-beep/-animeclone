@@ -8,6 +8,7 @@ import shutil
 import requests
 import edge_tts
 from services import audio_processor
+from services.elevenlabs_service import elevenlabs_service
 
 def clean_pure_khmer(text: str) -> str:
     """Filter out all Thai unicode (\u0E00-\u0E7F), Chinese unicode (\u4E00-\u9FFF), Japanese/Korean, and ensure 100% pure authentic Khmer."""
@@ -154,7 +155,36 @@ class KhmerDubber:
             if os.path.exists(def_ref):
                 reference_audio_path = def_ref
 
-        # 1. Zero-Shot Voice Cloning via VoxCPM2 (48kHz Hi-Fi) if server URL is configured
+        # 1. ElevenLabs Ultra-Realistic Zero-GPU Cloud Voice Cloning
+        is_eleven_mode = (
+            os.getenv('VOXCPM_MODE') == 'elevenlabs'
+            or voice_id == 'elevenlabs'
+            or (options and options.get('voiceMode') == 'elevenlabs')
+            or (voice_id and str(voice_id).startswith('eleven:'))
+        )
+        if is_eleven_mode and elevenlabs_service.is_configured():
+            try:
+                el_voice = None
+                if voice_id and str(voice_id).startswith('eleven:'):
+                    el_voice = str(voice_id).replace('eleven:', '')
+                elif options and options.get('elevenVoiceId'):
+                    el_voice = options['elevenVoiceId']
+                else:
+                    el_voice = elevenlabs_service.resolve_voice_for_character(
+                        reference_audio_path,
+                        gender='female' if is_female else 'male',
+                        role_key=(options.get('role_key', '') if options else '')
+                    )
+
+                print(f"🎙️ [ElevenLabs] Generating Zero-GPU Voice Clone (Voice: {el_voice}, Ref: {os.path.basename(reference_audio_path or 'none')})...")
+                ok = elevenlabs_service.text_to_speech(el_voice, text, output_path)
+                if ok and os.path.exists(output_path) and os.path.getsize(output_path) > 1000:
+                    print(f"✅ ElevenLabs Voice Clone generated: {output_path}")
+                    return output_path
+            except Exception as el_err:
+                print(f"⚠️ ElevenLabs notice, falling back: {el_err}")
+
+        # 2. Zero-Shot Voice Cloning via VoxCPM2 (48kHz Hi-Fi) if server URL is configured
         if os.getenv('VOXCPM_API_URL'):
             try:
                 ref_to_use = reference_audio_path
@@ -171,7 +201,7 @@ class KhmerDubber:
             except Exception as vox_err:
                 print(f"⚠️ VoxCPM2 API notice, falling back to 100% pure Khmer neural voice: {vox_err}")
 
-        # 2. Primary 100% Pure Authentic Cambodian Khmer Theatrical Neural Engine
+        # 3. Primary 100% Pure Authentic Cambodian Khmer Theatrical Neural Engine
         return await self.synthesize_khmer_speech(text, output_path, target_voice, pitch=target_pitch, rate=target_rate)
 
     def resolve_curated_role_voice(self, seg: dict, casting_safety_mode: str = 'safe_curated', user_role_map: dict = None) -> str:
@@ -455,6 +485,26 @@ class KhmerDubber:
                     shutil.rmtree(temp_dir, ignore_errors=True)
             except Exception:
                 pass
+
+        # Sort chronologically and de-overlap any collided segments cleanly
+        if all_segments:
+            all_segments.sort(key=lambda s: float(s.get('start_time', 0.0)))
+            cleaned_segs = []
+            for s in all_segments:
+                cur_start = max(0.0, float(s.get('start_time', 0.0)))
+                cur_end = max(cur_start + 0.6, float(s.get('end_time', cur_start + 2.5)))
+                cur_dur = cur_end - cur_start
+
+                if cleaned_segs:
+                    prev_end = float(cleaned_segs[-1].get('end_time', 0.0))
+                    if cur_start < prev_end + 0.2:
+                        cur_start = prev_end + 0.25
+                        cur_end = cur_start + cur_dur
+
+                s['start_time'] = round(cur_start, 2)
+                s['end_time'] = round(cur_end, 2)
+                cleaned_segs.append(s)
+            all_segments = cleaned_segs
 
         return all_segments
 

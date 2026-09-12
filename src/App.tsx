@@ -50,9 +50,15 @@ export const App: React.FC = () => {
   const [uploadedFile, setUploadedFile] = useState<ProjectFile | null>(null);
   const [recentFiles, setRecentFiles] = useState<ProjectFile[]>([]);
   const [voiceMode, setVoiceMode] = useState('voxcpm-voice-actor');
+  const [dubbingScope, setDubbingScope] = useState('120');
   const [maleLeadVoice, setMaleLeadVoice] = useState('hang_phleung_char_2_male.mp3');
   const [femaleLeadVoice, setFemaleLeadVoice] = useState('hang_phleung_char_6_female.mp3');
   const [geminiModel, setGeminiModel] = useState('gemini-3.5-flash');
+
+  // Video Upload Progress & Instant Preview
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadInfo, setUploadInfo] = useState<{ loadedMb: string; totalMb: string } | null>(null);
 
   const [isDubbing, setIsDubbing] = useState(false);
   const [dubbingProgress, setDubbingProgress] = useState(0);
@@ -74,6 +80,33 @@ export const App: React.FC = () => {
     blur: 0,
     aspectRatio: '16:9',
     lutPreset: 'none',
+    letterbox: false,
+    vignette: false,
+    filmGrain: false,
+    vhsGlitch: false,
+    glowBloom: false,
+    colorTint: 'none',
+    watermark: {
+      enabled: true,
+      text: '© សម្រាយរឿង HD - អាទិទេព DABBER PRO',
+      position: 'top-right',
+      opacity: 85,
+      fontSize: 13,
+      fontFamily: 'Outfit',
+      textColor: '#ffffff',
+      showBadge: true,
+    },
+    styleText: {
+      enabled: false,
+      title: 'សង្គ្រាមអាទិទេព',
+      subtitle: 'បញ្ចូលសំឡេងខ្មែរដោយ AI Dubbing',
+      badge: 'ភាគ ០១ - ចប់',
+      stylePreset: 'gold3d',
+      position: 'bottom-left',
+      fontSize: 26,
+      fontFamily: 'Koulen',
+      showBanner: true,
+    },
   });
 
   const [subtitleStyle, setSubtitleStyle] = useState<SubtitleStyle>({
@@ -88,9 +121,39 @@ export const App: React.FC = () => {
   });
 
   // Timeline & Segments
-  const [segments, setSegments] = useState<TimelineSegment[]>(DEFAULT_PRESET_TIMELINE_SEGMENTS);
+  const [segments, setSegments] = useState<TimelineSegment[]>([]);
   const [selectedSegmentIndex, setSelectedSegmentIndex] = useState(0);
   const [isScanningTimeline, setIsScanningTimeline] = useState(false);
+
+  // Helper to ensure segments are sorted chronologically and never overlap with each other
+  const sanitizeSegments = (segs: TimelineSegment[]): TimelineSegment[] => {
+    if (!segs || segs.length === 0) return [];
+    const sorted = [...segs].sort((a, b) => (a.start_time || 0) - (b.start_time || 0));
+    const cleaned: TimelineSegment[] = [];
+
+    for (let i = 0; i < sorted.length; i++) {
+      const item = { ...sorted[i], line_index: i };
+      const curStart = Math.max(0, item.start_time || 0);
+      const curDur = Math.max(0.6, (item.end_time || curStart + 2.0) - curStart);
+
+      if (cleaned.length > 0) {
+        const prev = cleaned[cleaned.length - 1];
+        if (curStart < prev.end_time + 0.2) {
+          const newStart = Number((prev.end_time + 0.25).toFixed(2));
+          item.start_time = newStart;
+          item.end_time = Number((newStart + curDur).toFixed(2));
+        } else {
+          item.start_time = Number(curStart.toFixed(2));
+          item.end_time = Number((curStart + curDur).toFixed(2));
+        }
+      } else {
+        item.start_time = Number(curStart.toFixed(2));
+        item.end_time = Number((curStart + curDur).toFixed(2));
+      }
+      cleaned.push(item);
+    }
+    return cleaned;
+  };
 
   // Characters
   const [characters, setCharacters] = useState<CharacterVoice[]>([]);
@@ -106,10 +169,16 @@ export const App: React.FC = () => {
   const [isDownloaderOpen, setIsDownloaderOpen] = useState(false);
   const [diskStats, setDiskStats] = useState<{ formattedSize: string; count: number } | null>(null);
 
-  // Toast Helper
+  // Toast Helper with deduplication & max queue protection
   const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') => {
-    const id = `${Date.now()}-${Math.random()}`;
-    setToasts((prev) => [...prev, { id, message, type }]);
+    setToasts((prev) => {
+      // Don't append if the exact message is already in recent toasts (prevents polling spam)
+      if (prev.some((t) => t.message === message)) {
+        return prev;
+      }
+      const id = `${Date.now()}-${Math.random()}`;
+      return [...prev.slice(-4), { id, message, type }];
+    });
   };
 
   const dismissToast = (id: string) => {
@@ -175,15 +244,41 @@ export const App: React.FC = () => {
   };
 
   const handleUploadFile = async (file: File) => {
-    showToast(`កំពុង Upload ឯកសារ "${file.name}"...`, 'info');
+    // 1. Instant Zero-Wait Local Preview (0.01s instant loading)
+    const localBlobUrl = URL.createObjectURL(file);
+    const instantFile: ProjectFile = {
+      filename: file.name,
+      originalName: file.name,
+      size: file.size,
+      type: file.type.startsWith('audio') ? 'audio' : 'video',
+      url: localBlobUrl,
+    };
+    setUploadedFile(instantFile);
+    setIsUploadingFile(true);
+    setUploadProgress(0);
+    setUploadInfo({
+      loadedMb: '0.0',
+      totalMb: (file.size / (1024 * 1024)).toFixed(1),
+    });
+    showToast(`⚡ បានផ្ទុកវីដេអូលើអេក្រង់ភ្លាមៗ! កំពុងរក្សាទុកក្នុង Server...`, 'info');
+
     try {
-      const res = await api.uploadFile(file);
+      const res = await api.uploadFile(file, (percent, loaded, total) => {
+        setUploadProgress(percent);
+        setUploadInfo({
+          loadedMb: (loaded / (1024 * 1024)).toFixed(1),
+          totalMb: (total / (1024 * 1024)).toFixed(1),
+        });
+      });
+
       if (res.success && res.file) {
         setUploadedFile(res.file);
-        setRecentFiles((prev) => [res.file, ...prev]);
-        showToast('បាន Upload វីដេអូជោគជ័យ!', 'success');
+        setRecentFiles((prev) => [res.file, ...prev.filter((f) => f.filename !== res.file.filename)]);
+        setIsUploadingFile(false);
+        showToast(`🎉 វីដេអូ "${file.name}" ត្រូវបានរក្សាទុកក្នុង Server រួចរាល់!`, 'success');
       }
     } catch (err: any) {
+      setIsUploadingFile(false);
       showToast(`បរាជ័យក្នុងការ Upload: ${err.message}`, 'error');
     }
   };
@@ -204,6 +299,7 @@ export const App: React.FC = () => {
         sourceLang: 'zh',
         targetLang: 'km',
         voiceId: voiceMode,
+        scope: dubbingScope,
         maleLeadVoice,
         femaleLeadVoice,
         geminiModel,
@@ -219,23 +315,30 @@ export const App: React.FC = () => {
   };
 
   const pollDubbingJob = (jobId: string) => {
+    let finished = false;
     const interval = setInterval(async () => {
+      if (finished) {
+        clearInterval(interval);
+        return;
+      }
       try {
         const job = await api.getDubbingStatus(jobId);
         setDubbingProgress(job.progress || 0);
         setDubbingMessage(job.message || 'កំពុងដំណើរការ...');
 
         if (job.status === 'completed') {
+          finished = true;
           clearInterval(interval);
           setIsDubbing(false);
           setOutputVideo(job.outputVideo || null);
           setOutputAudio(job.outputAudio || null);
           if (job.dialogueSegments && job.dialogueSegments.length > 0) {
-            setSegments(job.dialogueSegments);
+            setSegments(sanitizeSegments(job.dialogueSegments));
           }
           showToast('ការបញ្ជូលសំឡេងជោគជ័យ 100%!', 'success');
           loadFiles();
         } else if (job.status === 'failed') {
+          finished = true;
           clearInterval(interval);
           setIsDubbing(false);
           showToast(`បរាជ័យ: ${job.error || 'កំហុសបច្ចេកទេស'}`, 'error');
@@ -256,7 +359,7 @@ export const App: React.FC = () => {
       // 180s scope for fast, responsive dialogue extraction without hitting Gemini backoffs
       const res = await api.scanTimeline(uploadedFile.filename, '180');
       if (res.success && res.segments && res.segments.length > 0) {
-        setSegments(res.segments);
+        setSegments(sanitizeSegments(res.segments));
         showToast(`ស្កេនជោគជ័យ! រកឃើញ ${res.segments.length} ឃ្លាសន្ទនាក្នុងរឿង`, 'success');
       } else {
         showToast('មិនឃើញឃ្លាសន្ទនាក្នុងឈុតនេះឡើយ!', 'info');
@@ -415,10 +518,15 @@ export const App: React.FC = () => {
           <div className={activeTab === 'tab-dubbing' ? 'flex-1 flex flex-col h-full overflow-hidden' : 'hidden'}>
             <DubbingStudio
               uploadedFile={uploadedFile}
+              isUploadingFile={isUploadingFile}
+              uploadProgress={uploadProgress}
+              uploadInfo={uploadInfo}
               onUploadFile={handleUploadFile}
               onRemoveFile={() => setUploadedFile(null)}
               voiceMode={voiceMode}
               onVoiceModeChange={setVoiceMode}
+              dubbingScope={dubbingScope}
+              onDubbingScopeChange={setDubbingScope}
               maleLeadVoice={maleLeadVoice}
               onMaleLeadChange={setMaleLeadVoice}
               femaleLeadVoice={femaleLeadVoice}
@@ -436,6 +544,7 @@ export const App: React.FC = () => {
                 a.play().catch(() => {});
               }}
               segments={segments}
+              onChangeSegments={setSegments}
               selectedSegmentIndex={selectedSegmentIndex}
               onSelectSegment={setSelectedSegmentIndex}
               onScanTimeline={handleScanTimeline}
@@ -604,6 +713,7 @@ export const App: React.FC = () => {
           {activeTab === 'tab-thumbnail' && (
             <ThumbnailGenerator
               currentProject={uploadedFile}
+              videoUrl={outputVideo || uploadedFile?.url || (uploadedFile?.filename ? `/media/uploads/${uploadedFile.filename}` : '')}
               videoRef={videoRef}
               initialCapturedImage={thumbnailCapturedFrame}
               onShowToast={showToast}
@@ -636,17 +746,14 @@ export const App: React.FC = () => {
         isOpen={isExportOpen}
         onClose={() => setIsExportOpen(false)}
         onShowToast={showToast}
-        defaultTitle={uploadedFile?.originalName || 'khmer_dubbed_movie'}
-        videoUrl={outputVideo || uploadedFile?.url || null}
-        audioUrl={outputAudio || null}
+        activeProjectTitle={uploadedFile?.originalName || 'khmer_dubbed_movie'}
+        outputVideoUrl={outputVideo || uploadedFile?.url || null}
       />
 
       <QuickVoxcpmModal
         isOpen={isVoxModalOpen}
-        currentStatus={voxStatus}
-        cloudUrl={config?.cloudUrl || config?.voxcpmUrl || ''}
         onClose={() => setIsVoxModalOpen(false)}
-        onSaved={loadConfigAndStatus}
+        onRefreshStatus={loadConfigAndStatus}
         onShowToast={showToast}
       />
 

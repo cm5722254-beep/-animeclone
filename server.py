@@ -26,8 +26,10 @@ load_dotenv(dotenv_path=env_file_path, override=True)
 
 from services import audio_processor, auth_db
 from services.khmer_dubber import KhmerDubber, clean_pure_khmer, ROLE_THEATRICAL_PROFILES
+from services.elevenlabs_service import elevenlabs_service
 
 app = FastAPI(title="AI Voice Clone & Dubbing Studio (ZH -> KM)")
+
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 EXTRA_PATHS = [
@@ -319,6 +321,8 @@ def switch_voxcpm_mode(body: SwitchModeRequest, request: Request):
         updates['VOXCPM_API_URL'] = current_cloud
     elif body.mode == 'pure_khmer':
         updates['VOXCPM_API_URL'] = ''
+    elif body.mode == 'elevenlabs':
+        updates['VOXCPM_API_URL'] = ''
 
     set_env_vars(updates)
 
@@ -334,6 +338,20 @@ def get_voxcpm_status():
     url = os.getenv('VOXCPM_API_URL', '')
     mode = os.getenv('VOXCPM_MODE', 'local' if url.startswith('http://127.0.0.1') or not url else 'cloud')
 
+    if mode == 'elevenlabs':
+        info = elevenlabs_service.get_user_info()
+        configured = elevenlabs_service.is_configured()
+        return {
+            'online': configured and not bool(info.get('error')),
+            'configured': configured,
+            'mode': 'elevenlabs',
+            'isLocal': False,
+            'device': 'ElevenLabs Cloud AI',
+            'gpuName': 'Zero-GPU Cloud Voice Clone',
+            'quota': info,
+            'message': f"ElevenLabs Cloud AI (Tier: {info.get('tier', 'Free')}, {info.get('remaining', 0)} chars remaining)"
+        }
+
     if mode == 'pure_khmer' or not url or not url.strip():
         return {
             'online': True,
@@ -342,6 +360,7 @@ def get_voxcpm_status():
             'isLocal': True,
             'message': '100% Pure Khmer Neural Engine (Offline & Fast)'
         }
+
 
     clean_url = url.strip()
     if clean_url.startswith('http') and '.' not in clean_url and not clean_url.startswith('http://127.0.0.1') and not clean_url.startswith('http://localhost'):
@@ -398,13 +417,50 @@ def update_config(body: ConfigUpdate):
     set_env_vars(updates)
     return {'success': True, 'message': 'API keys & configurations saved'}
 
+@app.get('/api/elevenlabs/status')
+def get_elevenlabs_status():
+    return {
+        'configured': elevenlabs_service.is_configured(),
+        'info': elevenlabs_service.get_user_info()
+    }
+
+@app.get('/api/elevenlabs/voices')
+def get_elevenlabs_voices():
+    voices = elevenlabs_service.list_voices()
+    return {
+        'success': True,
+        'count': len(voices),
+        'voices': voices
+    }
+
+class ElevenCloneRequest(BaseModel):
+    voiceName: str
+    sampleFilename: str
+
+@app.post('/api/elevenlabs/clone')
+def clone_eleven_voice(body: ElevenCloneRequest):
+    if not elevenlabs_service.is_configured():
+        raise HTTPException(status_code=400, detail="សូមកំណត់ ELEVENLABS_API_KEY ក្នុង Settings ជាមុនសិន")
+
+    cand = os.path.join(SAMPLES_DIR, os.path.basename(body.sampleFilename))
+    if not os.path.exists(cand):
+        cand = os.path.join(UPLOADS_DIR, os.path.basename(body.sampleFilename))
+    if not os.path.exists(cand):
+        raise HTTPException(status_code=404, detail="រកមិនឃើញឯកសារគំរូសំឡេងឡើយ")
+
+    voice_id = elevenlabs_service.clone_voice(body.voiceName, cand)
+    if not voice_id:
+        raise HTTPException(status_code=500, detail="បរាជ័យក្នុងការ Clone សំឡេងជាមួយ ElevenLabs (អាចអស់ Quota ឬបញ្ហា Network)")
+    return {'success': True, 'voiceId': voice_id, 'voiceName': body.voiceName}
+
 @app.post('/api/upload')
+
 async def upload_file(mediaFile: UploadFile = File(...)):
     dest_filename = f"mediaFile-{int(time.time() * 1000)}-{mediaFile.filename}"
     dest_path = os.path.join(UPLOADS_DIR, dest_filename)
 
     with open(dest_path, 'wb') as f:
-        shutil.copyfileobj(mediaFile.file, f)
+        shutil.copyfileobj(mediaFile.file, f, length=1024 * 1024)
 
     file_size = os.path.getsize(dest_path)
     file_type = 'video' if any(dest_filename.lower().endswith(ext) for ext in ['.mp4', '.mkv', '.avi', '.mov', '.webm']) else 'audio'

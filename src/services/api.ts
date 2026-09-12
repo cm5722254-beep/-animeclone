@@ -1,4 +1,4 @@
-import { User, CharacterVoice, TimelineSegment, ProjectFile, StudioConfig, VoxcpmStatus } from '../types';
+import { User, CharacterVoice, TimelineSegment, ProjectFile, StudioConfig, VoxcpmStatus, VideoDownloadResult } from '../types';
 
 const API_BASE = '';
 
@@ -79,9 +79,26 @@ export const api = {
       body: JSON.stringify({ mode, cloudUrl }),
     }),
 
+  switchMode: (mode: string, cloudUrl?: string) =>
+    request('/api/voxcpm/switch-mode', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode, cloudUrl }),
+    }),
+
+  getElevenlabsStatus: () => request<any>('/api/elevenlabs/status'),
+  getElevenlabsVoices: () => request<any>('/api/elevenlabs/voices'),
+  cloneElevenVoice: (voiceName: string, sampleFilename: string) =>
+    request<{ success: boolean; voiceId: string; voiceName: string }>('/api/elevenlabs/clone', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ voiceName, sampleFilename }),
+    }),
+
   getNetworkInfo: () => request<any>('/api/system/network-info'),
 
   getOutputStats: () => request<{ count: number; totalBytes: number; formattedSize: string }>('/api/outputs/stats'),
+
 
   clearOutputs: () => request<{ success: boolean; count: number; formattedFreed: string }>('/api/outputs/clear', { method: 'POST' }),
 
@@ -94,12 +111,49 @@ export const api = {
       body: fd,
     });
   },
-  uploadFile: (file: File) => {
-    const fd = new FormData();
-    fd.append('mediaFile', file);
-    return request<{ success: boolean; file: ProjectFile; filename: string; url: string }>('/api/upload', {
-      method: 'POST',
-      body: fd,
+  uploadFile: (
+    file: File,
+    onProgress?: (percent: number, loaded: number, total: number) => void
+  ): Promise<{ success: boolean; file: ProjectFile; filename: string; url: string }> => {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      const fd = new FormData();
+      fd.append('mediaFile', file);
+
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && onProgress) {
+          const percent = Math.round((e.loaded / e.total) * 100);
+          onProgress(percent, e.loaded, e.total);
+        }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const data = JSON.parse(xhr.responseText);
+            resolve(data);
+          } catch (err) {
+            reject(new Error('Invalid JSON response from server'));
+          }
+        } else {
+          try {
+            const errJson = JSON.parse(xhr.responseText);
+            reject(new Error(errJson.detail || errJson.message || `Upload failed with status ${xhr.status}`));
+          } catch (_) {
+            reject(new Error(`Upload failed with status ${xhr.status}`));
+          }
+        }
+      };
+
+      xhr.onerror = () => reject(new Error('Network error during file upload'));
+      xhr.open('POST', '/api/upload');
+
+      const token = getAuthToken();
+      if (token) {
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      }
+
+      xhr.send(fd);
     });
   },
 

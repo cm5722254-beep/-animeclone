@@ -67,6 +67,52 @@ export interface VoxcpmStatus {
   message?: string;
 }
 
+export interface WatermarkConfig {
+  enabled: boolean;
+  text: string;
+  position: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'center';
+  opacity: number; // 10 to 100
+  fontSize: number; // 10 to 32
+  fontFamily: string; // 'Outfit' | 'Kantumruy Pro' | 'Koulen' | 'Moul'
+  textColor: string;
+  showBadge: boolean;
+  logoUrl?: string;
+}
+
+export interface VideoStyleTextConfig {
+  enabled: boolean;
+  title: string;
+  subtitle: string;
+  badge: string;
+  stylePreset: string; // supports 35+ 3D title presets
+  position: 'top' | 'center' | 'bottom-left' | 'bottom-right' | 'bottom-center' | 'free';
+  posX?: number; // 0 to 100 percentage (free positioning like Thumbnail)
+  posY?: number; // 0 to 100 percentage (free positioning like Thumbnail)
+  textAlign?: 'left' | 'center' | 'right';
+  rotationAngle?: number; // -30 to 30 deg
+  fontSize: number;
+  subtitleFontSize?: number;
+  fontFamily: string;
+  showBanner: boolean;
+  depth3D?: number; // 0 to 16px 3D extrusion
+  glowIntensity?: number; // 0 to 30px glow/bloom
+  strokeWidth?: number; // 0 to 14px outer stroke
+}
+
+export interface Effect3DPreset {
+  id: string;
+  label: string;
+  category: '3D Spatial & Transforms' | '3D Particles & Atmosphere' | '3D Titles & Typography' | '3D Dynamic Motion & Camera';
+  description: string;
+  icon?: string;
+  transform3d?: string;
+  filter3d?: string;
+  perspective?: number; // default e.g. 900
+  overlayType?: 'none' | 'cyber_grid' | 'starfield' | 'embers' | 'god_rays' | 'matrix_cube' | 'anaglyph' | 'lens_flare' | 'sakura_depth' | 'snow_depth' | 'portal_ring' | 'hologram_rings';
+  motionClass?: string;
+  titleStylePreset?: string;
+}
+
 export interface VideoEffects {
   brightness: number; // 50 to 150 (default 100)
   contrast: number;   // 50 to 150 (default 100)
@@ -74,7 +120,23 @@ export interface VideoEffects {
   sepia: number;      // 0 to 100 (default 0)
   blur: number;       // 0 to 10 (default 0)
   aspectRatio: '16:9' | '9:16' | '1:1' | '4:3';
-  lutPreset: 'none' | 'teal_orange' | 'warm_film' | 'moody_noir' | 'vibrant_anime';
+  lutPreset: string;
+  // Cinematic Overlays & Effects
+  letterbox?: boolean; // Cinema Scope black bars 2.35:1
+  vignette?: boolean;  // Darkened edges
+  filmGrain?: boolean; // Authentic 35mm grain
+  vhsGlitch?: boolean; // CRT scanlines
+  glowBloom?: boolean; // Anime dream bloom
+  colorTint?: 'none' | 'cyberpunk' | 'golden' | 'horror' | 'emerald';
+  // Watermark & Copyright
+  watermark?: WatermarkConfig;
+  // Styled Video Title / Lower-Third
+  styleText?: VideoStyleTextConfig;
+  // 3D Effects Engine (100+ Presets)
+  effect3dEnabled?: boolean;
+  effect3dPreset?: string;
+  effect3dIntensity?: number; // 0 to 100
+  effect3dDepth?: number;     // 0 to 100
 }
 
 export interface SubtitleStyle {
@@ -116,6 +178,15 @@ export interface ThumbnailConfig {
   strokeColor: string;
   rotationAngle: number; // -45 to +45 deg
   bgBanner: 'none' | 'glass' | 'ribbon' | 'gradient' | 'box';
+}
+
+export interface UserThumbnailTemplate {
+  id: string;
+  name: string;
+  createdAt: number;
+  config: ThumbnailConfig;
+  previewGradient?: string;
+  isBuiltin?: boolean;
 }
 
 export interface VideoDownloadResult {

@@ -1,6 +1,24 @@
-import React, { useRef, useEffect } from 'react';
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize, Camera, Sparkles } from 'lucide-react';
+import React, { useRef, useEffect, useState } from 'react';
+import {
+  Play,
+  Pause,
+  SkipBack,
+  SkipForward,
+  Volume2,
+  VolumeX,
+  Maximize,
+  Camera,
+  Subtitles,
+  Download,
+  Check,
+  Shield,
+  ShieldCheck,
+  Sparkles,
+  Tv,
+  Box,
+} from 'lucide-react';
 import { VideoEffects, SubtitleStyle } from '../../types';
+import { LUT_PRESETS, EFFECT_3D_PRESETS } from '../effects/effectsLibrary';
 
 interface VideoPreviewProps {
   src: string;
@@ -10,6 +28,8 @@ interface VideoPreviewProps {
   isMuted: boolean;
   playbackRate: number;
   currentSubtitle?: string;
+  showSubtitles?: boolean;
+  onToggleSubtitles?: () => void;
   videoEffects?: VideoEffects;
   subtitleStyle?: SubtitleStyle;
   videoRef?: React.RefObject<HTMLVideoElement>;
@@ -20,7 +40,9 @@ interface VideoPreviewProps {
   onRateChange: (rate: number) => void;
   onStep: (delta: number) => void;
   onOpenThumbnailStudio?: () => void;
+  onShowToast?: (msg: string, type: 'success' | 'error' | 'info') => void;
 }
+
 
 function formatTimecode(seconds: number): string {
   if (isNaN(seconds) || seconds < 0) seconds = 0;
@@ -39,6 +61,8 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
   isMuted,
   playbackRate,
   currentSubtitle,
+  showSubtitles = true,
+  onToggleSubtitles,
   videoEffects,
   subtitleStyle,
   videoRef: externalVideoRef,
@@ -49,10 +73,12 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
   onRateChange,
   onStep,
   onOpenThumbnailStudio,
+  onShowToast,
 }) => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const videoRef = externalVideoRef || localVideoRef;
   const frameRef = useRef<HTMLDivElement>(null);
+  const [capturedFeedback, setCapturedFeedback] = useState(false);
 
   useEffect(() => {
     const v = videoRef.current;
@@ -92,7 +118,160 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
     }
   };
 
-  // Compute CSS filter from effects
+  // 1-Click Direct Frame Capture & Instant Download
+  const handleInstantSnapshot = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const v = videoRef.current;
+    if (!v || v.videoWidth === 0) {
+      onShowToast?.('⚠️ មិនអាចថតរូបបានទេ សូមរង់ចាំវីដេអូ Load សិន', 'error');
+      return;
+    }
+
+    try {
+      const c = document.createElement('canvas');
+      c.width = v.videoWidth || 1920;
+      c.height = v.videoHeight || 1080;
+      const ctx = c.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(v, 0, 0, c.width, c.height);
+
+        // Burn Letterbox if enabled
+        if (videoEffects?.letterbox) {
+          ctx.fillStyle = '#000000';
+          ctx.fillRect(0, 0, c.width, c.height * 0.1);
+          ctx.fillRect(0, c.height * 0.9, c.width, c.height * 0.1);
+        }
+
+        // Burn Vignette if enabled
+        if (videoEffects?.vignette) {
+          const vig = ctx.createRadialGradient(
+            c.width / 2,
+            c.height / 2,
+            c.width * 0.25,
+            c.width / 2,
+            c.height / 2,
+            c.width * 0.7
+          );
+          vig.addColorStop(0, 'rgba(0,0,0,0)');
+          vig.addColorStop(1, 'rgba(0,0,0,0.85)');
+          ctx.fillStyle = vig;
+          ctx.fillRect(0, 0, c.width, c.height);
+        }
+
+        // Burn Watermark if enabled
+        if (videoEffects?.watermark?.enabled && videoEffects.watermark.text) {
+          ctx.save();
+          const wm = videoEffects.watermark;
+          const fontSize = Math.round((wm.fontSize || 14) * (c.width / 1280));
+          ctx.font = `bold ${fontSize}px "Outfit", "Kantumruy Pro", sans-serif`;
+          ctx.globalAlpha = (wm.opacity || 85) / 100;
+          ctx.fillStyle = wm.textColor || '#ffffff';
+          ctx.shadowColor = 'rgba(0,0,0,0.9)';
+          ctx.shadowBlur = 6;
+
+          const padding = 32;
+          let wmX = c.width - padding;
+          let wmY = padding + fontSize;
+          ctx.textAlign = 'right';
+
+          if (wm.position === 'top-left') {
+            wmX = padding;
+            ctx.textAlign = 'left';
+          } else if (wm.position === 'bottom-right') {
+            wmY = c.height - padding;
+          } else if (wm.position === 'bottom-left') {
+            wmX = padding;
+            wmY = c.height - padding;
+            ctx.textAlign = 'left';
+          } else if (wm.position === 'center') {
+            wmX = c.width / 2;
+            wmY = c.height / 2;
+            ctx.textAlign = 'center';
+          }
+
+          ctx.fillText(wm.text, wmX, wmY);
+          ctx.restore();
+        }
+
+        // Burn Style Title if enabled (Full positioning & 3D styling matches UI)
+        if (videoEffects?.styleText?.enabled && videoEffects.styleText.title) {
+          ctx.save();
+          const st = videoEffects.styleText;
+          const scale = c.width / 1280;
+          const titleSize = Math.round((st.fontSize || 28) * scale);
+          const subSize = Math.round((st.subtitleFontSize || 14) * scale);
+          const isFree = st.position === 'free' || (st.posX !== undefined && st.posY !== undefined);
+          const align = st.textAlign || (st.position === 'top' || st.position === 'center' || st.position === 'bottom-center' ? 'center' : st.position === 'bottom-right' ? 'right' : 'left');
+
+          let posX = isFree ? (c.width * (st.posX ?? 10)) / 100 : 48;
+          let posY = isFree ? (c.height * (st.posY ?? 82)) / 100 : c.height - 48;
+
+          ctx.translate(posX, posY);
+          if (st.rotationAngle) {
+            ctx.rotate((st.rotationAngle * Math.PI) / 180);
+          }
+
+          ctx.textAlign = align;
+          ctx.font = `bold ${titleSize}px "${st.fontFamily || 'Koulen'}", "Kantumruy Pro", sans-serif`;
+
+          // 3D Depth Extrusion
+          const depth = Math.round(5 * scale);
+          ctx.fillStyle = '#0a0d14';
+          for (let d = depth; d >= 1; d--) {
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
+            ctx.shadowBlur = 4;
+            ctx.shadowOffsetX = d;
+            ctx.shadowOffsetY = d;
+            ctx.fillText(st.title, d, d);
+          }
+
+          // Outer Glow
+          ctx.shadowColor = st.stylePreset === 'fire' ? '#ea580c' : st.stylePreset === 'neon' ? '#06b6d4' : '#eab308';
+          ctx.shadowBlur = Math.round(14 * scale);
+          ctx.fillStyle = st.stylePreset === 'neon' ? '#67e8f9' : st.stylePreset === 'fire' ? '#fed7aa' : '#fef08a';
+          ctx.fillText(st.title, 0, 0);
+
+          // Subtitle
+          if (st.subtitle) {
+            ctx.font = `500 ${subSize}px "Kantumruy Pro", sans-serif`;
+            ctx.shadowColor = 'rgba(0,0,0,0.9)';
+            ctx.shadowBlur = 6;
+            ctx.fillStyle = '#e2e8f0';
+            ctx.fillText(st.subtitle, 0, subSize + 6);
+          }
+
+          ctx.restore();
+        }
+
+        const dataUrl = c.toDataURL('image/jpeg', 0.95);
+        const link = document.createElement('a');
+        link.download = `thumbnail_capture_${Math.round(currentTime)}s.jpg`;
+        link.href = dataUrl;
+        link.click();
+
+        setCapturedFeedback(true);
+        setTimeout(() => setCapturedFeedback(false), 2000);
+        onShowToast?.('📸 បានថត និងទាញយករូបភាព Thumbnail Full HD (រួមទាំង Watermark & Style) ភ្លាមៗ!', 'success');
+      }
+    } catch (err: any) {
+      onShowToast?.(`កំហុសថតរូប: ${err.message}`, 'error');
+    }
+  };
+
+  // Compute CSS filter from effects + 40+ LUT library + 3D filter
+  const matchedLut = LUT_PRESETS.find((p) => p.id === videoEffects?.lutPreset);
+  const lutFilter = matchedLut && matchedLut.cssFilter !== 'none' ? matchedLut.cssFilter : '';
+
+  // 3D Effects Engine Resolver
+  const active3dPreset = videoEffects?.effect3dEnabled
+    ? EFFECT_3D_PRESETS.find((p) => p.id === videoEffects?.effect3dPreset)
+    : null;
+
+  const transform3dStyle = active3dPreset?.transform3d || '';
+  const filter3dStyle = active3dPreset?.filter3d || '';
+  const perspective3d = active3dPreset?.perspective ? `${active3dPreset.perspective}px` : '900px';
+  const motion3dClass = active3dPreset?.motionClass || '';
+
   const filterString = videoEffects
     ? [
         `brightness(${videoEffects.brightness}%)`,
@@ -100,10 +279,8 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
         `saturate(${videoEffects.saturation}%)`,
         `sepia(${videoEffects.sepia}%)`,
         videoEffects.blur > 0 ? `blur(${videoEffects.blur}px)` : '',
-        videoEffects.lutPreset === 'teal_orange' ? 'hue-rotate(15deg) contrast(110%)' : '',
-        videoEffects.lutPreset === 'warm_film' ? 'sepia(25%) saturate(120%)' : '',
-        videoEffects.lutPreset === 'moody_noir' ? 'grayscale(80%) contrast(140%)' : '',
-        videoEffects.lutPreset === 'vibrant_anime' ? 'saturate(150%) contrast(115%)' : '',
+        lutFilter,
+        filter3dStyle,
       ]
         .filter(Boolean)
         .join(' ')
@@ -130,25 +307,281 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
       {/* Screen Frame */}
       <div
         ref={frameRef}
-        className={`relative ${aspectClass} max-h-[calc(100%-48px)] bg-black rounded-lg shadow-2xl flex items-center justify-center overflow-hidden border border-white/[0.06] transition-all`}
+        className={`relative ${aspectClass} max-h-[calc(100%-48px)] bg-black rounded-lg shadow-2xl flex items-center justify-center overflow-hidden border border-white/[0.06] transition-all group`}
       >
-        <video
-          ref={videoRef}
-          src={src}
-          playsInline
-          preload="metadata"
-          style={{ filter: filterString }}
-          onTimeUpdate={() => {
-            if (videoRef.current) onTimeUpdate(videoRef.current.currentTime);
+        {/* 3D Spatial Wrapper */}
+        <div
+          className={`w-full h-full relative flex items-center justify-center transition-all duration-300 ${motion3dClass}`}
+          style={{
+            perspective: videoEffects?.effect3dEnabled ? perspective3d : undefined,
+            transform: videoEffects?.effect3dEnabled && transform3dStyle ? transform3dStyle : undefined,
+            transformStyle: videoEffects?.effect3dEnabled ? 'preserve-3d' : undefined,
           }}
-          onLoadedMetadata={() => {
-            if (videoRef.current) onDurationChange(videoRef.current.duration);
-          }}
-          className="w-full h-full object-contain transition-all duration-150"
-        />
+        >
+          <video
+            ref={videoRef}
+            src={src}
+            playsInline
+            preload="metadata"
+            style={{ filter: filterString }}
+            onTimeUpdate={() => {
+              if (videoRef.current) onTimeUpdate(videoRef.current.currentTime);
+            }}
+            onLoadedMetadata={() => {
+              if (videoRef.current) onDurationChange(videoRef.current.duration);
+            }}
+            className="w-full h-full object-contain transition-all duration-150"
+          />
 
-        {/* Dynamic Subtitle Overlay */}
-        {currentSubtitle && (
+          {/* 3D Dynamic Spatial Overlays */}
+          {videoEffects?.effect3dEnabled && active3dPreset?.overlayType === 'cyber_grid' && (
+            <div className="absolute inset-0 pointer-events-none z-10 overlay-cyber-grid" />
+          )}
+          {videoEffects?.effect3dEnabled && active3dPreset?.overlayType === 'starfield' && (
+            <div className="absolute inset-0 pointer-events-none z-10 overlay-starfield" />
+          )}
+          {videoEffects?.effect3dEnabled && active3dPreset?.overlayType === 'embers' && (
+            <div className="absolute inset-0 pointer-events-none z-10 overlay-embers" />
+          )}
+          {videoEffects?.effect3dEnabled && active3dPreset?.overlayType === 'god_rays' && (
+            <div className="absolute inset-0 pointer-events-none z-10 overlay-god-rays" />
+          )}
+          {videoEffects?.effect3dEnabled && active3dPreset?.overlayType === 'sakura_depth' && (
+            <div className="absolute inset-0 pointer-events-none z-10 overlay-sakura-depth" />
+          )}
+          {videoEffects?.effect3dEnabled && active3dPreset?.overlayType === 'snow_depth' && (
+            <div className="absolute inset-0 pointer-events-none z-10 overlay-snow-depth" />
+          )}
+          {videoEffects?.effect3dEnabled && active3dPreset?.overlayType === 'matrix_cube' && (
+            <div className="absolute inset-0 pointer-events-none z-10 overlay-matrix-cube" />
+          )}
+          {videoEffects?.effect3dEnabled && active3dPreset?.overlayType === 'anaglyph' && (
+            <div className="absolute inset-0 pointer-events-none z-10 overlay-anaglyph" />
+          )}
+          {videoEffects?.effect3dEnabled && active3dPreset?.overlayType === 'hologram_rings' && (
+            <div className="absolute inset-0 pointer-events-none z-10 overlay-hologram-rings" />
+          )}
+          {videoEffects?.effect3dEnabled && active3dPreset?.overlayType === 'lens_flare' && (
+            <div className="absolute inset-0 pointer-events-none z-10 overlay-lens-flare" />
+          )}
+        </div>
+
+        {/* 3D Active Indicator Floating Pill */}
+        {videoEffects?.effect3dEnabled && active3dPreset && (
+          <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/75 backdrop-blur-md border border-amber-500/50 text-amber-300 text-[11px] font-bold shadow-xl animate-in fade-in">
+            <Box className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+            <span>3D: {active3dPreset.label.split(' ')[1] || active3dPreset.label}</span>
+          </div>
+        )}
+
+        {/* 1. Cinematic Letterbox Bars (Cinema Scope 2.35:1) */}
+        {videoEffects?.letterbox && (
+          <>
+            <div className="absolute top-0 left-0 right-0 h-[10%] bg-black z-10 pointer-events-none transition-all shadow-md" />
+            <div className="absolute bottom-0 left-0 right-0 h-[10%] bg-black z-10 pointer-events-none transition-all shadow-md" />
+          </>
+        )}
+
+        {/* 2. Cinematic Vignette (Radial Shadow) */}
+        {videoEffects?.vignette && (
+          <div className="absolute inset-0 pointer-events-none z-10 [background:radial-gradient(circle,transparent_52%,rgba(0,0,0,0.85)_100%)]" />
+        )}
+
+        {/* 3. 35mm Film Grain Texture */}
+        {videoEffects?.filmGrain && (
+          <div
+            className="absolute inset-0 pointer-events-none z-10 opacity-30 mix-blend-overlay"
+            style={{
+              backgroundImage: 'radial-gradient(#fff 1px, transparent 1px), radial-gradient(#000 1px, transparent 1px)',
+              backgroundSize: '4px 4px',
+              backgroundPosition: '0 0, 2px 2px',
+            }}
+          />
+        )}
+
+        {/* 4. VHS Retro Scanlines */}
+        {videoEffects?.vhsGlitch && (
+          <div
+            className="absolute inset-0 pointer-events-none z-10 opacity-30 mix-blend-overlay"
+            style={{
+              backgroundImage: 'repeating-linear-gradient(rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px, rgba(0,0,0,0.5) 3px)',
+            }}
+          />
+        )}
+
+        {/* 5. Anime Dream Bloom */}
+        {videoEffects?.glowBloom && (
+          <div className="absolute inset-0 pointer-events-none z-10 bg-amber-400/10 mix-blend-screen backdrop-blur-[0.5px]" />
+        )}
+
+        {/* 6. Watermark & Copyright Protection Overlay */}
+        {videoEffects?.watermark?.enabled && videoEffects.watermark.text && (
+          <div
+            className={`absolute z-20 pointer-events-none flex items-center gap-1.5 select-none transition-all ${
+              videoEffects.watermark.position === 'top-left'
+                ? 'top-4 left-4'
+                : videoEffects.watermark.position === 'top-right'
+                ? 'top-14 right-4'
+                : videoEffects.watermark.position === 'bottom-left'
+                ? 'bottom-10 left-4'
+                : videoEffects.watermark.position === 'bottom-right'
+                ? 'bottom-10 right-4'
+                : 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'
+            }`}
+            style={{ opacity: (videoEffects.watermark.opacity || 85) / 100 }}
+          >
+            {videoEffects.watermark.showBadge ? (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/65 backdrop-blur-md border border-white/20 shadow-lg text-white">
+                <ShieldCheck className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span
+                  className="font-semibold tracking-wide"
+                  style={{
+                    fontSize: `${videoEffects.watermark.fontSize || 13}px`,
+                    fontFamily: videoEffects.watermark.fontFamily || 'Outfit',
+                    color: videoEffects.watermark.textColor || '#ffffff',
+                    textShadow: '0 1px 3px rgba(0,0,0,0.8)',
+                  }}
+                >
+                  {videoEffects.watermark.text}
+                </span>
+              </div>
+            ) : (
+              <span
+                className="font-semibold tracking-wide drop-shadow-md"
+                style={{
+                  fontSize: `${videoEffects.watermark.fontSize || 13}px`,
+                  fontFamily: videoEffects.watermark.fontFamily || 'Outfit',
+                  color: videoEffects.watermark.textColor || '#ffffff',
+                  textShadow: '0 2px 4px rgba(0,0,0,0.9)',
+                }}
+              >
+                {videoEffects.watermark.text}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* 7. Styled 3D Video Title / Theatrical Banner (Matches Thumbnail Engine) */}
+        {videoEffects?.styleText?.enabled && videoEffects.styleText.title && (() => {
+          const st = videoEffects.styleText;
+          const isFree = st.position === 'free' || (st.posX !== undefined && st.posY !== undefined);
+          const align = st.textAlign || (st.position === 'top' || st.position === 'center' || st.position === 'bottom-center' ? 'center' : st.position === 'bottom-right' ? 'right' : 'left');
+
+          return (
+            <div
+              className="absolute z-20 pointer-events-none select-none transition-all flex flex-col"
+              style={
+                isFree
+                  ? {
+                      left: `${st.posX ?? 10}%`,
+                      top: `${st.posY ?? 82}%`,
+                      transform: `translate(${align === 'center' ? '-50%' : align === 'right' ? '-100%' : '0'}, -50%) rotate(${st.rotationAngle || 0}deg)`,
+                      alignItems: align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start',
+                      textAlign: align,
+                    }
+                  : st.position === 'top'
+                  ? { top: '1.5rem', left: '1.5rem', right: '1.5rem', alignItems: 'center', textAlign: 'center' }
+                  : st.position === 'center'
+                  ? { top: '50%', left: '50%', transform: 'translate(-50%, -50%)', alignItems: 'center', textAlign: 'center' }
+                  : st.position === 'bottom-center'
+                  ? { bottom: '2rem', left: '1.5rem', right: '1.5rem', alignItems: 'center', textAlign: 'center' }
+                  : st.position === 'bottom-right'
+                  ? { bottom: '2rem', right: '1.5rem', alignItems: 'flex-end', textAlign: 'right' }
+                  : { bottom: '2rem', left: '1.5rem', alignItems: 'flex-start', textAlign: 'left' }
+              }
+            >
+              <div
+                className={`relative max-w-[90%] ${
+                  st.showBanner
+                    ? 'px-4 py-2.5 rounded-2xl bg-black/75 backdrop-blur-md border border-white/20 shadow-2xl'
+                    : ''
+                }`}
+                style={{
+                  alignItems: align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start',
+                  display: 'flex',
+                  flexDirection: 'column',
+                }}
+              >
+                {st.badge && (
+                  <span className="inline-block px-2.5 py-0.5 mb-1.5 rounded-md bg-gradient-to-r from-rose-600 to-amber-600 text-white font-mono font-bold text-[10.5px] shadow-md border border-white/20">
+                    {st.badge}
+                  </span>
+                )}
+                <h2
+                  className={`font-bold tracking-wide leading-tight ${(() => {
+                    const p = st.stylePreset;
+                    if (p === 'gold3d' || p === '3d_text_gold3d') return 'text-transparent bg-clip-text bg-gradient-to-b from-yellow-100 via-amber-300 to-amber-600 drop-shadow-[0_4px_8px_rgba(0,0,0,0.95)]';
+                    if (p === 'cyberpunk' || p === '3d_text_cyberpunk') return 'text-transparent bg-clip-text bg-gradient-to-r from-sky-300 via-pink-400 to-purple-400 drop-shadow-[0_0_14px_#38bdf8]';
+                    if (p === 'silver_blade' || p === '3d_text_silver_blade') return 'text-transparent bg-clip-text bg-gradient-to-b from-white via-slate-200 to-slate-400 drop-shadow-[0_4px_10px_rgba(148,163,184,0.8)]';
+                    if (p === 'fire' || p === '3d_text_lava_dragon') return 'text-transparent bg-clip-text bg-gradient-to-b from-yellow-200 via-orange-500 to-red-600 drop-shadow-[0_4px_14px_rgba(234,88,12,0.9)]';
+                    if (p === 'neon' || p === '3d_text_plasma_shock') return 'text-cyan-300 drop-shadow-[0_0_16px_#06b6d4]';
+                    if (p === 'diamond_prism' || p === '3d_text_diamond_prism') return 'text-transparent bg-clip-text bg-gradient-to-r from-white via-sky-200 to-blue-200 drop-shadow-[0_0_12px_#bae6fd]';
+                    if (p === 'jade_celestial' || p === '3d_text_jade_celestial') return 'text-transparent bg-clip-text bg-gradient-to-b from-emerald-100 via-emerald-300 to-emerald-700 drop-shadow-[0_4px_10px_rgba(5,150,105,0.8)]';
+                    if (p === 'mecha_chrome' || p === '3d_text_mecha_chrome') return 'text-transparent bg-clip-text bg-gradient-to-b from-slate-100 via-slate-300 to-zinc-600 drop-shadow-[0_3px_6px_rgba(0,0,0,0.9)]';
+                    if (p === 'crimson_shadow' || p === '3d_text_crimson_shadow') return 'text-transparent bg-clip-text bg-gradient-to-b from-rose-200 via-red-500 to-red-900 drop-shadow-[0_4px_12px_rgba(185,28,28,0.9)]';
+                    if (p === 'glacier_ice' || p === '3d_text_glacier_ice') return 'text-transparent bg-clip-text bg-gradient-to-b from-white via-sky-300 to-blue-600 drop-shadow-[0_0_14px_#0284c7]';
+                    if (p === 'synthwave_80s' || p === '3d_text_synthwave_80s') return 'text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-400 to-cyan-400 drop-shadow-[0_0_12px_#e879f9]';
+                    if (p === 'khmer_royal' || p === '3d_text_khmer_royal') return 'text-transparent bg-clip-text bg-gradient-to-b from-amber-100 via-yellow-400 to-amber-700 drop-shadow-[0_4px_10px_rgba(180,83,9,0.9)]';
+                    if (p === 'sapphire' || p === '3d_text_ocean_wave') return 'text-transparent bg-clip-text bg-gradient-to-b from-blue-100 via-sky-400 to-blue-700 drop-shadow-[0_4px_8px_rgba(0,0,0,0.9)]';
+                    if (p === 'glass' || p === '3d_text_glass_frost') return 'text-white/95 backdrop-blur-md drop-shadow-[0_4px_12px_rgba(255,255,255,0.4)]';
+                    if (p === 'anime') return 'text-amber-300 drop-shadow-[0_0_14px_rgba(245,158,11,0.9)]';
+                    if (p === 'cinema' || p === '3d_text_hollywood_bold') return 'text-white drop-shadow-[0_4px_10px_rgba(0,0,0,0.95)]';
+                    return 'text-white drop-shadow-[0_4px_8px_rgba(0,0,0,0.9)]';
+                  })()}`}
+                  style={{
+                    fontSize: `${st.fontSize || 28}px`,
+                    fontFamily: st.fontFamily || 'Koulen',
+                    textShadow:
+                      st.stylePreset === 'gold3d'
+                        ? '0 3px 6px rgba(0,0,0,0.9), 0 0 12px rgba(245,158,11,0.6)'
+                        : st.stylePreset === 'fire'
+                        ? '0 3px 6px rgba(0,0,0,0.9), 0 0 16px #ea580c'
+                        : st.stylePreset === 'neon'
+                        ? '0 0 16px #06b6d4, 0 0 30px #0ea5e9'
+                        : '0 3px 8px rgba(0,0,0,0.95)',
+                  }}
+                >
+                  {st.title}
+                </h2>
+                {st.subtitle && (
+                  <p className="text-slate-100 text-xs mt-1 drop-shadow-md font-medium">
+                    {st.subtitle}
+                  </p>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Top-Left Quick Overlays: Subtitle Indicator & Direct Snapshot */}
+        <div className="absolute top-3 left-3 z-20 flex items-center gap-2 opacity-80 group-hover:opacity-100 transition-opacity">
+          {onToggleSubtitles && (
+            <button
+              onClick={onToggleSubtitles}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold backdrop-blur-md border transition-all ${
+                showSubtitles
+                  ? 'bg-purple-600/80 border-purple-400 text-white shadow-lg shadow-purple-600/30'
+                  : 'bg-black/60 border-white/20 text-slate-400 hover:text-white'
+              }`}
+              title="ចុចដើម្បី បិទ ឬ បើក Subtitle លើវីដេអូ"
+            >
+              <Subtitles className="w-3.5 h-3.5" />
+              <span>{showSubtitles ? 'CC: បើក (ON)' : 'CC: បិទ (OFF)'}</span>
+            </button>
+          )}
+
+          <button
+            onClick={handleInstantSnapshot}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/60 hover:bg-amber-600/90 border border-white/20 hover:border-amber-400 text-amber-300 hover:text-white text-[11px] font-medium backdrop-blur-md shadow-lg transition-all"
+            title="ថតយករូបភាពបច្ចុប្បន្នធ្វើជា Thumbnail ភ្លាមៗ (1-Click Instant Thumbnail)"
+          >
+            {capturedFeedback ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <Camera className="w-3.5 h-3.5" />}
+            <span>{capturedFeedback ? 'បានរក្សាទុក!' : 'ថត Thumbnail ភ្លាមៗ'}</span>
+          </button>
+        </div>
+
+        {/* Dynamic Subtitle Overlay (Only if showSubtitles is true) */}
+        {showSubtitles && currentSubtitle && (
           <div className={`absolute ${subtitlePositionClass} left-[5%] right-[5%] text-center pointer-events-none z-10 animate-in fade-in duration-100`}>
             <p
               className="inline-block px-3 py-1 rounded shadow-xl leading-relaxed"
@@ -204,28 +637,56 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Quick Capture Thumbnail */}
-          {onOpenThumbnailStudio && (
+          {/* Subtitle On/Off Toggle Button */}
+          {onToggleSubtitles && (
             <button
-              onClick={onOpenThumbnailStudio}
-              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[11px] font-medium transition-colors"
-              title="បើក Thumbnail Generator ជាមួយរូបភាពបច្ចុប្បន្ន"
+              onClick={onToggleSubtitles}
+              className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium transition-all ${
+                showSubtitles
+                  ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
+                  : 'bg-white/[0.04] text-slate-400 hover:text-white border border-white/[0.08]'
+              }`}
+              title="បិទ ឬ បើក Subtitle លើវីដេអូ"
             >
-              <Camera className="w-3 h-3" />
-              <span>Thumbnail</span>
+              <Subtitles className="w-3 h-3 text-purple-400" />
+              <span>CC: {showSubtitles ? 'បើក' : 'បិទ'}</span>
             </button>
           )}
 
-          {/* Rate */}
+          {/* Instant Frame Capture Button */}
+          <button
+            onClick={handleInstantSnapshot}
+            className="flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 text-[11px] font-medium transition-colors"
+            title="ថតយក Thumbnail កម្រិតច្បាស់ភ្លាមៗ"
+          >
+            <Download className="w-3 h-3" />
+            <span>ថតរូប</span>
+          </button>
+
+          {/* Open Full Thumbnail Studio */}
+          {onOpenThumbnailStudio && (
+            <button
+              onClick={onOpenThumbnailStudio}
+              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-slate-200 border border-white/[0.1] text-[11px] font-medium transition-colors"
+              title="បើកផ្ទាំងរចនា Thumbnail Studio"
+            >
+              <Camera className="w-3 h-3 text-amber-400" />
+              <span>Studio</span>
+            </button>
+          )}
+
+          {/* Playback Rate */}
           <select
             value={playbackRate}
             onChange={(e) => onRateChange(parseFloat(e.target.value))}
             className="bg-[#07090e] border border-white/[0.08] text-slate-300 text-[11px] rounded-lg px-2 py-1 font-mono cursor-pointer"
           >
+            <option value="0.5">0.5x</option>
             <option value="0.75">0.75x</option>
             <option value="1.0">1.0x</option>
             <option value="1.25">1.25x</option>
             <option value="1.5">1.5x</option>
+            <option value="2.0">2.0x</option>
           </select>
 
           {/* Mute */}

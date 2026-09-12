@@ -3,6 +3,7 @@ import {
   Sparkles,
   CloudLightning,
   Laptop,
+  Radio,
   Download,
   Settings,
   User as UserIcon,
@@ -52,8 +53,8 @@ export const Header: React.FC<HeaderProps> = ({
             <Sparkles className="w-4 h-4" />
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="font-bold text-sm tracking-wide text-white font-ui">CHEATH DABBER</span>
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-400 border border-sky-500/30">
+            <span className="font-bold text-sm tracking-wide text-white font-ui">អាទិទេព DABBER</span>
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
               v3 PRO
             </span>
           </div>
@@ -107,6 +108,20 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
 
           <button
+            onClick={() => onSwitchEngine('elevenlabs')}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-medium transition-all ${
+              engineMode === 'elevenlabs'
+                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+            title="ElevenLabs Zero-GPU Cloud Voice Cloning (Ultra-Realistic)"
+          >
+            <Radio className="w-3 h-3 text-purple-400" />
+            <span>ElevenLabs AI</span>
+            <span className={`w-1.5 h-1.5 rounded-full ${engineMode === 'elevenlabs' ? 'bg-purple-400 shadow-[0_0_6px_#c084fc]' : 'bg-slate-500'}`} />
+          </button>
+
+          <button
             onClick={() => onSwitchEngine('pure_khmer')}
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-medium transition-all ${
               engineMode === 'pure_khmer'
@@ -120,22 +135,26 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         </div>
 
-        {/* GPU Beacon */}
+        {/* Engine / GPU Beacon */}
         <button
           onClick={onOpenVoxModal}
           className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] transition-colors ${
-            voxStatus?.online
+            engineMode === 'elevenlabs'
+              ? 'bg-purple-500/10 border border-purple-500/30 text-purple-300 hover:bg-purple-500/20'
+              : voxStatus?.online
               ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20'
               : 'bg-rose-500/10 border border-rose-500/30 text-rose-300 hover:bg-rose-500/20'
           }`}
-          title="ចុចដើម្បីកំណត់ Link VoxCPM2 Server"
+          title="ចុចដើម្បីកំណត់ Settings / Server URL"
         >
           <span
             className={`w-2 h-2 rounded-full ${
-              voxStatus?.online ? 'bg-emerald-400 shadow-[0_0_6px_#34d399]' : 'bg-rose-400 shadow-[0_0_6px_#f87171]'
+              engineMode === 'elevenlabs'
+                ? 'bg-purple-400 shadow-[0_0_6px_#c084fc]'
+                : voxStatus?.online ? 'bg-emerald-400 shadow-[0_0_6px_#34d399]' : 'bg-rose-400 shadow-[0_0_6px_#f87171]'
             }`}
           />
-          <span>{voxStatus?.online ? '⚡ GPU Online' : '⚠️ GPU Offline'}</span>
+          <span>{engineMode === 'elevenlabs' ? '🎙️ ElevenLabs Cloud' : voxStatus?.online ? '⚡ GPU Online' : '⚠️ GPU Offline'}</span>
         </button>
       </div>
 
