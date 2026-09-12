@@ -26,15 +26,9 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.5'
-
       - name: Build Debug APK
         run: |
           cd android
-          rm -rf .gradle
           sed -i -e 's/\r$//' gradlew
           chmod +x gradlew
           ./gradlew assembleDebug --stacktrace --no-daemon
