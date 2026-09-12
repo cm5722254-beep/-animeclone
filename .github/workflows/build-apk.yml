@@ -34,6 +34,7 @@ jobs:
       - name: Build Debug APK
         run: |
           cd android
+          rm -rf .gradle
           sed -i -e 's/\r$//' gradlew
           chmod +x gradlew
           ./gradlew assembleDebug --stacktrace --no-daemon

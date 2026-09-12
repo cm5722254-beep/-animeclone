@@ -38,4 +38,11 @@ dist/
 build/
 *.spec
 
+# Android & Gradle Caches
+.gradle/
+android/.gradle/
+android/build/
+android/app/build/
+build_output/
+
 
