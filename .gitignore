@@ -34,6 +34,11 @@ __pycache__/
 # Large Binaries & Desktop Builds
 bin/*.exe
 *.exe
+*.apk
+!public/CheatzDabber_Khmer_v1.0.apk
+*.mp4
+*.bak
+*.bak.*
 dist/
 build/
 *.spec

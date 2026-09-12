@@ -123,9 +123,17 @@ class GenerateLineRequest(BaseModel):
     speakerId: Optional[str] = None
     emotion: Optional[str] = 'dramatic'
 
+class DownloadVideoRequest(BaseModel):
+    url: str
+    quality: Optional[str] = 'best'
+
 class AssembleCustomRequest(BaseModel):
     filename: str
     segments: List[dict]
+    bgmAudio: Optional[str] = None
+    removeOriginalVocals: Optional[bool] = False
+    vocalGain: Optional[float] = 2.2
+    bgmGain: Optional[float] = 0.85
 
 class CharacterSpeakRequest(BaseModel):
     voiceId: str
@@ -341,7 +349,7 @@ def get_voxcpm_status():
 
     import requests
     try:
-        timeout = 2.0 if clean_url.startswith('http://127.0.0.1') or clean_url.startswith('http://localhost') else 15
+        timeout = 1.5 if clean_url.startswith('http://127.0.0.1') or clean_url.startswith('http://localhost') else 4.0
         r = requests.get(clean_url, timeout=timeout)
         if r.status_code == 200:
             is_local = clean_url.startswith('http://127.0.0.1') or clean_url.startswith('http://localhost')
@@ -420,6 +428,69 @@ async def upload_file(mediaFile: UploadFile = File(...)):
         'url': file_url
     }
 
+@app.post('/api/video/download')
+async def download_online_video(body: DownloadVideoRequest):
+    if not body.url or not body.url.strip():
+        raise HTTPException(status_code=400, detail="សូមបញ្ចូល URL វីដេអូ YouTube, Facebook ឬ TikTok")
+
+    url = body.url.strip()
+    try:
+        import yt_dlp
+    except ImportError:
+        raise HTTPException(status_code=500, detail="ម៉ូឌុល yt-dlp មិនទាន់ត្រូវបានតំឡើងនៅលើប្រព័ន្ធទេ")
+
+    ts = int(time.time() * 1000)
+    out_template = os.path.join(UPLOADS_DIR, f"yt_dlp_{ts}_%(title).40s.%(ext)s")
+
+    ydl_opts = {
+        'outtmpl': out_template,
+        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+        'merge_output_format': 'mp4',
+        'noplaylist': True,
+        'quiet': True,
+        'no_warnings': True,
+    }
+
+    try:
+        loop = asyncio.get_event_loop()
+        def _exec_download():
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=True)
+                target = ydl.prepare_filename(info)
+                base, _ = os.path.splitext(target)
+                mp4_target = base + '.mp4'
+                if os.path.exists(mp4_target):
+                    target = mp4_target
+                return info, target
+
+        info, downloaded_file = await loop.run_in_executor(None, _exec_download)
+
+        if not os.path.exists(downloaded_file):
+            raise HTTPException(status_code=500, detail="ទាញយកវីដេអូមិនបានសម្រេច (File not created)")
+
+        filename = os.path.basename(downloaded_file)
+        file_size = os.path.getsize(downloaded_file)
+        title = info.get('title') or filename
+        duration = info.get('duration') or 0
+        thumbnail = info.get('thumbnail') or None
+
+        return {
+            'success': True,
+            'filename': filename,
+            'originalName': title,
+            'size': file_size,
+            'type': 'video',
+            'url': f"/media/uploads/{filename}",
+            'duration': duration,
+            'thumbnail': thumbnail,
+            'message': f"បានទាញយកវីដេអូ '{title}' ដោយជោគជ័យ!"
+        }
+    except Exception as e:
+        err_msg = str(e)
+        if "is not a valid URL" in err_msg:
+            err_msg = "URL វីដេអូមិនត្រឹមត្រូវ សូមពិនិត្យមើលម្ដងទៀត"
+        raise HTTPException(status_code=400, detail=f"កំហុសក្នុងការទាញយក: {err_msg}")
+
 @app.get('/api/files')
 def get_files():
     results = []
@@ -488,6 +559,48 @@ def clear_outputs():
         'freedBytes': freed_bytes,
         'formattedFreed': format_bytes(freed_bytes),
         'message': f"បានលុបឯកសារ Output សរុប {deleted_count} ឯកសារ (សន្សំទំហំបាន {format_bytes(freed_bytes)})"
+    }
+
+@app.delete('/api/files/{filename:path}')
+def delete_file(filename: str):
+    p = os.path.join(UPLOADS_DIR, os.path.basename(filename))
+    if not os.path.exists(p):
+        # check without basename if it was a direct match
+        cand = os.path.join(UPLOADS_DIR, filename)
+        if os.path.exists(cand):
+            p = cand
+        else:
+            raise HTTPException(status_code=404, detail="រកមិនឃើញឯកសារគម្រោងឡើយ")
+    try:
+        os.unlink(p)
+        return {'success': True, 'message': f"បានលុបគម្រោង '{filename}' ដោយជោគជ័យ"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"បរាជ័យក្នុងការលុបឯកសារ: {str(e)}")
+
+@app.post('/api/files/clear')
+def clear_all_files():
+    deleted_count = 0
+    freed_bytes = 0
+    if os.path.exists(UPLOADS_DIR):
+        for f in os.listdir(UPLOADS_DIR):
+            if f == '.gitkeep': continue
+            p = os.path.join(UPLOADS_DIR, f)
+            try:
+                if os.path.isfile(p):
+                    sz = os.path.getsize(p)
+                    os.unlink(p)
+                    deleted_count += 1
+                    freed_bytes += sz
+                elif os.path.isdir(p):
+                    shutil.rmtree(p, ignore_errors=True)
+            except Exception as e:
+                print(f"Error clearing upload file {f}: {e}")
+    return {
+        'success': True,
+        'count': deleted_count,
+        'freedBytes': freed_bytes,
+        'formattedFreed': format_bytes(freed_bytes),
+        'message': f"បានលុបគម្រោងចោលសរុប {deleted_count} គម្រោង (សន្សំទំហំបាន {format_bytes(freed_bytes)})"
     }
 
 class SeparateRequest(BaseModel):
@@ -616,7 +729,12 @@ async def scan_timeline(body: ScanTimelineRequest):
         root_path = os.path.join(BASE_DIR, body.filename)
         if os.path.exists(root_path): input_path = root_path
     if not os.path.exists(input_path):
-        raise HTTPException(status_code=404, detail="File not found")
+        # Auto-fallback to available uploads if previous file was deleted
+        cand_files = [f for f in os.listdir(UPLOADS_DIR) if f != '.gitkeep' and not f.startswith('.')]
+        if cand_files:
+            input_path = os.path.join(UPLOADS_DIR, cand_files[0])
+        else:
+            raise HTTPException(status_code=404, detail="រកមិនឃើញឯកសារវីដេអូឡើយ (អាចត្រូវបានលុបចោល)។ សូម Upload វីដេអូជាមុនសិន")
 
     audio_ext = os.path.splitext(body.filename)[0] + '.mp3'
     extracted_audio_path = os.path.join(OUTPUTS_DIR, f"audio_{audio_ext}")
@@ -765,7 +883,29 @@ async def assemble_custom(body: AssembleCustomRequest):
     await khmer_dubber.assemble_timeline_audio(mapped_segments, duration, master_dialogue_path)
 
     dubbed_audio_path = os.path.join(OUTPUTS_DIR, f"custom_dubbed_master_py_{ts}.mp3")
-    audio_processor.mix_vocals_with_original(extracted_audio_path, master_dialogue_path, dubbed_audio_path, 2.2, 0.85)
+
+    # Clean BGM selection: Strip Chinese vocals if requested
+    bgm_source_path = extracted_audio_path
+    if body.bgmAudio:
+        bgm_cand = os.path.join(OUTPUTS_DIR, os.path.basename(body.bgmAudio))
+        if os.path.exists(bgm_cand):
+            bgm_source_path = bgm_cand
+    elif body.removeOriginalVocals:
+        ai_bgm_cand = os.path.join(OUTPUTS_DIR, f"{os.path.splitext(os.path.basename(extracted_audio_path))[0]}_ai_bgm.wav")
+        dsp_bgm_cand = os.path.join(OUTPUTS_DIR, f"{os.path.splitext(os.path.basename(extracted_audio_path))[0]}_dsp_bgm.wav")
+        if os.path.exists(ai_bgm_cand):
+            bgm_source_path = ai_bgm_cand
+        elif os.path.exists(dsp_bgm_cand):
+            bgm_source_path = dsp_bgm_cand
+        else:
+            from services import vocal_separator
+            sep_res = vocal_separator.separate_vocals_and_bgm(extracted_audio_path, OUTPUTS_DIR, True)
+            if sep_res.get('bgmPath') and os.path.exists(sep_res['bgmPath']):
+                bgm_source_path = sep_res['bgmPath']
+
+    v_gain = body.vocalGain or 2.2
+    b_gain = body.bgmGain or 0.85
+    audio_processor.mix_vocals_with_original(bgm_source_path, master_dialogue_path, dubbed_audio_path, v_gain, b_gain)
 
     video_ext = os.path.splitext(input_path)[1]
     out_video_filename = f"custom_dubbed_khmer_py_{ts}{video_ext}"
