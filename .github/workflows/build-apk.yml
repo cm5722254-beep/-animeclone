@@ -3,11 +3,10 @@ name: Build Android APK
 on:
   push:
     branches: [ main ]
-    paths:
-      - 'android/**'
-      - 'public/**'
-      - '.github/workflows/build-apk.yml'
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -27,13 +26,11 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-
       - name: Build Debug APK
         run: |
           cd android
-          gradle assembleDebug --stacktrace
+          chmod +x gradlew
+          ./gradlew assembleDebug --stacktrace --no-daemon
 
       - name: Rename and Prepare APK
         run: |
@@ -49,17 +46,17 @@ jobs:
 
       - name: Create GitHub Release with APK
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main'
         with:
-          tag_name: android-v1.0
+          tag_name: v1.0-apk
           name: "Cheatz Dabber Android App v1.0 (Khmer Neural APK)"
           body: |
-            ### 📱 Cheatz Dabber - Android APK (Khmer Neural Only)
+            ### 📱 Cheatz Dabber - Android APK (Khmer Neural Edition)
             - 🇰🇭 100% Khmer Natural Voices (Piseth & Sreymom)
-            - 📁 Load Video direct from Android Gallery
+            - 📁 Load Video from Gallery
             - ✏️ Live Editable Subtitles & Dialogue
             - ⚡ 1-Tap Process & Dubbing
-            - 📥 1-Tap Direct Video Export
+            - 📥 1-Tap Video Export
           files: build_output/CheatzDabber_Khmer_v1.0.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
