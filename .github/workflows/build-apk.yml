@@ -26,9 +26,15 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.5'
+
       - name: Build Debug APK
         run: |
           cd android
+          sed -i -e 's/\r$//' gradlew
           chmod +x gradlew
           ./gradlew assembleDebug --stacktrace --no-daemon
 
@@ -53,10 +59,10 @@ jobs:
           body: |
             ### 📱 Cheatz Dabber - Android APK (Khmer Neural Edition)
             - 🇰🇭 100% Khmer Natural Voices (Piseth & Sreymom)
-            - 📁 Load Video from Gallery
+            - 📁 Load Video direct from Android Gallery
             - ✏️ Live Editable Subtitles & Dialogue
             - ⚡ 1-Tap Process & Dubbing
-            - 📥 1-Tap Video Export
+            - 📥 1-Tap Direct Video Export
           files: build_output/CheatzDabber_Khmer_v1.0.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
