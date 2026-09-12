@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 
 void main() {
@@ -73,7 +73,7 @@ class MainStudioScreen extends StatefulWidget {
 
 class _MainStudioScreenState extends State<MainStudioScreen> {
   bool inWorkspace = false;
-  String serverUrl = "https://animeclone-ai-studio.onrender.com";
+  String serverUrl = "http://192.168.50.202:3000";
   
   File? selectedVideoFile;
   String? uploadedServerFilename;
@@ -115,15 +115,14 @@ class _MainStudioScreenState extends State<MainStudioScreen> {
   // 1. Pick and Upload Video
   Future<void> _pickVideo() async {
     try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.video,
-      );
+      final ImagePicker picker = ImagePicker();
+      final XFile? result = await picker.pickVideo(source: ImageSource.gallery);
 
-      if (result != null && result.files.single.path != null) {
-        final file = File(result.files.single.path!);
+      if (result != null) {
+        final file = File(result.path);
         setState(() {
           selectedVideoFile = file;
-          originalFilename = result.files.single.name;
+          originalFilename = result.name;
           videoSizeBytes = file.lengthSync();
           isUploading = true;
           progressMessage = "កំពុង Upload វីដេអូទៅកាន់ម៉ាស៊ីន AI...";
