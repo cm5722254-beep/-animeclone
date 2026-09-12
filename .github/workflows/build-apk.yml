@@ -34,19 +34,13 @@ jobs:
           cd android
           sed -i -e 's/\r$//' gradlew
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace --no-daemon 2>&1 | tee ../gradle_build.log
-
-      - name: Upload Build Log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: gradle-build-log
-          path: gradle_build.log
+          ./gradlew assembleDebug --stacktrace --no-daemon
 
       - name: Rename and Prepare APK
         run: |
           mkdir -p build_output
-          cp android/app/build/outputs/apk/debug/app-debug.apk build_output/CheatzDabber_Khmer_v1.0.apk
+          find android/ -name "*.apk" -exec cp {} build_output/CheatzDabber_Khmer_v1.0.apk \;
+          ls -lh build_output/
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
