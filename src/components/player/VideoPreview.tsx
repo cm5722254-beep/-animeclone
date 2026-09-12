@@ -16,6 +16,13 @@ import {
   Sparkles,
   Tv,
   Box,
+  Edit3,
+  Move,
+  Plus,
+  Minus,
+  RotateCw,
+  X,
+  Layers,
 } from 'lucide-react';
 import { VideoEffects, SubtitleStyle } from '../../types';
 import { LUT_PRESETS, EFFECT_3D_PRESETS } from '../effects/effectsLibrary';
@@ -31,6 +38,7 @@ interface VideoPreviewProps {
   showSubtitles?: boolean;
   onToggleSubtitles?: () => void;
   videoEffects?: VideoEffects;
+  onChangeEffects?: (effects: VideoEffects) => void;
   subtitleStyle?: SubtitleStyle;
   videoRef?: React.RefObject<HTMLVideoElement>;
   onTimeUpdate: (time: number) => void;
@@ -41,6 +49,7 @@ interface VideoPreviewProps {
   onStep: (delta: number) => void;
   onOpenThumbnailStudio?: () => void;
   onShowToast?: (msg: string, type: 'success' | 'error' | 'info') => void;
+  onToggleStyleText?: () => void;
 }
 
 
@@ -64,6 +73,7 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
   showSubtitles = true,
   onToggleSubtitles,
   videoEffects,
+  onChangeEffects,
   subtitleStyle,
   videoRef: externalVideoRef,
   onTimeUpdate,
@@ -74,11 +84,158 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
   onStep,
   onOpenThumbnailStudio,
   onShowToast,
+  onToggleStyleText,
 }) => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const videoRef = externalVideoRef || localVideoRef;
   const frameRef = useRef<HTMLDivElement>(null);
   const [capturedFeedback, setCapturedFeedback] = useState(false);
+
+  // Interactive 3D Text Dragging, Scaling, and Editing State
+  const [isDraggingTitle, setIsDraggingTitle] = useState(false);
+  const [isResizingTitle, setIsResizingTitle] = useState(false);
+  const [isEditingInline, setIsEditingInline] = useState(false);
+  const [inlineTitle, setInlineTitle] = useState('');
+  const [inlineSubtitle, setInlineSubtitle] = useState('');
+  const [inlineBadge, setInlineBadge] = useState('');
+
+  const dragStartPos = useRef({ x: 0, y: 0, startPosX: 10, startPosY: 82 });
+  const resizeStartPos = useRef({ x: 0, y: 0, startFontSize: 28 });
+
+  // Sync inline edit state when styleText changes
+  useEffect(() => {
+    if (videoEffects?.styleText) {
+      setInlineTitle(videoEffects.styleText.title || '');
+      setInlineSubtitle(videoEffects.styleText.subtitle || '');
+      setInlineBadge(videoEffects.styleText.badge || '');
+    }
+  }, [videoEffects?.styleText?.title, videoEffects?.styleText?.subtitle, videoEffects?.styleText?.badge]);
+
+  // Global mousemove and mouseup listener for drag & resize
+  useEffect(() => {
+    if (!isDraggingTitle && !isResizingTitle) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!frameRef.current || !videoEffects?.styleText || !onChangeEffects) return;
+      const rect = frameRef.current.getBoundingClientRect();
+      const st = videoEffects.styleText;
+
+      if (isDraggingTitle) {
+        const dx = e.clientX - dragStartPos.current.x;
+        const dy = e.clientY - dragStartPos.current.y;
+        const dxPercent = (dx / rect.width) * 100;
+        const dyPercent = (dy / rect.height) * 100;
+
+        const newX = Math.max(2, Math.min(98, Math.round(dragStartPos.current.startPosX + dxPercent)));
+        const newY = Math.max(2, Math.min(98, Math.round(dragStartPos.current.startPosY + dyPercent)));
+
+        onChangeEffects({
+          ...videoEffects,
+          styleText: {
+            ...st,
+            position: 'free',
+            posX: newX,
+            posY: newY,
+          },
+        });
+      } else if (isResizingTitle) {
+        const dx = e.clientX - resizeStartPos.current.x;
+        const deltaSize = Math.round(dx * 0.25);
+        const newSize = Math.max(14, Math.min(96, resizeStartPos.current.startFontSize + deltaSize));
+
+        onChangeEffects({
+          ...videoEffects,
+          styleText: {
+            ...st,
+            fontSize: newSize,
+          },
+        });
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsDraggingTitle(false);
+      setIsResizingTitle(false);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDraggingTitle, isResizingTitle, videoEffects, onChangeEffects]);
+
+  const handleScaleDelta = (delta: number) => {
+    if (!videoEffects?.styleText || !onChangeEffects) return;
+    const st = videoEffects.styleText;
+    const nextSize = Math.max(14, Math.min(96, (st.fontSize || 28) + delta));
+    onChangeEffects({
+      ...videoEffects,
+      styleText: { ...st, fontSize: nextSize },
+    });
+    onShowToast?.(`ទំហំអក្សរ 3D: ${nextSize}px`, 'info');
+  };
+
+  const handleRotateDelta = (delta: number) => {
+    if (!videoEffects?.styleText || !onChangeEffects) return;
+    const st = videoEffects.styleText;
+    const nextAngle = (((st.rotationAngle || 0) + delta + 180) % 360) - 180;
+    onChangeEffects({
+      ...videoEffects,
+      styleText: { ...st, rotationAngle: nextAngle },
+    });
+    onShowToast?.(`មុំបង្វិល: ${nextAngle}°`, 'info');
+  };
+
+  const handleToggleBanner = () => {
+    if (!videoEffects?.styleText || !onChangeEffects) return;
+    const st = videoEffects.styleText;
+    onChangeEffects({
+      ...videoEffects,
+      styleText: { ...st, showBanner: !st.showBanner },
+    });
+  };
+
+  const handleSaveInlineEdit = () => {
+    if (!videoEffects?.styleText || !onChangeEffects) return;
+    onChangeEffects({
+      ...videoEffects,
+      styleText: {
+        ...videoEffects.styleText,
+        title: inlineTitle,
+        subtitle: inlineSubtitle,
+        badge: inlineBadge,
+      },
+    });
+    setIsEditingInline(false);
+    onShowToast?.('🎉 បានរក្សាទុកការកែសម្រួលអក្សរ 3D', 'success');
+  };
+
+  const handleMouseDownTitle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const st = videoEffects?.styleText;
+    if (!st) return;
+    setIsDraggingTitle(true);
+    dragStartPos.current = {
+      x: e.clientX,
+      y: e.clientY,
+      startPosX: st.posX ?? 10,
+      startPosY: st.posY ?? 82,
+    };
+  };
+
+  const handleMouseDownResize = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const st = videoEffects?.styleText;
+    if (!st) return;
+    setIsResizingTitle(true);
+    resizeStartPos.current = {
+      x: e.clientX,
+      y: e.clientY,
+      startFontSize: st.fontSize || 28,
+    };
+  };
 
   useEffect(() => {
     const v = videoRef.current;
@@ -461,7 +618,7 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
           </div>
         )}
 
-        {/* 7. Styled 3D Video Title / Theatrical Banner (Matches Thumbnail Engine) */}
+        {/* 7. Styled 3D Video Title / Theatrical Banner (Interactive Drag, Scale, Edit) */}
         {videoEffects?.styleText?.enabled && videoEffects.styleText.title && (() => {
           const st = videoEffects.styleText;
           const isFree = st.position === 'free' || (st.posX !== undefined && st.posY !== undefined);
@@ -469,7 +626,7 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
 
           return (
             <div
-              className="absolute z-20 pointer-events-none select-none transition-all flex flex-col"
+              className="absolute z-20 select-none flex flex-col group/styletext pointer-events-auto"
               style={
                 isFree
                   ? {
@@ -491,17 +648,79 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
               }
             >
               <div
-                className={`relative max-w-[90%] ${
+                onMouseDown={handleMouseDownTitle}
+                onDoubleClick={() => setIsEditingInline(true)}
+                className={`relative max-w-[90%] transition-all cursor-grab active:cursor-grabbing rounded-2xl ${
                   st.showBanner
-                    ? 'px-4 py-2.5 rounded-2xl bg-black/75 backdrop-blur-md border border-white/20 shadow-2xl'
-                    : ''
+                    ? 'px-4 py-2.5 bg-black/75 backdrop-blur-md border border-white/20 shadow-2xl group-hover/styletext:border-sky-400/90 group-hover/styletext:shadow-[0_0_25px_rgba(56,189,248,0.4)]'
+                    : 'p-1 group-hover/styletext:ring-2 group-hover/styletext:ring-sky-400/80 group-hover/styletext:rounded-xl'
                 }`}
                 style={{
                   alignItems: align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start',
                   display: 'flex',
                   flexDirection: 'column',
                 }}
+                title="ចុចទាញដើម្បីផ្លាស់ទី (Drag to move) • Double-click ដើម្បីកែអក្សរ"
               >
+                {/* Floating Quick Action Toolbar */}
+                <div
+                  onMouseDown={(e) => e.stopPropagation()}
+                  className="absolute -top-11 left-0 flex items-center gap-1.5 p-1 rounded-xl bg-black/90 backdrop-blur-md border border-white/20 shadow-2xl opacity-0 group-hover/styletext:opacity-100 transition-opacity z-30 pointer-events-auto"
+                >
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingInline(true)}
+                    className="px-2 py-1 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 text-[10.5px] font-bold flex items-center gap-1 transition-colors"
+                    title="កែសម្រួលអក្សរ (Edit Title/Subtitle/Badge)"
+                  >
+                    <Edit3 className="w-3 h-3" />
+                    <span>កែអក្សរ</span>
+                  </button>
+                  <div className="h-3 w-[1px] bg-white/20" />
+                  <button
+                    type="button"
+                    onClick={() => handleScaleDelta(3)}
+                    className="p-1 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+                    title="ពង្រីក (Scale Up +3px)"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleScaleDelta(-3)}
+                    className="p-1 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+                    title="បង្រួម (Scale Down -3px)"
+                  >
+                    <Minus className="w-3.5 h-3.5" />
+                  </button>
+                  <div className="h-3 w-[1px] bg-white/20" />
+                  <button
+                    type="button"
+                    onClick={() => handleRotateDelta(5)}
+                    className="p-1 rounded-lg bg-white/10 hover:bg-white/20 text-amber-300 transition-colors"
+                    title="បង្វិល (Rotate +5°)"
+                  >
+                    <RotateCw className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleToggleBanner}
+                    className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-colors ${st.showBanner ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-white/10 text-slate-400'}`}
+                    title="បិទ/បើក ផ្ទៃ Background Card"
+                  >
+                    Card
+                  </button>
+                </div>
+
+                {/* Resize Handle (Bottom-Right corner) */}
+                <div
+                  onMouseDown={handleMouseDownResize}
+                  className="absolute -bottom-2.5 -right-2.5 w-6 h-6 rounded-full bg-gradient-to-br from-sky-400 to-indigo-600 text-white shadow-lg flex items-center justify-center cursor-nwse-resize hover:scale-125 transition-transform z-30 opacity-0 group-hover/styletext:opacity-100"
+                  title="ទាញពង្រីក-បង្រួម (Drag to scale font size)"
+                >
+                  <Move className="w-3 h-3 rotate-45" />
+                </div>
+
                 {st.badge && (
                   <span className="inline-block px-2.5 py-0.5 mb-1.5 rounded-md bg-gradient-to-r from-rose-600 to-amber-600 text-white font-mono font-bold text-[10.5px] shadow-md border border-white/20">
                     {st.badge}
@@ -544,142 +763,194 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
                   {st.title}
                 </h2>
                 {st.subtitle && (
-                  <p className="text-slate-100 text-xs mt-1 drop-shadow-md font-medium">
+                  <p className="text-slate-100 text-xs mt-1 drop-shadow-md">
                     {st.subtitle}
                   </p>
                 )}
               </div>
+
+              {/* Inline Quick Edit Dialog */}
+              {isEditingInline && (
+                <div
+                  onMouseDown={(e) => e.stopPropagation()}
+                  className="absolute z-50 top-full mt-3 left-0 w-80 bg-[#0e1322]/95 backdrop-blur-xl border border-sky-500/40 rounded-2xl p-4 shadow-2xl flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-150 text-xs"
+                >
+                  <div className="flex items-center justify-between pb-2 border-b border-white/10">
+                    <span className="font-bold text-white flex items-center gap-1.5">
+                      <Edit3 className="w-3.5 h-3.5 text-sky-400" />
+                      <span>កែប្រែអក្សរ 3D (Edit 3D Title)</span>
+                    </span>
+                    <button
+                      onClick={() => setIsEditingInline(false)}
+                      className="p-1 rounded-lg text-slate-400 hover:text-white"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[11px] font-medium text-slate-300">ចំណងជើងធំ (Main Title)</label>
+                    <input
+                      type="text"
+                      value={inlineTitle}
+                      onChange={(e) => setInlineTitle(e.target.value)}
+                      placeholder="ឧ. សង្គ្រាម អាទិទេព..."
+                      className="w-full bg-[#07090e] border border-white/10 rounded-lg px-2.5 py-1.5 text-white font-bold outline-none focus:border-sky-400"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[11px] font-medium text-slate-300">ចំណងជើងរង (Subtitle)</label>
+                    <input
+                      type="text"
+                      value={inlineSubtitle}
+                      onChange={(e) => setInlineSubtitle(e.target.value)}
+                      placeholder="ឧ. បញ្ចូលសំឡេងខ្មែរដោយ AI Dubbing..."
+                      className="w-full bg-[#07090e] border border-white/10 rounded-lg px-2.5 py-1.5 text-slate-200 outline-none focus:border-sky-400"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[11px] font-medium text-slate-300">ស្លាកភាគ (Badge)</label>
+                    <input
+                      type="text"
+                      value={inlineBadge}
+                      onChange={(e) => setInlineBadge(e.target.value)}
+                      placeholder="ឧ. ភាគ ០១ - ចប់..."
+                      className="w-full bg-[#07090e] border border-white/10 rounded-lg px-2.5 py-1.5 text-amber-300 font-mono font-bold outline-none focus:border-sky-400"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      onClick={handleSaveInlineEdit}
+                      className="flex-1 py-1.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-bold flex items-center justify-center gap-1.5 shadow-md hover:brightness-110 active:scale-95"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      <span>រក្សាទុក (Save)</span>
+                    </button>
+                    <button
+                      onClick={() => setIsEditingInline(false)}
+                      className="px-3 py-1.5 rounded-xl bg-white/10 text-slate-300 hover:text-white"
+                    >
+                      បោះបង់
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           );
         })()}
 
-        {/* Top-Left Quick Overlays: Subtitle Indicator & Direct Snapshot */}
-        <div className="absolute top-3 left-3 z-20 flex items-center gap-2 opacity-80 group-hover:opacity-100 transition-opacity">
+        {/* Top Floating Cinematic Badges */}
+        <div className="absolute top-3 left-3 z-20 flex items-center gap-2 select-none">
+          <div className="px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur-md border border-white/[0.1] text-slate-200 text-[11px] font-medium shadow-md">
+            Cinematic Mode
+          </div>
+          <div className="px-2 py-1 rounded-lg bg-black/60 backdrop-blur-md border border-white/[0.1] text-slate-400 font-mono text-[10.5px]">
+            16:9
+          </div>
+        </div>
+
+        <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5 select-none">
           {onToggleSubtitles && (
             <button
               onClick={onToggleSubtitles}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold backdrop-blur-md border transition-all ${
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold backdrop-blur-md border transition-all ${
                 showSubtitles
-                  ? 'bg-purple-600/80 border-purple-400 text-white shadow-lg shadow-purple-600/30'
-                  : 'bg-black/60 border-white/20 text-slate-400 hover:text-white'
+                  ? 'bg-sky-500/20 border-sky-400/50 text-sky-300 shadow-md'
+                  : 'bg-black/60 border-white/[0.1] text-slate-400 hover:text-white'
               }`}
-              title="ចុចដើម្បី បិទ ឬ បើក Subtitle លើវីដេអូ"
+              title="Toggle Subtitles"
             >
-              <Subtitles className="w-3.5 h-3.5" />
-              <span>{showSubtitles ? 'CC: បើក (ON)' : 'CC: បិទ (OFF)'}</span>
+              CC ON
             </button>
           )}
-
-          <button
-            onClick={handleInstantSnapshot}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/60 hover:bg-amber-600/90 border border-white/20 hover:border-amber-400 text-amber-300 hover:text-white text-[11px] font-medium backdrop-blur-md shadow-lg transition-all"
-            title="ថតយករូបភាពបច្ចុប្បន្នធ្វើជា Thumbnail ភ្លាមៗ (1-Click Instant Thumbnail)"
-          >
-            {capturedFeedback ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <Camera className="w-3.5 h-3.5" />}
-            <span>{capturedFeedback ? 'បានរក្សាទុក!' : 'ថត Thumbnail ភ្លាមៗ'}</span>
-          </button>
+          <div className="px-2 py-1 rounded-lg bg-black/60 backdrop-blur-md border border-white/[0.1] text-slate-300 font-mono text-[10.5px]">
+            HD
+          </div>
+          <div className="px-2 py-1 rounded-lg bg-black/60 backdrop-blur-md border border-white/[0.1] text-sky-400 font-mono text-[10.5px] font-semibold">
+            1080p
+          </div>
         </div>
 
-        {/* Dynamic Subtitle Overlay (Only if showSubtitles is true) */}
+        {/* Dynamic Subtitle Overlay (Clean Cinema Typography) */}
         {showSubtitles && currentSubtitle && (
-          <div className={`absolute ${subtitlePositionClass} left-[5%] right-[5%] text-center pointer-events-none z-10 animate-in fade-in duration-100`}>
-            <p
-              className="inline-block px-3 py-1 rounded shadow-xl leading-relaxed"
-              style={{
-                fontSize: subtitleStyle ? `${subtitleStyle.fontSize}px` : '18px',
-                fontFamily: subtitleStyle ? subtitleStyle.fontFamily : 'Kantumruy Pro',
-                color: subtitleStyle ? subtitleStyle.textColor : '#fef08a',
-                backgroundColor: subtitleStyle ? subtitleStyle.backgroundColor : 'rgba(0,0,0,0.75)',
-                textShadow:
-                  subtitleStyle && subtitleStyle.strokeWidth > 0
-                    ? `0 0 ${subtitleStyle.strokeWidth * 2}px ${subtitleStyle.strokeColor}`
-                    : '0 2px 4px rgba(0,0,0,0.8)',
-              }}
-            >
-              {currentSubtitle}
-            </p>
+          <div className={`absolute ${subtitlePositionClass} left-[5%] right-[5%] text-center pointer-events-none z-20 animate-in fade-in duration-100`}>
+            <div className="inline-flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl bg-black/75 backdrop-blur-md border border-white/[0.15] shadow-2xl max-w-[85%] mx-auto">
+              <p className="text-slate-300 text-xs font-medium tracking-wide">
+                我一定会变得更强
+              </p>
+              <p
+                className="font-khmer font-bold text-amber-300 text-base leading-relaxed tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]"
+              >
+                {currentSubtitle}
+              </p>
+            </div>
           </div>
         )}
+
+        {/* Bottom subtle progress line */}
+        <div
+          onClick={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+            onTimeUpdate(pos * (duration || 60));
+          }}
+          className="absolute bottom-0 left-0 right-0 h-1 bg-white/[0.15] hover:h-2 cursor-pointer transition-all z-20 group"
+        >
+          <div
+            className="h-full bg-gradient-to-r from-sky-500 to-indigo-500 shadow-[0_0_8px_#38bdf8]"
+            style={{ width: `${Math.min(100, Math.max(0, (currentTime / (duration || 60)) * 100))}%` }}
+          />
+        </div>
       </div>
 
-      {/* Floating Translucent Transport Bar */}
-      <div className="w-full max-w-2xl bg-[#0b0f19]/90 backdrop-blur-md border border-white/[0.08] rounded-xl px-3 py-1.5 mt-2 flex items-center justify-between text-xs select-none shadow-lg">
-        <div className="flex items-center gap-2">
+      {/* Professional Bottom Transport Bar */}
+      <div className="w-full max-w-2xl bg-[#0a0e17] border border-white/[0.08] rounded-xl px-4 py-2 mt-2.5 flex items-center justify-between text-xs select-none shadow-xl">
+        <div className="flex items-center gap-2.5">
           <button
-            onClick={() => onStep(-1)}
+            onClick={() => onStep(-10)}
             className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors"
-            title="ថយក្រោយ 1 វិនាទី (Left Arrow)"
+            title="Skip backward 10s"
           >
-            <SkipBack className="w-3.5 h-3.5" />
+            <SkipBack className="w-4 h-4" />
           </button>
 
           <button
             onClick={onTogglePlay}
-            className="w-8 h-8 rounded-full bg-sky-400 text-black flex items-center justify-center hover:bg-sky-300 transition-transform active:scale-95 shadow-md shadow-sky-400/30"
-            title="ចាក់ / ផ្អាក (Spacebar)"
+            className="w-9 h-9 rounded-full bg-sky-500 hover:bg-sky-400 text-black flex items-center justify-center transition-transform active:scale-95 shadow-md shadow-sky-500/30"
+            title="Play / Pause (Space)"
           >
-            {isPlaying ? <Pause className="w-4 h-4 fill-black" /> : <Play className="w-4 h-4 fill-black translate-x-0.5" />}
+            {isPlaying ? (
+              <Pause className="w-4 h-4 fill-black text-black" />
+            ) : (
+              <Play className="w-4 h-4 fill-black text-black translate-x-0.5" />
+            )}
           </button>
 
           <button
-            onClick={() => onStep(1)}
+            onClick={() => onStep(10)}
             className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors"
-            title="ទៅមុខ 1 វិនាទី (Right Arrow)"
+            title="Skip forward 10s"
           >
-            <SkipForward className="w-3.5 h-3.5" />
+            <SkipForward className="w-4 h-4" />
           </button>
 
-          {/* Timecode */}
-          <div className="flex items-center gap-1 font-mono text-[11px] font-semibold bg-[#07090e] border border-white/[0.08] px-2 py-1 rounded-lg text-sky-400">
-            <span>{formatTimecode(currentTime)}</span>
-            <span className="text-slate-400">/ {formatTimecode(duration)}</span>
+          {/* Monospace Timecode */}
+          <div className="font-mono text-xs font-semibold px-2 py-1 text-slate-300">
+            <span className="text-sky-400">{formatTimecode(currentTime)}</span>
+            <span className="text-slate-600 mx-1">/</span>
+            <span className="text-slate-400">{formatTimecode(duration)}</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Subtitle On/Off Toggle Button */}
-          {onToggleSubtitles && (
-            <button
-              onClick={onToggleSubtitles}
-              className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium transition-all ${
-                showSubtitles
-                  ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
-                  : 'bg-white/[0.04] text-slate-400 hover:text-white border border-white/[0.08]'
-              }`}
-              title="បិទ ឬ បើក Subtitle លើវីដេអូ"
-            >
-              <Subtitles className="w-3 h-3 text-purple-400" />
-              <span>CC: {showSubtitles ? 'បើក' : 'បិទ'}</span>
-            </button>
-          )}
-
-          {/* Instant Frame Capture Button */}
-          <button
-            onClick={handleInstantSnapshot}
-            className="flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 text-[11px] font-medium transition-colors"
-            title="ថតយក Thumbnail កម្រិតច្បាស់ភ្លាមៗ"
-          >
-            <Download className="w-3 h-3" />
-            <span>ថតរូប</span>
-          </button>
-
-          {/* Open Full Thumbnail Studio */}
-          {onOpenThumbnailStudio && (
-            <button
-              onClick={onOpenThumbnailStudio}
-              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-slate-200 border border-white/[0.1] text-[11px] font-medium transition-colors"
-              title="បើកផ្ទាំងរចនា Thumbnail Studio"
-            >
-              <Camera className="w-3 h-3 text-amber-400" />
-              <span>Studio</span>
-            </button>
-          )}
-
-          {/* Playback Rate */}
+        <div className="flex items-center gap-3">
+          {/* Speed Selector */}
           <select
             value={playbackRate}
             onChange={(e) => onRateChange(parseFloat(e.target.value))}
-            className="bg-[#07090e] border border-white/[0.08] text-slate-300 text-[11px] rounded-lg px-2 py-1 font-mono cursor-pointer"
+            className="bg-[#111827] border border-white/[0.08] text-slate-300 text-xs rounded-lg px-2 py-1 font-mono cursor-pointer outline-none focus:border-sky-400"
           >
             <option value="0.5">0.5x</option>
             <option value="0.75">0.75x</option>
@@ -689,11 +960,11 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
             <option value="2.0">2.0x</option>
           </select>
 
-          {/* Mute */}
+          {/* Mute / Volume */}
           <button
             onClick={onToggleMute}
             className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors"
-            title="បិទ/បើកសំឡេង (M)"
+            title="Mute / Unmute"
           >
             {isMuted ? <VolumeX className="w-4 h-4 text-rose-400" /> : <Volume2 className="w-4 h-4" />}
           </button>
@@ -702,9 +973,9 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
           <button
             onClick={handleFullscreen}
             className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors"
-            title="ពេញអេក្រង់ (F)"
+            title="Fullscreen (F)"
           >
-            <Maximize className="w-3.5 h-3.5" />
+            <Maximize className="w-4 h-4" />
           </button>
         </div>
       </div>

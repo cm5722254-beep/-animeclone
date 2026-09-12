@@ -48,7 +48,9 @@ interface ThumbnailGeneratorProps {
   videoUrl?: string;
   videoRef?: React.RefObject<HTMLVideoElement>;
   initialCapturedImage?: string | null;
-  onShowToast: (msg: string, type: 'success' | 'error' | 'info') => void;
+  onShowToast: (msg: string, type: 'success' | 'error' | 'info' | 'warning') => void;
+  onApplyToVideo?: (config: ThumbnailConfig) => void;
+  onOpenExportModal?: () => void;
 }
 
 function formatTimecode(seconds: number): string {
@@ -289,6 +291,8 @@ export const ThumbnailGenerator: React.FC<ThumbnailGeneratorProps> = ({
   videoRef,
   initialCapturedImage,
   onShowToast,
+  onApplyToVideo,
+  onOpenExportModal,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const internalVideoRef = useRef<HTMLVideoElement>(null);
@@ -1228,11 +1232,42 @@ export const ThumbnailGenerator: React.FC<ThumbnailGeneratorProps> = ({
 
           <button
             onClick={handleDownloadThumbnail}
-            className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-white text-xs font-bold flex items-center gap-2 shadow-lg shadow-amber-500/25 transition-all active:scale-95"
+            className="px-4 py-2 rounded-xl bg-white/[0.08] hover:bg-white/[0.14] text-slate-200 text-xs font-semibold flex items-center gap-2 border border-white/[0.12] transition-all active:scale-95"
           >
-            <Download className="w-4 h-4" />
-            <span>Download HD</span>
+            <Download className="w-4 h-4 text-amber-400" />
+            <span>Download PNG</span>
           </button>
+
+          {onApplyToVideo && (
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.setItem('dabber_thumbnail_autosave', JSON.stringify(config));
+                onApplyToVideo(config);
+              }}
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-emerald-600/25 transition-all active:scale-95 whitespace-nowrap"
+              title="ដាក់អក្សរមាស 3D, ចំណងជើង និងស្លាកភាគនេះទៅលើវីដេអូកាត់តផ្ទាល់"
+            >
+              <Sparkles className="w-4 h-4 text-emerald-200 animate-pulse" />
+              <span>🔥 ដាក់អក្សរនេះលើវីដេអូ</span>
+            </button>
+          )}
+
+          {onOpenExportModal && (
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.setItem('dabber_thumbnail_autosave', JSON.stringify(config));
+                if (onApplyToVideo) onApplyToVideo(config);
+                onOpenExportModal();
+              }}
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 via-rose-600 to-indigo-600 hover:brightness-110 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-rose-600/25 transition-all active:scale-95 whitespace-nowrap"
+              title="Export វីដេអូដោយបង្កប់អក្សរ និងចំណងជើង 3D នេះចូលក្នុងសាច់វីដេអូរហូត"
+            >
+              <Download className="w-4 h-4 text-white" />
+              <span>🎬 Export បង្កប់អក្សរជាប់វីដេអូ</span>
+            </button>
+          )}
         </div>
       </div>
 

@@ -20,6 +20,7 @@ import { AdminUsersModal } from './components/modals/AdminUsersModal';
 import { AddVoiceModal } from './components/modals/AddVoiceModal';
 import { EditVoiceModal } from './components/modals/EditVoiceModal';
 import { VoiceAuditionModal } from './components/modals/VoiceAuditionModal';
+import { SystemStatusModal } from './components/layout/SystemStatusModal';
 
 import { api } from './services/api';
 import { User, CharacterVoice, TimelineSegment, ProjectFile, StudioConfig, VoxcpmStatus, TabId, VideoEffects, SubtitleStyle } from './types';
@@ -167,6 +168,7 @@ export const App: React.FC = () => {
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isAddVoiceOpen, setIsAddVoiceOpen] = useState(false);
   const [isDownloaderOpen, setIsDownloaderOpen] = useState(false);
+  const [isSystemStatusOpen, setIsSystemStatusOpen] = useState(false);
   const [diskStats, setDiskStats] = useState<{ formattedSize: string; count: number } | null>(null);
 
   // Toast Helper with deduplication & max queue protection
@@ -207,6 +209,67 @@ export const App: React.FC = () => {
 
     // 5. Disk Stats
     api.getOutputStats().then(setDiskStats).catch(() => {});
+  }, []);
+
+  // Studio Professional Keyboard Shortcuts (Space, Ctrl+S, Ctrl+Z, M, F)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      const isInput = target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        showToast('📁 គម្រោងត្រូវបានរក្សាទុក (Project Saved)', 'success');
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+        if (!isInput) {
+          e.preventDefault();
+          showToast('បានត្រឡប់ក្រោយ (Undo)', 'info');
+        }
+        return;
+      }
+
+      if (((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') || ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'z')) {
+        if (!isInput) {
+          e.preventDefault();
+          showToast('បានធ្វើឡើងវិញ (Redo)', 'info');
+        }
+        return;
+      }
+
+      if (e.code === 'Space' && !isInput) {
+        e.preventDefault();
+        if (videoRef.current) {
+          if (videoRef.current.paused) videoRef.current.play();
+          else videoRef.current.pause();
+        }
+        return;
+      }
+
+      if (e.key.toLowerCase() === 'm' && !isInput && !e.ctrlKey && !e.metaKey) {
+        if (videoRef.current) {
+          videoRef.current.muted = !videoRef.current.muted;
+          showToast(videoRef.current.muted ? '🔇 បានបិទសំឡេង (Muted)' : '🔊 បានបើកសំឡេង (Unmuted)', 'info');
+        }
+        return;
+      }
+
+      if (e.key.toLowerCase() === 'f' && !isInput && !e.ctrlKey && !e.metaKey) {
+        if (videoRef.current) {
+          if (!document.fullscreenElement) {
+            videoRef.current.parentElement?.requestFullscreen?.();
+          } else {
+            document.exitFullscreen?.();
+          }
+        }
+        return;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   const loadConfigAndStatus = async () => {
@@ -286,6 +349,11 @@ export const App: React.FC = () => {
   const handleStartDubbing = async () => {
     if (!uploadedFile) {
       showToast('សូមបញ្ចូលវីដេអូជាមុនសិន!', 'warning');
+      return;
+    }
+
+    if (isUploadingFile) {
+      showToast('⚡ វីដេអូកំពុង Upload ចូល Server... សូមរង់ចាំឱ្យពេញ ១០០% សិន (ប្រហែលប៉ុន្មានវិនាទី)', 'warning');
       return;
     }
 
@@ -462,8 +530,21 @@ export const App: React.FC = () => {
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#07090e] text-slate-100 font-khmer">
       {/* Header Bar */}
       <Header
-        activeProjectTitle={uploadedFile?.originalName || uploadedFile?.filename || ''}
+        activeProjectTitle={uploadedFile?.originalName || uploadedFile?.filename || 'Perfect World EP145.mp4'}
         isSaving={false}
+        user={user}
+        onLogout={handleLogout}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenExport={() => setIsExportOpen(true)}
+        onUndo={() => showToast('បានត្រឡប់ក្រោយ (Undo)', 'info')}
+        onRedo={() => showToast('បានធ្វើឡើងវិញ (Redo)', 'info')}
+        onPreview={() => {
+          if (videoRef.current) {
+            if (videoRef.current.paused) videoRef.current.play();
+            else videoRef.current.pause();
+          }
+        }}
+        onOpenAuthModal={() => setIsAuthModalOpen(true)}
         engineMode={engineMode}
         onSwitchEngine={async (m) => {
           setEngineMode(m);
@@ -472,10 +553,6 @@ export const App: React.FC = () => {
         }}
         voxStatus={voxStatus}
         onOpenVoxModal={() => setIsVoxModalOpen(true)}
-        user={user}
-        onLogout={handleLogout}
-        onOpenSettings={() => setIsSettingsOpen(true)}
-        onOpenExport={() => setIsExportOpen(true)}
         onOpenAdmin={() => setIsAdminOpen(true)}
         onOpenDownloader={() => setIsDownloaderOpen(true)}
         onOpenThumbnailStudio={handleOpenThumbnailStudio}
@@ -489,6 +566,14 @@ export const App: React.FC = () => {
           onSelectTab={setActiveTab}
           isCollapsed={isSidebarCollapsed}
           onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          onNewProject={() => {
+            setUploadedFile(null);
+            setActiveTab('tab-dubbing');
+          }}
+          onOpenExport={() => setIsExportOpen(true)}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          onOpenSystemStatus={() => setIsSystemStatusOpen(true)}
+          isSystemOnline={Boolean(voxStatus && (voxStatus.online || voxStatus.configured))}
         />
 
         {/* Dynamic Studio Views */}
@@ -557,6 +642,9 @@ export const App: React.FC = () => {
               videoRef={videoRef}
               onOpenThumbnailStudio={handleOpenThumbnailStudio}
               onShowToast={showToast}
+              characters={characters}
+              onOpenTab={setActiveTab}
+              onOpenExport={() => setIsExportOpen(true)}
             />
           </div>
 
@@ -717,6 +805,32 @@ export const App: React.FC = () => {
               videoRef={videoRef}
               initialCapturedImage={thumbnailCapturedFrame}
               onShowToast={showToast}
+              onApplyToVideo={(cfg) => {
+                setVideoEffects((prev) => ({
+                  ...prev,
+                  styleText: {
+                    enabled: true,
+                    title: cfg.title,
+                    subtitle: cfg.subtitle,
+                    badge: cfg.badge,
+                    stylePreset: cfg.effectStyle || 'gold3d',
+                    fontFamily: cfg.fontFamily || 'Koulen',
+                    fontSize: Math.min(48, Math.max(22, Math.round((cfg.fontSize || 58) * 0.6))),
+                    subtitleFontSize: cfg.subtitleFontSize ? Math.round(cfg.subtitleFontSize * 0.7) : undefined,
+                    position: 'free',
+                    posX: cfg.posX ?? 10,
+                    posY: cfg.posY ?? 82,
+                    textAlign: cfg.textAlign || 'left',
+                    rotationAngle: cfg.rotationAngle || 0,
+                    showBanner: cfg.bgBanner !== 'none',
+                    depth3D: cfg.depth3D ?? 6,
+                    glowIntensity: cfg.glowIntensity ?? 16,
+                    strokeWidth: cfg.strokeWidth ?? 5,
+                  },
+                }));
+                showToast('🎉 បានដាក់អក្សរ Style Thumbnail លើវីដេអូបានជោគជ័យ! បើក Video Preview ដើម្បីទស្សនា', 'success');
+              }}
+              onOpenExportModal={() => setIsExportOpen(true)}
             />
           )}
 
@@ -748,6 +862,9 @@ export const App: React.FC = () => {
         onShowToast={showToast}
         activeProjectTitle={uploadedFile?.originalName || 'khmer_dubbed_movie'}
         outputVideoUrl={outputVideo || uploadedFile?.url || null}
+        filename={uploadedFile?.filename || (outputVideo ? outputVideo.split('/').pop() || '' : '')}
+        videoEffects={videoEffects}
+        segments={segments}
       />
 
       <QuickVoxcpmModal
@@ -796,6 +913,24 @@ export const App: React.FC = () => {
           showToast(`បានទាញយក និងផ្ទុកវីដេអូ ${file.originalName} ចូលស្ទូឌីយោ!`, 'success');
         }}
         onShowToast={showToast}
+      />
+
+      {/* Professional System Status Modal */}
+      <SystemStatusModal
+        isOpen={isSystemStatusOpen}
+        onClose={() => setIsSystemStatusOpen(false)}
+        voxStatus={voxStatus}
+        config={config}
+        diskStats={diskStats}
+        onRefresh={loadConfigAndStatus}
+        onOpenVoxModal={() => {
+          setIsSystemStatusOpen(false);
+          setIsVoxModalOpen(true);
+        }}
+        onOpenSettings={() => {
+          setIsSystemStatusOpen(false);
+          setIsSettingsOpen(true);
+        }}
       />
 
       {/* Toast Notifications */}

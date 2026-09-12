@@ -233,3 +233,110 @@ def burn_subtitles_to_video(video_path: str, srt_path: str, output_video_path: s
     cmd = f'ffmpeg -nostdin -y -i "{video_path}" -vf "subtitles=\'{escaped_srt}\':force_style=\'{force_style}\'" -c:v libx264 -preset fast -crf 22 -c:a copy -movflags +faststart "{output_video_path}"'
     run_command(cmd)
     return output_video_path
+
+def get_video_dimensions(video_path: str):
+    """Query video width and height using ffprobe."""
+    try:
+        cmd = f'ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 "{video_path}"'
+        out = run_command(cmd).strip()
+        parts = out.split('x')
+        if len(parts) >= 2:
+            return int(parts[0]), int(parts[1])
+    except Exception:
+        pass
+    return 1920, 1080
+
+def burn_overlay_and_subtitles(video_path: str, output_video_path: str, overlay_image_path: str = None, srt_path: str = None, options: dict = None):
+    """
+    Permanently burns 3D title/thumbnail overlay and/or subtitles into the video stream.
+    Supports resolution scaling, multi-bitrate profiles, and preserves audio streams.
+    """
+    from PIL import Image
+
+    options = options or {}
+    resolution = options.get('resolution', 'original')
+    bitrate = options.get('bitrate', 'high')
+
+    video_w, video_h = get_video_dimensions(video_path)
+    inputs = [f'-i "{video_path}"']
+    filter_steps = []
+    current_v = '[0:v]'
+
+    # Handle resolution scaling (portrait vs landscape)
+    is_portrait = video_h > video_w
+    if resolution == '1080p':
+        if not is_portrait and video_h != 1080:
+            filter_steps.append(f"{current_v}scale=-2:1080[v_scaled]")
+            current_v = '[v_scaled]'
+            video_w = int(round(video_w * (1080 / max(1, video_h))))
+            video_h = 1080
+        elif is_portrait and video_w != 1080:
+            filter_steps.append(f"{current_v}scale=1080:-2[v_scaled]")
+            current_v = '[v_scaled]'
+            video_h = int(round(video_h * (1080 / max(1, video_w))))
+            video_w = 1080
+    elif resolution == '720p':
+        if not is_portrait and video_h != 720:
+            filter_steps.append(f"{current_v}scale=-2:720[v_scaled]")
+            current_v = '[v_scaled]'
+            video_w = int(round(video_w * (720 / max(1, video_h))))
+            video_h = 720
+        elif is_portrait and video_w != 720:
+            filter_steps.append(f"{current_v}scale=720:-2[v_scaled]")
+            current_v = '[v_scaled]'
+            video_h = int(round(video_h * (720 / max(1, video_w))))
+            video_w = 720
+    elif resolution == '4k':
+        if not is_portrait and video_h != 2160:
+            filter_steps.append(f"{current_v}scale=-2:2160[v_scaled]")
+            current_v = '[v_scaled]'
+            video_w = int(round(video_w * (2160 / max(1, video_h))))
+            video_h = 2160
+        elif is_portrait and video_w != 2160:
+            filter_steps.append(f"{current_v}scale=2160:-2[v_scaled]")
+            current_v = '[v_scaled]'
+            video_h = int(round(video_h * (2160 / max(1, video_w))))
+            video_w = 2160
+
+    temp_scaled_overlay = None
+    if overlay_image_path and os.path.exists(overlay_image_path):
+        try:
+            with Image.open(overlay_image_path) as im:
+                actual_w, actual_h = im.size
+                if (actual_w, actual_h) != (video_w, video_h):
+                    temp_scaled_overlay = f"{overlay_image_path}_scaled_{video_w}x{video_h}.png"
+                    im.resize((video_w, video_h), Image.Resampling.LANCZOS).save(temp_scaled_overlay)
+                    inputs.append(f'-i "{temp_scaled_overlay}"')
+                else:
+                    inputs.append(f'-i "{overlay_image_path}"')
+            ovl_idx = len(inputs) - 1
+            filter_steps.append(f"{current_v}[{ovl_idx}:v]overlay=0:0[v_ovl]")
+            current_v = '[v_ovl]'
+        except Exception as ex:
+            print(f"Overlay scaling notice: {ex}")
+
+    if srt_path and os.path.exists(srt_path):
+        escaped_srt = srt_path.replace('\\', '/').replace(':', '\\:')
+        font_size = options.get('fontSize', 24)
+        force_style = f"FontSize={font_size},PrimaryColour=&H0000FFFF,OutlineColour=&H00000000,BorderStyle=3,Outline=2,MarginV=30"
+        filter_steps.append(f"{current_v}subtitles='{escaped_srt}':force_style='{force_style}'[v_sub]")
+        current_v = '[v_sub]'
+
+    crf = '19' if bitrate == 'high' else '22' if bitrate == 'standard' else '26'
+    input_flags = " ".join(inputs)
+    if filter_steps:
+        fc = ";".join(filter_steps)
+        cmd = f'ffmpeg -nostdin -y {input_flags} -filter_complex "{fc}" -map "{current_v}" -map 0:a? -c:v libx264 -preset fast -crf {crf} -c:a aac -b:a 192k -movflags +faststart "{output_video_path}"'
+    else:
+        cmd = f'ffmpeg -nostdin -y {input_flags} -c:v copy -c:a copy -movflags +faststart "{output_video_path}"'
+
+    try:
+        run_command(cmd)
+    finally:
+        if temp_scaled_overlay and os.path.exists(temp_scaled_overlay):
+            try:
+                os.remove(temp_scaled_overlay)
+            except Exception:
+                pass
+
+    return output_video_path

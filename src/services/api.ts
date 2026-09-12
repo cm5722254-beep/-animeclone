@@ -227,6 +227,22 @@ export const api = {
       body: JSON.stringify(params),
     }),
 
+  renderExportVideo: (params: {
+    filename: string;
+    inputVideo?: string;
+    titleOverlayBase64?: string;
+    burnSubtitles?: boolean;
+    subtitles?: any[];
+    resolution?: string;
+    format?: string;
+    bitrate?: string;
+  }) =>
+    request<{ success: boolean; outputVideo: string; filename: string; hasOverlay: boolean; hasSubtitles: boolean }>('/api/video/render-export', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    }),
+
   // Translation
   translate: (text: string, sourceLang = 'zh', targetLang = 'km') =>
     request<{ translation: string }>('/api/translate', {

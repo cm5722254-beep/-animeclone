@@ -4,6 +4,7 @@ import time
 import json
 import shutil
 import asyncio
+import base64
 
 # Force UTF-8 encoding on Windows console
 if sys.platform == 'win32':
@@ -136,6 +137,17 @@ class AssembleCustomRequest(BaseModel):
     removeOriginalVocals: Optional[bool] = False
     vocalGain: Optional[float] = 2.2
     bgmGain: Optional[float] = 0.85
+
+class RenderExportRequest(BaseModel):
+    filename: str
+    inputVideo: Optional[str] = None
+    titleOverlayBase64: Optional[str] = None
+    burnSubtitles: Optional[bool] = False
+    subtitles: Optional[List[dict]] = None
+    resolution: Optional[str] = '1080p'
+    format: Optional[str] = 'mp4'
+    bitrate: Optional[str] = 'high'
+
 
 class CharacterSpeakRequest(BaseModel):
     voiceId: str
@@ -368,7 +380,7 @@ def get_voxcpm_status():
 
     import requests
     try:
-        timeout = 1.5 if clean_url.startswith('http://127.0.0.1') or clean_url.startswith('http://localhost') else 4.0
+        timeout = 1.5 if clean_url.startswith('http://127.0.0.1') or clean_url.startswith('http://localhost') else 7.0
         r = requests.get(clean_url, timeout=timeout)
         if r.status_code == 200:
             is_local = clean_url.startswith('http://127.0.0.1') or clean_url.startswith('http://localhost')
@@ -383,7 +395,13 @@ def get_voxcpm_status():
         return {'online': False, 'configured': True, 'url': clean_url, 'mode': mode, 'message': f'ឆ្លើយតបកូដ HTTP {r.status_code}'}
     except Exception as e:
         is_local = clean_url.startswith('http://127.0.0.1') or clean_url.startswith('http://localhost')
-        msg = 'មិនទាន់បើក START_LOCAL_VOXCPM.bat លើកុំព្យូទ័រ' if is_local else str(e)
+        err_str = str(e)
+        if is_local:
+            msg = 'មិនទាន់បើក START_LOCAL_VOXCPM.bat លើកុំព្យូទ័រ'
+        elif 'timed out' in err_str.lower():
+            msg = 'Colab / Kaggle កំពុងរវល់ខ្លាំង ឬកំពុងដំណើរការ (Busy Processing) — បណ្តាញនៅភ្ជាប់ធម្មតា'
+        else:
+            msg = f'មិនទាន់ភ្ជាប់ទៅ Cloud Server ({err_str})'
         return {'online': False, 'configured': True, 'url': clean_url, 'isLocal': is_local, 'mode': mode, 'message': msg}
 
 @app.post('/api/config')
@@ -659,18 +677,43 @@ def clear_all_files():
         'message': f"បានលុបគម្រោងចោលសរុប {deleted_count} គម្រោង (សន្សំទំហំបាន {format_bytes(freed_bytes)})"
     }
 
+def resolve_uploaded_file(filename: str):
+    """Robustly resolve video filename to real disk path in UPLOADS_DIR, matching timestamps/prefixes."""
+    if not filename:
+        return None, ""
+    clean = os.path.basename(filename).strip()
+    # 1. Direct path in uploads
+    p = os.path.join(UPLOADS_DIR, clean)
+    if os.path.exists(p):
+        return p, clean
+    # 2. Direct path in base dir
+    p = os.path.join(BASE_DIR, clean)
+    if os.path.exists(p):
+        return p, clean
+    # 3. Match candidate files in UPLOADS_DIR (e.g. mediaFile-*-ep1.mp4 for ep1.mp4)
+    if os.path.exists(UPLOADS_DIR):
+        files = os.listdir(UPLOADS_DIR)
+        candidates = [f for f in files if f == clean or f.endswith(f"-{clean}") or clean in f]
+        if candidates:
+            candidates.sort(key=lambda x: os.path.getmtime(os.path.join(UPLOADS_DIR, x)), reverse=True)
+            return os.path.join(UPLOADS_DIR, candidates[0]), candidates[0]
+        # 4. Fallback: newest video in UPLOADS_DIR
+        all_vids = [f for f in files if f.lower().endswith(('.mp4', '.mkv', '.mov', '.avi', '.webm'))]
+        if all_vids:
+            all_vids.sort(key=lambda x: os.path.getmtime(os.path.join(UPLOADS_DIR, x)), reverse=True)
+            return os.path.join(UPLOADS_DIR, all_vids[0]), all_vids[0]
+    return None, clean
+
 class SeparateRequest(BaseModel):
     filename: str
     preferAi: Optional[bool] = True
 
 @app.post('/api/audio/separate')
 async def separate_audio_track(body: SeparateRequest):
-    input_path = os.path.join(UPLOADS_DIR, body.filename)
-    if not os.path.exists(input_path):
-        root_path = os.path.join(BASE_DIR, body.filename)
-        if os.path.exists(root_path): input_path = root_path
-    if not os.path.exists(input_path):
+    input_path, real_filename = resolve_uploaded_file(body.filename)
+    if not input_path or not os.path.exists(input_path):
         raise HTTPException(status_code=404, detail="File not found")
+    body.filename = real_filename
 
     audio_ext = os.path.splitext(body.filename)[0] + '.mp3'
     extracted_audio = os.path.join(OUTPUTS_DIR, f"audio_{audio_ext}")
@@ -696,12 +739,10 @@ async def start_dubbing(body: DubbingStartRequest, background_tasks: BackgroundT
         os.environ['VOXCPM_MODE'] = 'pure_khmer'
         os.environ['VOXCPM_API_URL'] = ''
 
-    input_path = os.path.join(UPLOADS_DIR, body.filename)
-    if not os.path.exists(input_path):
-        root_path = os.path.join(BASE_DIR, body.filename)
-        if os.path.exists(root_path): input_path = root_path
-    if not os.path.exists(input_path):
+    input_path, real_filename = resolve_uploaded_file(body.filename)
+    if not input_path or not os.path.exists(input_path):
         raise HTTPException(status_code=404, detail="Uploaded file not found")
+    body.filename = real_filename
 
     job_id = f"job_{int(time.time() * 1000)}"
     job = {
@@ -974,6 +1015,110 @@ async def assemble_custom(body: AssembleCustomRequest):
         'outputAudio': f"/media/outputs/{os.path.basename(dubbed_audio_path)}",
         'totalLinesDubbed': len(mapped_segments)
     }
+
+@app.post('/api/video/render-export')
+async def render_export_video(body: RenderExportRequest):
+    # 1. Resolve source video path
+    input_path = None
+    if body.inputVideo:
+        cand = os.path.basename(body.inputVideo)
+        for folder in [OUTPUTS_DIR, UPLOADS_DIR, BASE_DIR]:
+            p = os.path.join(folder, cand)
+            if os.path.exists(p):
+                input_path = p
+                break
+
+    if not input_path or not os.path.exists(input_path):
+        for folder in [OUTPUTS_DIR, UPLOADS_DIR, BASE_DIR]:
+            p = os.path.join(folder, body.filename)
+            if os.path.exists(p):
+                input_path = p
+                break
+
+    if not input_path or not os.path.exists(input_path):
+        resolved_path, _ = resolve_uploaded_file(body.filename or (body.inputVideo and os.path.basename(body.inputVideo)) or "")
+        if resolved_path and os.path.exists(resolved_path):
+            input_path = resolved_path
+
+    if not input_path or not os.path.exists(input_path):
+        raise HTTPException(status_code=404, detail="វីដេអូដើមមិនត្រូវបានរកឃើញឡើយ!")
+
+    ts = int(time.time() * 1000)
+    temp_overlay_path = None
+    temp_srt_path = None
+
+    try:
+        # 2. Extract Transparent Title/Thumbnail Overlay PNG
+        if body.titleOverlayBase64:
+            try:
+                raw_b64 = body.titleOverlayBase64
+                if ',' in raw_b64:
+                    raw_b64 = raw_b64.split(',', 1)[1]
+                img_bytes = base64.b64decode(raw_b64)
+                temp_overlay_path = os.path.join(OUTPUTS_DIR, f"export_overlay_{ts}.png")
+                with open(temp_overlay_path, 'wb') as f:
+                    f.write(img_bytes)
+            except Exception as ex:
+                print(f"Overlay decode error: {ex}")
+                temp_overlay_path = None
+
+        # 3. Generate SRT for Subtitles if requested
+        if body.burnSubtitles and body.subtitles and len(body.subtitles) > 0:
+            try:
+                srt_content = audio_processor.generate_srt(body.subtitles)
+                if srt_content and len(srt_content.strip()) > 0:
+                    temp_srt_path = os.path.join(OUTPUTS_DIR, f"export_sub_{ts}.srt")
+                    with open(temp_srt_path, 'w', encoding='utf-8') as f:
+                        f.write(srt_content)
+            except Exception as ex:
+                print(f"SRT generation error: {ex}")
+                temp_srt_path = None
+
+        # 4. Output filename and path
+        target_format = body.format or 'mp4'
+        if target_format not in ['mp4', 'mkv', 'mov']:
+            target_format = 'mp4'
+
+        base_stem = os.path.splitext(os.path.basename(input_path))[0]
+        clean_stem = base_stem.replace('custom_dubbed_khmer_py_', '').replace('custom_dubbed_khmer_', '').replace('audio_', '')
+        out_filename = f"studio_burned_{clean_stem}_{ts}.{target_format}"
+        out_path = os.path.join(OUTPUTS_DIR, out_filename)
+
+        # 5. Burn permanently with FFmpeg
+        options = {
+            'resolution': body.resolution or '1080p',
+            'bitrate': body.bitrate or 'high',
+            'format': target_format
+        }
+
+        audio_processor.burn_overlay_and_subtitles(
+            video_path=input_path,
+            output_video_path=out_path,
+            overlay_image_path=temp_overlay_path,
+            srt_path=temp_srt_path,
+            options=options
+        )
+
+        return {
+            'success': True,
+            'outputVideo': f"/media/outputs/{out_filename}",
+            'filename': out_filename,
+            'hasOverlay': bool(temp_overlay_path and os.path.exists(out_path)),
+            'hasSubtitles': bool(temp_srt_path and os.path.exists(out_path))
+        }
+
+    finally:
+        # Cleanup temporary files
+        if temp_overlay_path and os.path.exists(temp_overlay_path):
+            try:
+                os.remove(temp_overlay_path)
+            except Exception:
+                pass
+        if temp_srt_path and os.path.exists(temp_srt_path):
+            try:
+                os.remove(temp_srt_path)
+            except Exception:
+                pass
 
 @app.post('/api/character/clone')
 async def character_clone(voiceSample: UploadFile = File(...), characterName: Optional[str] = Form(None), description: Optional[str] = Form(None)):

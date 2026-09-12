@@ -343,111 +343,60 @@ export const MultiTrackTimeline: React.FC<TimelineProps> = ({
   };
 
   return (
-    <div className="h-68 bg-[#070a12] border-t border-white/[0.08] flex flex-col overflow-hidden select-none">
+    <div className="h-68 bg-[#07090e] border-t border-white/[0.08] flex flex-col overflow-hidden select-none">
       {/* Pro NLE Timeline Toolbar */}
-      <div className="h-10 px-3 bg-[#0a0e18] border-b border-white/[0.08] flex items-center justify-between text-xs">
-        {/* Left Controls: Transport & Pro Editing Tools */}
+      <div className="h-10 px-3 bg-[#0a0e17] border-b border-white/[0.08] flex items-center justify-between text-xs">
+        {/* Left Controls: Transport & Pro Editing Tools matching Image 3 */}
         <div className="flex items-center gap-2">
-          {onTogglePlay && (
-            <button
-              onClick={onTogglePlay}
-              className={`p-1.5 rounded-lg border transition-all ${
-                isPlaying
-                  ? 'bg-amber-500/20 border-amber-500/40 text-amber-300'
-                  : 'bg-sky-500/20 border-sky-500/40 text-sky-300 hover:bg-sky-500/30'
-              }`}
-              title={isPlaying ? 'Pause (Space)' : 'Play (Space)'}
-            >
-              {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-            </button>
-          )}
-
-          {/* Timecode Box */}
-          <div className="bg-[#05070c] border border-white/[0.1] px-2.5 py-1 rounded-md font-mono text-[11px] text-sky-400 font-semibold tracking-wider flex items-center gap-1.5">
-            <span>{formatTimecode(currentTime)}</span>
-            <span className="text-slate-600">/</span>
-            <span className="text-slate-400">{formatTimecode(totalDur)}</span>
-          </div>
-
-          <div className="h-4 w-[1px] bg-white/[0.1] mx-1" />
-
           {/* Split (Cut) Button */}
           <button
             onClick={handleSplitClip}
-            className="flex items-center gap-1 px-2.5 py-1 rounded bg-white/[0.04] hover:bg-sky-500/20 border border-white/[0.08] hover:border-sky-500/40 text-slate-300 hover:text-sky-300 text-[11px] font-medium transition-all"
-            title="កាត់ឃ្លាសំឡេងត្រង់ចំណុច Playhead (Split / Cut)"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-slate-300 hover:text-white text-xs font-medium transition-all"
+            title="Split Clip at Playhead"
           >
             <Scissors className="w-3.5 h-3.5 text-sky-400" />
-            <span>កាត់ (Split)</span>
-          </button>
-
-          {/* Duplicate Button */}
-          <button
-            onClick={handleDuplicateClip}
-            className="flex items-center gap-1 px-2 py-1 rounded bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-slate-300 hover:text-white text-[11px] font-medium transition-all"
-            title="ចម្លងឃ្លាសំឡេង (Duplicate)"
-          >
-            <Copy className="w-3.5 h-3.5 text-slate-400" />
-            <span>ចម្លង</span>
+            <span>Split</span>
           </button>
 
           {/* Delete Button */}
           <button
             onClick={handleDeleteClip}
-            className="flex items-center gap-1 px-2 py-1 rounded bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 hover:border-rose-500/40 text-rose-400 text-[11px] font-medium transition-all"
-            title="លុបឃ្លាដែលបានជ្រើសរើស (Delete)"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-rose-500/20 border border-white/[0.08] hover:border-rose-500/30 text-slate-300 hover:text-rose-300 text-xs font-medium transition-all"
+            title="Delete Selected Clip"
           >
             <Trash2 className="w-3.5 h-3.5" />
-            <span>លុប</span>
+            <span>Delete</span>
           </button>
-
-          <div className="h-4 w-[1px] bg-white/[0.1] mx-1" />
 
           {/* Magnet / Snap Button */}
           <button
             onClick={() => setSnapEnabled(!snapEnabled)}
-            className={`flex items-center gap-1 px-2 py-1 rounded border text-[11px] font-medium transition-all ${
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium transition-all ${
               snapEnabled
-                ? 'bg-sky-500/20 border-sky-400/40 text-sky-300'
-                : 'bg-white/[0.03] border-white/[0.08] text-slate-500'
+                ? 'bg-sky-500/20 border-sky-400/50 text-sky-300 shadow-sm'
+                : 'bg-white/[0.04] border-white/[0.08] text-slate-400'
             }`}
-            title="បិទ/បើក មុខងារទាញភ្ជាប់ដោយស្វ័យប្រវត្តិ (Magnet Snap)"
+            title="Toggle Magnet Snap"
           >
             <Magnet className="w-3.5 h-3.5" />
-            <span>Snap: {snapEnabled ? 'ON' : 'OFF'}</span>
+            <span>Snap</span>
           </button>
 
-          <div className="h-4 w-[1px] bg-white/[0.1] mx-1" />
-
-          {/* Auto De-overlap / Organize Button */}
+          {/* Markers / Auto-Arrange */}
           <button
             onClick={handleAutoDeoverlap}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 hover:text-amber-200 text-[11px] font-semibold transition-all shadow-sm shadow-amber-500/10 active:scale-95"
-            title="រៀបចំឃ្លាសំឡេងទាំងអស់កុំឱ្យជាន់គ្នារញេរញៃ (Auto-Arrange & De-overlap Clashing Clips)"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-slate-300 text-xs font-medium transition-all"
+            title="Auto-Arrange & Align Dialogue Clips"
           >
-            <LayoutList className="w-3.5 h-3.5 text-amber-400" />
-            <span>រៀបចំឃ្លាកុំឱ្យជាន់គ្នា</span>
+            <LayoutList className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Markers</span>
           </button>
         </div>
 
-        {/* Right Controls: AI Scan, Zoom, and Assemble */}
+        {/* Right Controls: AI Scan, Zoom Slider, and Assemble Video */}
         <div className="flex items-center gap-3">
-          <button
-            onClick={onScan}
-            disabled={isScanning}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 text-[11px] transition-colors border border-indigo-500/40 disabled:opacity-50"
-            title="ស្កេន និងស្រង់ឃ្លាសន្ទនាទាំងអស់ពីរឿងដោយ AI"
-          >
-            {isScanning ? (
-              <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-400" />
-            ) : (
-              <Scan className="w-3.5 h-3.5 text-indigo-400" />
-            )}
-            <span>{isScanning ? 'កំពុងស្កេន AI...' : 'ស្កេនឃ្លាសន្ទនា'}</span>
-          </button>
-
-          {/* Zoom Slider */}
-          <div className="flex items-center gap-1.5 text-slate-400 text-[11px]">
+          {/* Zoom Slider with Icons */}
+          <div className="flex items-center gap-1.5 text-slate-400 text-xs">
             <ZoomOut
               className="w-3.5 h-3.5 cursor-pointer hover:text-white"
               onClick={() => onZoomChange(Math.max(60, zoom - 20))}
@@ -458,21 +407,21 @@ export const MultiTrackTimeline: React.FC<TimelineProps> = ({
               max="260"
               value={zoom}
               onChange={(e) => onZoomChange(parseInt(e.target.value, 10))}
-              className="w-20 h-1 accent-sky-400 bg-slate-800 rounded cursor-pointer"
+              className="w-24 h-1 accent-sky-400 bg-slate-800 rounded cursor-pointer"
             />
             <ZoomIn
               className="w-3.5 h-3.5 cursor-pointer hover:text-white"
               onClick={() => onZoomChange(Math.min(260, zoom + 20))}
             />
-            <span className="text-[10px] font-mono text-slate-500 w-7">{zoom}%</span>
           </div>
 
+          {/* Assemble Video Action Button */}
           <button
             onClick={onAssemble}
-            className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-sky-500 hover:bg-sky-400 text-black font-semibold text-xs transition-colors shadow-md shadow-sky-500/20"
-            title="ប្រមូលផ្តុំកាត់តសំឡេងខ្មែរទាំងអស់ចូលវីដេអូ (Export / Assemble)"
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:brightness-110 text-white font-bold text-xs transition-all shadow-md shadow-sky-600/30 active:scale-95"
+            title="Assemble Video"
           >
-            <CheckCheck className="w-3.5 h-3.5" />
+            <CheckCheck className="w-4 h-4" />
             <span>Assemble Video</span>
           </button>
         </div>

@@ -47,13 +47,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       <div className="bg-[#111827] border border-white/[0.1] rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="p-6 text-center flex flex-col items-center gap-2 border-b border-white/[0.06] bg-[#0b0f19]">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-sky-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-sky-500/25">
-            <Sparkles className="w-6 h-6" />
+          <div className="relative mb-1">
+            <img
+              src="/logo.png"
+              alt="អាទិទេព DABBER PRO"
+              className="w-14 h-14 rounded-2xl border-2 border-sky-400/50 shadow-[0_0_20px_rgba(56,189,248,0.5)] object-cover"
+            />
           </div>
-          <h2 className="text-base font-bold text-white font-ui">
-            អាទិទេព DABBER <span className="text-amber-400">PRO</span>
-          </h2>
-          <p className="text-xs text-slate-400">AI Video & Multi-Character Khmer Dubbing Studio</p>
+          <h2 className="text-base font-bold text-white font-ui">អាទិទេព DABBER PRO</h2>
+          <p className="text-xs text-slate-400">
+            ចូលប្រើប្រាស់ប្រព័ន្ធស្ទូឌីយោ AI Dubbing
+          </p>
         </div>
 
         {/* Tab Switcher */}

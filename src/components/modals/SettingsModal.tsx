@@ -77,11 +77,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       <div className="bg-[#111827] border border-white/[0.1] rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="p-4 px-6 border-b border-white/[0.08] flex items-center justify-between bg-[#0b0f19]">
-          <h3 className="text-sm font-bold text-white flex items-center gap-2 font-ui">
-            <Sliders className="w-4 h-4 text-sky-400" />
-            <span>ការកំណត់ API & ប្រព័ន្ធ (System & AI Config)</span>
-          </h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-white p-1">
+          <div className="flex items-center gap-2.5">
+            <img
+              src="/logo.png"
+              alt="Logo"
+              className="w-7 h-7 rounded-lg border border-sky-400/40 shadow-[0_0_10px_rgba(56,189,248,0.4)] object-cover"
+            />
+            <h3 className="text-sm font-bold text-white flex items-center gap-2 font-ui">
+              <span>ការកំណត់ API & ប្រព័ន្ធ (System & AI Config)</span>
+            </h3>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/[0.05]">
             <X className="w-4 h-4" />
           </button>
         </div>

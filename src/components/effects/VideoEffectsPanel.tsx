@@ -20,7 +20,10 @@ import {
   Tv,
   Radio,
   Image as ImageIcon,
-  Box
+  Box,
+  Minus,
+  Plus,
+  Edit3
 } from 'lucide-react';
 import { VideoEffects, SubtitleStyle, WatermarkConfig, VideoStyleTextConfig } from '../../types';
 import { LUT_PRESETS, SUBTITLE_PRESETS, AUDIO_EFFECT_PRESETS, EFFECT_3D_PRESETS } from './effectsLibrary';
@@ -40,11 +43,12 @@ export const VideoEffectsPanel: React.FC<VideoEffectsPanelProps> = ({
   onChangeSubtitleStyle,
   onShowToast,
 }) => {
-  const [activeTab, setActiveTab] = useState<'video' | 'effect3d' | 'watermark' | 'styletext' | 'subtitles' | 'audio'>('effect3d');
+  const [activeTab, setActiveTab] = useState<'video' | 'effect3d' | 'text3d' | 'watermark' | 'styletext' | 'subtitles' | 'audio'>('text3d');
   const [filterSearch, setFilterSearch] = useState('');
   const [subSearch, setSubSearch] = useState('');
   const [audioSearch, setAudioSearch] = useState('');
   const [effect3dSearch, setEffect3dSearch] = useState('');
+  const [text3dSearch, setText3dSearch] = useState('');
   const [selectedLutCategory, setSelectedLutCategory] = useState<string>('All');
   const [selectedSubCategory, setSelectedSubCategory] = useState<string>('All');
   const [selected3dCategory, setSelected3dCategory] = useState<string>('All');
@@ -176,7 +180,7 @@ export const VideoEffectsPanel: React.FC<VideoEffectsPanelProps> = ({
     );
   });
 
-  // Filtered 3D Effects (118 Presets)
+  // Filtered 3D Effects
   const categories3D = [
     'All',
     '3D Spatial & Transforms',
@@ -193,11 +197,40 @@ export const VideoEffectsPanel: React.FC<VideoEffectsPanelProps> = ({
     return matchesCat && matchesQuery;
   });
 
+  // Filtered 3D Text / Typography (100+ presets)
+  const text3dPresets = EFFECT_3D_PRESETS.filter(p => p.category === '3D Titles & Typography');
+  const filteredText3d = text3dPresets.filter((item) =>
+    !text3dSearch ||
+    item.label.toLowerCase().includes(text3dSearch.toLowerCase()) ||
+    item.description.toLowerCase().includes(text3dSearch.toLowerCase())
+  );
+
+  // Color palette for 3D text cards based on preset name keywords
+  const getTextCardColors = (id: string): { bg: string; border: string; badge: string; preview: string } => {
+    if (id.includes('gold') || id.includes('imperial') || id.includes('harvest')) return { bg: 'rgba(120,80,0,0.3)', border: '#f59e0b', badge: 'bg-amber-500', preview: 'linear-gradient(135deg,#fef08a,#f59e0b,#92400e)' };
+    if (id.includes('fire') || id.includes('lava') || id.includes('volcano') || id.includes('dragon_fire') || id.includes('inferno') || id.includes('magma') || id.includes('phoenix') || id.includes('red_phoenix') || id.includes('burning')) return { bg: 'rgba(120,20,0,0.3)', border: '#ef4444', badge: 'bg-red-600', preview: 'linear-gradient(135deg,#fca5a5,#ef4444,#7f1d1d)' };
+    if (id.includes('cyber') || id.includes('neon_cyan') || id.includes('hologram') || id.includes('plasma') || id.includes('electric') || id.includes('matrix') || id.includes('circuit')) return { bg: 'rgba(0,80,120,0.3)', border: '#06b6d4', badge: 'bg-cyan-500', preview: 'linear-gradient(135deg,#67e8f9,#06b6d4,#0e7490)' };
+    if (id.includes('neon_pink') || id.includes('tokyo') || id.includes('vaporwave') || id.includes('candy') || id.includes('rose_gold') || id.includes('velvet_red') || id.includes('red_carpet') || id.includes('crimson') || id.includes('blood')) return { bg: 'rgba(120,0,80,0.3)', border: '#ec4899', badge: 'bg-pink-500', preview: 'linear-gradient(135deg,#f9a8d4,#ec4899,#831843)' };
+    if (id.includes('jade') || id.includes('emerald') || id.includes('forest') || id.includes('bamboo') || id.includes('matrix_green') || id.includes('acid') || id.includes('potion') || id.includes('sunflower') || id.includes('neon_yellow')) return { bg: 'rgba(0,80,40,0.3)', border: '#10b981', badge: 'bg-emerald-500', preview: 'linear-gradient(135deg,#6ee7b7,#10b981,#064e3b)' };
+    if (id.includes('silver') || id.includes('chrome') || id.includes('mecha') || id.includes('titanium') || id.includes('platinum') || id.includes('marble') || id.includes('carbon') || id.includes('warrior_iron') || id.includes('samurai') || id.includes('blade') || id.includes('obsidian')) return { bg: 'rgba(50,60,70,0.4)', border: '#94a3b8', badge: 'bg-slate-400', preview: 'linear-gradient(135deg,#f1f5f9,#94a3b8,#1e293b)' };
+    if (id.includes('cosmic') || id.includes('nebula') || id.includes('space') || id.includes('galaxy') || id.includes('void') || id.includes('deep_space') || id.includes('aurora') || id.includes('midnight_galaxy') || id.includes('starlight')) return { bg: 'rgba(40,0,80,0.3)', border: '#a855f7', badge: 'bg-purple-500', preview: 'linear-gradient(135deg,#d8b4fe,#a855f7,#581c87)' };
+    if (id.includes('ice') || id.includes('glacier') || id.includes('frost') || id.includes('frozen') || id.includes('arctic') || id.includes('snow') || id.includes('divine_frost')) return { bg: 'rgba(0,60,100,0.3)', border: '#38bdf8', badge: 'bg-sky-400', preview: 'linear-gradient(135deg,#bae6fd,#38bdf8,#075985)' };
+    if (id.includes('sakura') || id.includes('cherry') || id.includes('romantic') || id.includes('pastel') || id.includes('peach') || id.includes('lotus') || id.includes('angel') || id.includes('koi') || id.includes('moonstone')) return { bg: 'rgba(120,40,80,0.2)', border: '#f472b6', badge: 'bg-pink-400', preview: 'linear-gradient(135deg,#fce7f3,#f472b6,#be185d)' };
+    if (id.includes('khmer') || id.includes('ancient') || id.includes('pagoda') || id.includes('dragon_khmer') || id.includes('buddhist') || id.includes('scroll') || id.includes('pirate') || id.includes('wuxia') || id.includes('ink')) return { bg: 'rgba(80,40,0,0.3)', border: '#d97706', badge: 'bg-amber-600', preview: 'linear-gradient(135deg,#fde68a,#d97706,#451a03)' };
+    if (id.includes('ocean') || id.includes('sapphire') || id.includes('turquoise') || id.includes('underwater') || id.includes('coral') || id.includes('lapis')) return { bg: 'rgba(0,40,100,0.3)', border: '#3b82f6', badge: 'bg-blue-500', preview: 'linear-gradient(135deg,#93c5fd,#3b82f6,#1e3a8a)' };
+    if (id.includes('sunset') || id.includes('neon_orange') || id.includes('solar') || id.includes('tiger') || id.includes('copper')) return { bg: 'rgba(120,60,0,0.3)', border: '#f97316', badge: 'bg-orange-500', preview: 'linear-gradient(135deg,#fed7aa,#f97316,#7c2d12)' };
+    if (id.includes('venom') || id.includes('midnight_black') || id.includes('vampire') || id.includes('gothic') || id.includes('blood_moon') || id.includes('sand_dune') || id.includes('volcanic_ash')) return { bg: 'rgba(10,10,20,0.6)', border: '#475569', badge: 'bg-slate-600', preview: 'linear-gradient(135deg,#64748b,#1e293b,#020617)' };
+    if (id.includes('steampunk') || id.includes('brass') || id.includes('castle') || id.includes('stone') || id.includes('granite')) return { bg: 'rgba(60,40,10,0.4)', border: '#a16207', badge: 'bg-yellow-700', preview: 'linear-gradient(135deg,#fde68a,#a16207,#78350f)' };
+    if (id.includes('rainbow') || id.includes('hologram_rainbow') || id.includes('peacock') || id.includes('prism')) return { bg: 'rgba(80,0,120,0.3)', border: '#c084fc', badge: 'bg-fuchsia-400', preview: 'linear-gradient(135deg,#f0abfc,#c084fc,#7e22ce)' };
+    // default
+    return { bg: 'rgba(30,40,60,0.4)', border: '#fbbf24', badge: 'bg-amber-400', preview: 'linear-gradient(135deg,#fef3c7,#fbbf24,#92400e)' };
+  };
+
   return (
     <div className="bg-[#0b101d] border border-white/[0.08] rounded-xl p-4 flex flex-col gap-4 max-h-[85vh] overflow-hidden">
       {/* Tab Selector & Reset Header */}
       <div className="flex items-center justify-between border-b border-white/[0.08] pb-3 shrink-0">
-        <div className="flex items-center gap-1 bg-[#070b14] p-1 rounded-xl border border-white/[0.06] overflow-x-auto max-w-[280px] sm:max-w-none">
+        <div className="flex items-center gap-1 bg-[#070b14] p-1 rounded-xl border border-white/[0.06] overflow-x-auto max-w-[320px] sm:max-w-none">
           <button
             onClick={() => setActiveTab('video')}
             className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all whitespace-nowrap ${
@@ -208,6 +241,18 @@ export const VideoEffectsPanel: React.FC<VideoEffectsPanelProps> = ({
           >
             <Sliders className="w-3.5 h-3.5" />
             <span>LUTs & FX</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('text3d')}
+            className={`px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all whitespace-nowrap ${
+              activeTab === 'text3d'
+                ? 'bg-gradient-to-r from-rose-500 via-fuchsia-500 to-purple-600 text-white shadow-lg shadow-fuchsia-500/30'
+                : 'text-fuchsia-400 hover:text-white'
+            }`}
+          >
+            <Type className="w-3.5 h-3.5" />
+            <span>អក្ស3D ({text3dPresets.length}+)</span>
           </button>
 
           <button
@@ -527,7 +572,418 @@ export const VideoEffectsPanel: React.FC<VideoEffectsPanelProps> = ({
           </div>
         )}
 
-        {/* ======================= TAB: 110+ 3D EFFECTS & SPATIAL ENGINE ======================= */}
+        {/* ======================= TAB: អក្ស3D 100+ ======================= */}
+        {activeTab === 'text3d' && (
+          <div className="space-y-4">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-fuchsia-900/40 via-purple-900/40 to-rose-900/40 border border-fuchsia-500/30 rounded-xl p-3.5 space-y-1">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-extrabold flex items-center gap-1.5">
+                    <Type className="w-4 h-4 text-fuchsia-400 animate-pulse" />
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-300 via-fuchsia-300 to-purple-300">
+                      អក្ស 3D — {text3dPresets.length}+ Effect Typography
+                    </span>
+                  </div>
+                  <div className="text-[10.5px] text-slate-400 mt-0.5">Gold · Neon · Fire · Ice · Dragon · Khmer · Cosmic · Wuxia · Cyberpunk · Romance · Horror...</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[10px] font-mono text-fuchsia-400 font-bold">{filteredText3d.length} results</div>
+                  <div className="text-[9px] text-slate-500">of {text3dPresets.length} total</div>
+                </div>
+              </div>
+              {/* Active Preset */}
+              <div className="flex items-center justify-between text-[11px] pt-1 border-t border-white/[0.06]">
+                <span className="text-slate-400">Effect 3D Text បច្ចុប្បន្ន:</span>
+                <span className="font-bold font-mono text-fuchsia-300 truncate max-w-[200px]">
+                  {EFFECT_3D_PRESETS.find(p => p.id === effects.effect3dPreset && p.category === '3D Titles & Typography')?.label || 'ជ្រើសរើស Effect ខាងក្រោម'}
+                </span>
+              </div>
+            </div>
+
+            {/* Quick Popular Picks */}
+            <div className="bg-[#070b14] p-2.5 rounded-xl border border-white/[0.06]">
+              <div className="text-[10.5px] font-bold text-fuchsia-300 mb-1.5 flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-fuchsia-400" />
+                <span>ពេញនិយម (Popular Picks):</span>
+              </div>
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+                {[
+                  { id: '3d_text_gold3d', label: '👑 Imperial Gold' },
+                  { id: '3d_text_cyberpunk', label: '⚡ Cyberpunk' },
+                  { id: '3d_text_lava_dragon', label: '🔥 Dragon Lava' },
+                  { id: '3d_text_khmer_royal', label: '🇰🇭 Khmer Royal' },
+                  { id: '3d_text_diamond_prism', label: '💎 Diamond' },
+                  { id: '3d_text_cosmic_nebula', label: '🪐 Nebula' },
+                  { id: '3d_text_glacier_ice', label: '🧊 Glacier Ice' },
+                  { id: '3d_text_sakura_bloom', label: '🌸 Sakura' },
+                  { id: '3d_text_rose_gold', label: '🌹 Rose Gold' },
+                  { id: '3d_text_burning_phoenix', label: '🦅 Phoenix' },
+                  { id: '3d_text_aurora_borealis', label: '🌌 Aurora' },
+                  { id: '3d_text_hologram_rainbow', label: '🌈 Rainbow' },
+                ].map((q) => (
+                  <button
+                    key={q.id}
+                    type="button"
+                    onClick={() => {
+                      const preset = EFFECT_3D_PRESETS.find(p => p.id === q.id);
+                      onChangeEffects({
+                        ...effects,
+                        effect3dEnabled: true,
+                        effect3dPreset: q.id,
+                        styleText: {
+                          ...(effects.styleText || { enabled: true, title: 'ចំណងជើងរឿង', subtitle: 'AI Dubbing', badge: 'ភាគ ០១', stylePreset: 'gold3d', position: 'bottom-left', fontSize: 28, fontFamily: 'Koulen', showBanner: true }),
+                          enabled: true,
+                          stylePreset: preset?.titleStylePreset || 'gold3d',
+                        }
+                      });
+                      onShowToast(`🎉 Effect 3D Text: ${q.label}`, 'success');
+                    }}
+                    className={`px-2 py-1 rounded text-[10.5px] font-semibold whitespace-nowrap transition-all border ${
+                      effects.effect3dPreset === q.id && effects.effect3dEnabled
+                        ? 'bg-fuchsia-500/30 border-fuchsia-400 text-fuchsia-200'
+                        : 'bg-[#0b101d] border-white/[0.06] text-slate-400 hover:text-white hover:border-fuchsia-400/40'
+                    }`}
+                  >
+                    {q.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Direct Edit & Scaling Controls for 3D Text */}
+            <div className="bg-[#070b14] p-3 rounded-xl border border-sky-500/30 space-y-2.5 shadow-lg">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <Edit3 className="w-3.5 h-3.5 text-sky-400" />
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-300 via-indigo-300 to-fuchsia-300">
+                    កែសម្រួល & ពង្រីកបង្រួមអក្សរ 3D
+                  </span>
+                </span>
+                <span className="text-[10px] text-sky-400/80 bg-sky-400/10 px-1.5 py-0.5 rounded border border-sky-400/20 font-mono font-bold">
+                  {effects.styleText?.fontSize || 28}px
+                </span>
+              </div>
+
+              {/* Title, Subtitle, Badge Inputs */}
+              <div className="space-y-1.5">
+                <div className="flex flex-col gap-0.5">
+                  <label className="text-[10px] text-slate-400">ចំណងជើងធំ (Main Title)</label>
+                  <input
+                    type="text"
+                    value={effects.styleText?.title || ''}
+                    onChange={(e) => {
+                      onChangeEffects({
+                        ...effects,
+                        styleText: {
+                          ...(effects.styleText || { enabled: true, title: '', subtitle: '', badge: '', stylePreset: 'gold3d', position: 'bottom-left', fontSize: 28, fontFamily: 'Koulen', showBanner: true }),
+                          title: e.target.value,
+                          enabled: true,
+                        }
+                      });
+                    }}
+                    placeholder="បញ្ចូលចំណងជើងរឿង..."
+                    className="w-full bg-[#0b101d] border border-white/10 rounded-lg px-2.5 py-1 text-xs text-white font-bold outline-none focus:border-sky-400"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex flex-col gap-0.5">
+                    <label className="text-[10px] text-slate-400">ចំណងជើងរង (Subtitle)</label>
+                    <input
+                      type="text"
+                      value={effects.styleText?.subtitle || ''}
+                      onChange={(e) => {
+                        onChangeEffects({
+                          ...effects,
+                          styleText: {
+                            ...(effects.styleText || { enabled: true, title: '', subtitle: '', badge: '', stylePreset: 'gold3d', position: 'bottom-left', fontSize: 28, fontFamily: 'Koulen', showBanner: true }),
+                            subtitle: e.target.value,
+                            enabled: true,
+                          }
+                        });
+                      }}
+                      placeholder="ចំណងជើងរង..."
+                      className="w-full bg-[#0b101d] border border-white/10 rounded-lg px-2 py-1 text-xs text-slate-200 outline-none focus:border-sky-400"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-0.5">
+                    <label className="text-[10px] text-slate-400">ស្លាកភាគ (Badge)</label>
+                    <input
+                      type="text"
+                      value={effects.styleText?.badge || ''}
+                      onChange={(e) => {
+                        onChangeEffects({
+                          ...effects,
+                          styleText: {
+                            ...(effects.styleText || { enabled: true, title: '', subtitle: '', badge: '', stylePreset: 'gold3d', position: 'bottom-left', fontSize: 28, fontFamily: 'Koulen', showBanner: true }),
+                            badge: e.target.value,
+                            enabled: true,
+                          }
+                        });
+                      }}
+                      placeholder="ភាគ ០១..."
+                      className="w-full bg-[#0b101d] border border-white/10 rounded-lg px-2 py-1 text-xs text-amber-300 font-mono font-bold outline-none focus:border-sky-400"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Font Size Scale Slider with Quick - / + buttons */}
+              <div className="space-y-1 pt-1 border-t border-white/[0.06]">
+                <div className="flex justify-between items-center text-[11px] text-slate-300">
+                  <span className="flex items-center gap-1">
+                    <Move className="w-3 h-3 text-sky-400" />
+                    <span>ពង្រីក-បង្រួម (Font Size)</span>
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = Math.max(14, (effects.styleText?.fontSize || 28) - 2);
+                        onChangeEffects({
+                          ...effects,
+                          styleText: { ...(effects.styleText || { enabled: true, title: 'ចំណងជើង', subtitle: '', badge: '', stylePreset: 'gold3d', position: 'bottom-left', fontSize: 28, fontFamily: 'Koulen', showBanner: true }), fontSize: next }
+                        });
+                      }}
+                      className="p-1 rounded bg-white/10 hover:bg-white/20 text-white"
+                      title="បង្រួម (-2px)"
+                    >
+                      <Minus className="w-3 h-3" />
+                    </button>
+                    <span className="font-mono font-bold text-sky-400 min-w-[32px] text-center">
+                      {effects.styleText?.fontSize || 28}px
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = Math.min(90, (effects.styleText?.fontSize || 28) + 2);
+                        onChangeEffects({
+                          ...effects,
+                          styleText: { ...(effects.styleText || { enabled: true, title: 'ចំណងជើង', subtitle: '', badge: '', stylePreset: 'gold3d', position: 'bottom-left', fontSize: 28, fontFamily: 'Koulen', showBanner: true }), fontSize: next }
+                        });
+                      }}
+                      className="p-1 rounded bg-white/10 hover:bg-white/20 text-white"
+                      title="ពង្រីក (+2px)"
+                    >
+                      <Plus className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+                <input
+                  type="range"
+                  min="14"
+                  max="90"
+                  value={effects.styleText?.fontSize || 28}
+                  onChange={(e) => {
+                    onChangeEffects({
+                      ...effects,
+                      styleText: {
+                        ...(effects.styleText || { enabled: true, title: 'ចំណងជើង', subtitle: '', badge: '', stylePreset: 'gold3d', position: 'bottom-left', fontSize: 28, fontFamily: 'Koulen', showBanner: true }),
+                        fontSize: parseInt(e.target.value, 10),
+                        enabled: true,
+                      }
+                    });
+                  }}
+                  className="w-full h-1.5 accent-sky-400 bg-slate-800 rounded cursor-pointer"
+                />
+              </div>
+
+              {/* Position X & Y and Rotation Sliders */}
+              <div className="grid grid-cols-2 gap-2 pt-1 border-t border-white/[0.06]">
+                <div>
+                  <div className="flex justify-between text-[10.5px] text-slate-400 mb-0.5">
+                    <span>ទីតាំង X (Left/Right)</span>
+                    <span className="font-mono text-sky-400">{effects.styleText?.posX ?? 10}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={effects.styleText?.posX ?? 10}
+                    onChange={(e) => {
+                      onChangeEffects({
+                        ...effects,
+                        styleText: {
+                          ...(effects.styleText || { enabled: true, title: 'ចំណងជើង', subtitle: '', badge: '', stylePreset: 'gold3d', position: 'bottom-left', fontSize: 28, fontFamily: 'Koulen', showBanner: true }),
+                          position: 'free',
+                          posX: parseInt(e.target.value, 10),
+                          enabled: true,
+                        }
+                      });
+                    }}
+                    className="w-full h-1 accent-sky-400 bg-slate-800 rounded cursor-pointer"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-[10.5px] text-slate-400 mb-0.5">
+                    <span>ទីតាំង Y (Top/Bottom)</span>
+                    <span className="font-mono text-sky-400">{effects.styleText?.posY ?? 82}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={effects.styleText?.posY ?? 82}
+                    onChange={(e) => {
+                      onChangeEffects({
+                        ...effects,
+                        styleText: {
+                          ...(effects.styleText || { enabled: true, title: 'ចំណងជើង', subtitle: '', badge: '', stylePreset: 'gold3d', position: 'bottom-left', fontSize: 28, fontFamily: 'Koulen', showBanner: true }),
+                          position: 'free',
+                          posY: parseInt(e.target.value, 10),
+                          enabled: true,
+                        }
+                      });
+                    }}
+                    className="w-full h-1 accent-sky-400 bg-slate-800 rounded cursor-pointer"
+                  />
+                </div>
+              </div>
+
+              {/* Banner Card & Toggle Button */}
+              <div className="flex items-center justify-between pt-1 border-t border-white/[0.06]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const cur = effects.styleText?.showBanner ?? true;
+                    onChangeEffects({
+                      ...effects,
+                      styleText: {
+                        ...(effects.styleText || { enabled: true, title: 'ចំណងជើង', subtitle: '', badge: '', stylePreset: 'gold3d', position: 'bottom-left', fontSize: 28, fontFamily: 'Koulen', showBanner: true }),
+                        showBanner: !cur,
+                        enabled: true,
+                      }
+                    });
+                  }}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors border ${
+                    effects.styleText?.showBanner ?? true
+                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                      : 'bg-white/[0.06] text-slate-400 border-white/[0.08]'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>{effects.styleText?.showBanner ?? true ? 'ផ្ទាំង Card: ON' : 'ផ្ទាំង Card: OFF'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const cur = effects.styleText?.enabled ?? false;
+                    onChangeEffects({
+                      ...effects,
+                      styleText: {
+                        ...(effects.styleText || { enabled: true, title: 'ចំណងជើង', subtitle: '', badge: '', stylePreset: 'gold3d', position: 'bottom-left', fontSize: 28, fontFamily: 'Koulen', showBanner: true }),
+                        enabled: !cur,
+                      }
+                    });
+                    onShowToast(!cur ? '🎉 បានបើកអក្សរ 3D' : 'បានបិទអក្សរ 3D', !cur ? 'success' : 'info');
+                  }}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors border ${
+                    effects.styleText?.enabled
+                      ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+                      : 'bg-white/[0.06] text-slate-400 border-white/[0.08]'
+                  }`}
+                >
+                  {effects.styleText?.enabled ? 'អក្សរ 3D: បង្ហាញ' : 'អក្សរ 3D: លាក់'}
+                </button>
+              </div>
+            </div>
+
+            {/* Intensity Sliders */}
+            <div className="bg-[#070b14] p-3 rounded-xl border border-white/[0.06] grid grid-cols-2 gap-3">
+              <div>
+                <div className="flex justify-between text-[11px] text-slate-400 mb-1">
+                  <span>Text 3D Intensity</span>
+                  <span className="font-mono text-fuchsia-400">{effects.effect3dIntensity ?? 80}%</span>
+                </div>
+                <input type="range" min="20" max="150" value={effects.effect3dIntensity ?? 80}
+                  onChange={(e) => onChangeEffects({ ...effects, effect3dIntensity: parseInt(e.target.value, 10) })}
+                  className="w-full h-1 accent-fuchsia-400 bg-slate-800 rounded cursor-pointer" />
+              </div>
+              <div>
+                <div className="flex justify-between text-[11px] text-slate-400 mb-1">
+                  <span>Text 3D Depth</span>
+                  <span className="font-mono text-rose-400">{effects.effect3dDepth ?? 75}%</span>
+                </div>
+                <input type="range" min="20" max="150" value={effects.effect3dDepth ?? 75}
+                  onChange={(e) => onChangeEffects({ ...effects, effect3dDepth: parseInt(e.target.value, 10) })}
+                  className="w-full h-1 accent-rose-400 bg-slate-800 rounded cursor-pointer" />
+              </div>
+            </div>
+
+            {/* Search */}
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+              <input
+                type="text"
+                placeholder="ស្វែងរក Effect 3D Text (Gold, Fire, Neon, Ice, Dragon, Khmer, Sakura, Galaxy...)"
+                value={text3dSearch}
+                onChange={(e) => setText3dSearch(e.target.value)}
+                className="w-full bg-[#070b14] border border-white/[0.08] text-xs text-slate-200 pl-8 pr-3 py-1.5 rounded-lg outline-none focus:border-fuchsia-400 transition-colors"
+              />
+            </div>
+
+            {/* 100+ 3D Text Effects Grid — Color Preview Cards */}
+            <div className="grid grid-cols-2 gap-2 max-h-[420px] overflow-y-auto p-1 bg-[#070b14] rounded-xl border border-white/[0.06]">
+              {filteredText3d.length === 0 && (
+                <div className="col-span-2 text-center text-slate-500 text-xs py-8">មិនមានលទ្ធផល — Try different keywords</div>
+              )}
+              {filteredText3d.map((item) => {
+                const isSelected = effects.effect3dPreset === item.id && effects.effect3dEnabled;
+                const colors = getTextCardColors(item.id);
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      onChangeEffects({
+                        ...effects,
+                        effect3dEnabled: true,
+                        effect3dPreset: item.id,
+                        styleText: {
+                          ...(effects.styleText || { enabled: true, title: 'ចំណងជើងរឿង', subtitle: 'AI Dubbing', badge: 'ភាគ ០១', stylePreset: 'gold3d', position: 'bottom-left', fontSize: 28, fontFamily: 'Koulen', showBanner: true }),
+                          enabled: true,
+                          stylePreset: item.titleStylePreset || 'gold3d',
+                        }
+                      });
+                      onShowToast(`🎉 Effect 3D Text: ${item.label}`, 'success');
+                    }}
+                    className={`p-2.5 rounded-xl border text-left flex flex-col gap-1.5 transition-all ${
+                      isSelected
+                        ? 'shadow-lg scale-[1.02]'
+                        : 'hover:scale-[1.01] hover:shadow-md'
+                    }`}
+                    style={{
+                      background: isSelected ? colors.bg.replace('0.3', '0.5') : colors.bg,
+                      borderColor: isSelected ? colors.border : 'rgba(255,255,255,0.06)',
+                      boxShadow: isSelected ? `0 0 12px ${colors.border}40` : undefined
+                    }}
+                  >
+                    {/* Preview bar */}
+                    <div className="h-1.5 rounded-full w-full opacity-90" style={{ background: colors.preview }} />
+                    <div className="flex items-start justify-between gap-1">
+                      <div className="text-[11px] font-bold truncate leading-snug" style={{ color: isSelected ? colors.border : '#e2e8f0' }}>
+                        {item.label}
+                      </div>
+                      {isSelected && (
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold text-white shrink-0 ${colors.badge}`}>ON</span>
+                      )}
+                    </div>
+                    <div className="text-[9.5px] text-slate-400 line-clamp-1 leading-relaxed">{item.description}</div>
+                    <div className="flex items-center justify-between text-[9px]">
+                      <span className="text-slate-500 truncate">3D Typography</span>
+                      <span className="font-mono font-bold" style={{ color: colors.border }}>3D TEXT</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ======================= TAB: 3D EFFECTS & SPATIAL ENGINE ======================= */}
         {activeTab === 'effect3d' && (
           <div className="space-y-4">
             {/* Master Toggle & Active Preset Info */}
@@ -1032,38 +1488,44 @@ export const VideoEffectsPanel: React.FC<VideoEffectsPanelProps> = ({
               </div>
             </div>
 
-            {/* 12+ 3D Style Presets */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300">ស្ទាយអក្សរ 3D ភាពយន្ត (3D Movie Title Presets)</label>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { id: 'gold3d', label: '👑 ទឹកមាស 3D (Gold Cinema)', desc: 'ពណ៌មាសរលោង 3D Bevel' },
-                  { id: 'cyberpunk', label: '⚡ Cyber Neon (Cyan/Pink)', desc: 'ពន្លឺ Neon ពណ៌ខៀវផ្កាឈូក' },
-                  { id: 'fire', label: '🔥 ភ្លើងកក្រើក (Inferno Dragon)', desc: 'ភ្លើងក្រហមទឹកក្រូច' },
-                  { id: 'neon', label: '💎 Cyan Glow Neon', desc: 'ពន្លឺ Neon ខៀវស្រាល' },
-                  { id: 'sapphire', label: '🌊 Sapphire Blue', desc: 'ពណ៌ទឹកប៊ិចរលោង' },
-                  { id: 'crimson_shadow', label: '🩸 ភ័យរន្ធត់ (Blood Horror)', desc: 'ក្រហមឈាម ខ្មោចព្រាយ' },
-                  { id: 'jade_celestial', label: '🌿 ត្បូងមរកត (Emerald Jade)', desc: 'បៃតងរស្មី ទេវកថា' },
-                  { id: 'silver_blade', label: '⚔️ ផ្លែដាវប្រាក់ (Silver Blade)', desc: 'ចាំងពន្លឺមុតស្រួច Wuxia' },
-                  { id: 'diamond_prism', label: '💎 ត្បូងពេជ្រ (Diamond Prism)', desc: 'ចាំងពន្លឺ 3D គ្រីស្តាល់' },
-                  { id: 'cinema', label: '⚪ Monolith 3D (Hollywood White)', desc: 'សសុទ្ធ Hollywood 3D' },
-                  { id: 'glass', label: '🧊 Glass Frosted', desc: 'កញ្ចក់ថ្លា Minimal' },
-                  { id: 'anime', label: '✨ Shonen Anime Glow', desc: 'ពន្លឺ Anime ទេពកោសល្យ' },
-                ].map((st) => {
-                  const isSelected = currentStyleText.stylePreset === st.id;
+            {/* 3D Text Style Presets — Full 100+ palette from library */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-rose-400" />
+                  <span>ស្ទាយ 3D Text ({text3dPresets.length}+ ជម្រើស)</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('text3d')}
+                  className="text-[10px] text-fuchsia-400 hover:text-fuchsia-300 font-semibold underline underline-offset-2 transition-colors"
+                >
+                  មើលទាំងអស់ →
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-2 max-h-52 overflow-y-auto p-1 bg-[#070b14] rounded-xl border border-white/[0.06]">
+                {text3dPresets.slice(0, 30).map((item) => {
+                  const isSelected = currentStyleText.stylePreset === (item.titleStylePreset || '');
+                  const colors = getTextCardColors(item.id);
                   return (
                     <button
-                      key={st.id}
+                      key={item.id}
                       type="button"
-                      onClick={() => updateStyleText({ stylePreset: st.id as any })}
+                      onClick={() => {
+                        updateStyleText({ stylePreset: (item.titleStylePreset || 'gold3d') as any });
+                        onChangeEffects({ ...effects, effect3dEnabled: true, effect3dPreset: item.id });
+                      }}
                       className={`p-2 rounded-xl border text-left transition-all ${
-                        isSelected
-                          ? 'bg-amber-500/20 border-amber-400 text-white shadow-md'
-                          : 'bg-[#070b14] border-white/[0.06] text-slate-400 hover:text-slate-200'
+                        isSelected ? 'shadow-md scale-[1.02]' : 'hover:scale-[1.01]'
                       }`}
+                      style={{
+                        background: isSelected ? colors.bg.replace('0.3', '0.5') : 'rgba(11,16,29,0.9)',
+                        borderColor: isSelected ? colors.border : 'rgba(255,255,255,0.06)',
+                        boxShadow: isSelected ? `0 0 10px ${colors.border}40` : undefined
+                      }}
                     >
-                      <div className="text-[11px] font-bold">{st.label}</div>
-                      <div className="text-[9.5px] text-slate-500 truncate">{st.desc}</div>
+                      <div className="h-1 rounded-full mb-1" style={{ background: colors.preview }} />
+                      <div className="text-[11px] font-bold truncate" style={{ color: isSelected ? colors.border : '#e2e8f0' }}>{item.label}</div>
                     </button>
                   );
                 })}
