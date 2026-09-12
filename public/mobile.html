@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#070a13">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Cheatz Dabber | Android Khmer Neural Studio</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/mobile.css?v=2026.1">
+</head>
+<body>
+  <!-- Header -->
+  <header class="m-header">
+    <div class="m-logo">
+      <div class="m-logo-icon">🎬</div>
+      <div>
+        <div class="m-logo-text">Cheatz Dabber</div>
+        <div class="m-badge-khmer">🇰🇭 Khmer Neural Only</div>
+      </div>
+    </div>
+    <button type="button" class="m-btn-install" id="btnInstallPwa" style="display:none;">
+      <span>📱 ដំឡើង App</span>
+    </button>
+  </header>
+
+  <!-- Screen 1: Splash / Launcher -->
+  <section class="m-splash-view" id="splashView">
+    <div class="m-splash-hero-icon">✨</div>
+    <h1 class="m-splash-title">ស្ទូឌីយោបញ្ជូលសំឡេងខ្មែរ</h1>
+    <p class="m-splash-subtitle">
+      កម្មវិធីសាមញ្ញ និងងាយស្រួលបំផុតសម្រាប់ Android • ដំណើរការសំឡេងខ្មែរ Neural ធម្មជាតិឥតគិតថ្លៃ ១០០%
+    </p>
+
+    <div class="m-splash-features">
+      <div class="m-splash-feat-item">
+        <span class="emoji">📁</span>
+        <span>ជ្រើសរើសវីដេអូពីទូរស័ព្ទ (Load Video)</span>
+      </div>
+      <div class="m-splash-feat-item">
+        <span class="emoji">✏️</span>
+        <span>កែសម្រួលពាក្យពេចន៍សន្ទនាតាមចិត្ត</span>
+      </div>
+      <div class="m-splash-feat-item">
+        <span class="emoji">⚡</span>
+        <span>បង្កើតសំឡេងខ្មែរស្វ័យប្រវត្តិ (Generate)</span>
+      </div>
+      <div class="m-splash-feat-item">
+        <span class="emoji">📥</span>
+        <span>ទាញយកវីដេអូចុងក្រោយ (Export Video)</span>
+      </div>
+    </div>
+
+    <button type="button" class="btn-start-app" id="btnStartApp">
+      <span>🚀 ចាប់ផ្ដើមកម្មវិធី (Start App)</span>
+    </button>
+  </section>
+
+  <!-- Screen 2: Workspace View -->
+  <main class="m-workspace-view" id="workspaceView">
+    <input type="file" id="mobileFileInput" accept="video/mp4,video/mkv,video/webm,video/mov" style="display:none;">
+
+    <!-- 1. Video Card -->
+    <div class="m-card">
+      <div class="m-card-header">
+        <div class="m-card-title">
+          <span>🎬</span>
+          <span>វីដេអូរឿង (Video Player)</span>
+        </div>
+        <button type="button" class="m-change-video-btn" id="btnChangeVideo" style="display:none;">ប្ដូរវីដេអូ</button>
+      </div>
+
+      <!-- Load Video Button (Shows when no video) -->
+      <button type="button" class="btn-load-video" id="btnLoadVideo">
+        <div class="icon-circle">📁</div>
+        <div class="btn-text-main">ជ្រើសរើសវីដេអូ (Load Video)</div>
+        <div class="btn-text-sub">ចុចដើម្បីជ្រើសរើសវីដេអូរឿងពីទូរស័ព្ទ (MP4, MKV, WebM)</div>
+      </button>
+
+      <!-- Video Player (Shows when video loaded) -->
+      <div class="m-player-container" id="mPlayerCard" style="display:none;">
+        <video id="mVideoPlayer" controls playsinline></video>
+      </div>
+
+      <div class="m-file-meta-row" id="mVideoMetaRow" style="display:none;">
+        <span id="mFileName">video.mp4</span>
+        <span id="mFileSize">0 MB</span>
+      </div>
+    </div>
+
+    <!-- 2. Dialogue & Subtitles Card (Editable) -->
+    <div class="m-card">
+      <div class="m-script-header">
+        <div class="m-card-title">
+          <span>💬</span>
+          <span>អក្សរការនិយាយ (អាចកែបាន)</span>
+        </div>
+        <span style="font-size:0.72rem; color:#10b981; font-weight:600;">🇰🇭 Khmer Neural Voice</span>
+      </div>
+
+      <div class="m-lines-list" id="linesList">
+        <!-- Dialogue items injected dynamically -->
+      </div>
+
+      <button type="button" class="btn-add-line" id="btnAddLine">
+        <span>+ បន្ថែមប្រយោគសន្ទនាថ្មី</span>
+      </button>
+    </div>
+
+    <!-- 3. Sticky Action Bar -->
+    <div class="m-action-dock">
+      <!-- Progress Bar -->
+      <div class="m-progress-box" id="mProgressBox">
+        <div class="m-progress-label">
+          <span id="mProgressText">កំពុងដំណើរការ...</span>
+          <span id="mProgressPercent">0%</span>
+        </div>
+        <div class="m-progress-bar-bg">
+          <div class="m-progress-bar-fill" id="mProgressFill"></div>
+        </div>
+      </div>
+
+      <!-- Generate Button -->
+      <button type="button" class="btn-generate-main" id="btnGenerateMain" disabled>
+        <span>⚡ បង្កើតសំឡេងខ្មែរ (Process / Generate)</span>
+      </button>
+
+      <!-- Export Button -->
+      <button type="button" class="btn-export-main" id="btnExportMain">
+        <span>📥 ទាញយកវីដេអូ (Export Video)</span>
+      </button>
+    </div>
+  </main>
+
+  <!-- Toast Container -->
+  <div class="m-toast-container" id="toastContainer"></div>
+
+  <script src="/js/mobile.js?v=2026.1"></script>
+</body>
+</html>

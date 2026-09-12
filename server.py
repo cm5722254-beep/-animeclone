@@ -1070,6 +1070,14 @@ def get_network_info():
         'primaryLanUrl': lan_addrs[0]['url'] if lan_addrs else f"http://localhost:{port}"
     }
 
+@app.get('/mobile')
+@app.get('/android')
+def serve_mobile_app():
+    mobile_file = os.path.join(PUBLIC_DIR, 'mobile.html')
+    if os.path.exists(mobile_file):
+        return FileResponse(mobile_file)
+    raise HTTPException(status_code=404, detail="Mobile app not found")
+
 # --- Static File Mounts ---
 app.mount('/media/outputs', StaticFiles(directory=OUTPUTS_DIR), name='outputs')
 app.mount('/media/samples', StaticFiles(directory=SAMPLES_DIR), name='samples')
