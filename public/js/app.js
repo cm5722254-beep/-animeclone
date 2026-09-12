@@ -176,7 +176,11 @@ async function initConfig() {
             voxDot.style.boxShadow = '0 0 8px #ef4444';
           }
           voxText.textContent = '⚠️ VoxCPM2: ដាច់ការភ្ជាប់ (ចុចប្ដូរ Link)';
-          document.getElementById('connectionAlertBanner')?.classList.remove('hidden');
+          if (currentEngineMode !== 'pure_khmer') {
+            document.getElementById('connectionAlertBanner')?.classList.remove('hidden');
+          } else {
+            document.getElementById('connectionAlertBanner')?.classList.add('hidden');
+          }
         } else {
           voxBadge.style.background = 'rgba(234, 179, 8, 0.15)';
           voxBadge.style.border = '1px solid rgba(234, 179, 8, 0.4)';
@@ -186,7 +190,11 @@ async function initConfig() {
             voxDot.style.boxShadow = '0 0 8px #eab308';
           }
           voxText.textContent = '⚡ VoxCPM2: សូមកំណត់ Link';
-          document.getElementById('connectionAlertBanner')?.classList.remove('hidden');
+          if (currentEngineMode !== 'pure_khmer') {
+            document.getElementById('connectionAlertBanner')?.classList.remove('hidden');
+          } else {
+            document.getElementById('connectionAlertBanner')?.classList.add('hidden');
+          }
         }
       } catch (e) {
         console.warn('Vox status check error:', e);
@@ -2890,6 +2898,7 @@ async function initEngineModeSwitcher() {
   btnPure.addEventListener('click', async () => {
     currentEngineMode = 'pure_khmer';
     updateEngineModeButtons('pure_khmer');
+    document.getElementById('connectionAlertBanner')?.classList.add('hidden');
     try {
       await fetch('/api/voxcpm/switch-mode', {
         method: 'POST',
