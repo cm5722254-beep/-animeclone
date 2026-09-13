@@ -523,8 +523,16 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
           {videoEffects?.effect3dEnabled && active3dPreset?.overlayType === 'hologram_rings' && (
             <div className="absolute inset-0 pointer-events-none z-10 overlay-hologram-rings" />
           )}
-          {videoEffects?.effect3dEnabled && active3dPreset?.overlayType === 'lens_flare' && (
-            <div className="absolute inset-0 pointer-events-none z-10 overlay-lens-flare" />
+          {/* Center Play Overlay Icon when paused */}
+          {!isPlaying && src && (
+            <div
+              onClick={onTogglePlay}
+              className="absolute inset-0 flex items-center justify-center cursor-pointer z-15 group/playbtn transition-all"
+            >
+              <div className="w-16 h-16 rounded-full bg-sky-500/90 hover:bg-sky-400 text-black flex items-center justify-center shadow-[0_0_25px_rgba(56,189,248,0.6)] transform group-hover/playbtn:scale-110 active:scale-95 transition-all">
+                <Play className="w-7 h-7 fill-black text-black translate-x-0.5" />
+              </div>
+            </div>
           )}
         </div>
 
