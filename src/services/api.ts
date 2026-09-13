@@ -258,4 +258,21 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ filename, preferAi }),
     }),
+
+  // Project Persistence (Never lose timeline/segments on browser refresh)
+  saveProject: (data: any) =>
+    request<{ success: boolean; message: string }>('/api/project/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }),
+
+  loadProject: () =>
+    request<{ success: boolean; project: any }>('/api/project/load'),
+
+  clearProject: () =>
+    request<{ success: boolean; message: string }>('/api/project/clear', {
+      method: 'POST',
+    }),
 };
+

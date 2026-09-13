@@ -16,6 +16,8 @@ import {
   Laptop,
   ShieldCheck,
   Smartphone,
+  Save,
+  Loader2,
 } from 'lucide-react';
 import { User, VoxcpmStatus } from '../../types';
 import { getSubscriptionInfo } from '../../utils/subscription';
@@ -27,6 +29,7 @@ interface HeaderProps {
   onLogout: () => void;
   onOpenSettings: () => void;
   onOpenExport: () => void;
+  onSaveProject?: () => void;
   onUndo?: () => void;
   onRedo?: () => void;
   onPreview?: () => void;
@@ -47,6 +50,7 @@ export const Header: React.FC<HeaderProps> = ({
   onLogout,
   onOpenSettings,
   onOpenExport,
+  onSaveProject,
   onUndo,
   onRedo,
   onPreview,
@@ -217,6 +221,22 @@ export const Header: React.FC<HeaderProps> = ({
             <Redo2 className="w-3.5 h-3.5" />
           </button>
         </div>
+
+        {/* Save Project Button */}
+        <button
+          onClick={onSaveProject}
+          disabled={isSaving}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold bg-[#111827] hover:bg-[#1a2234] border-white/[0.1] hover:border-emerald-500/40 text-slate-200 active:scale-95 transition-all shadow-sm"
+          title="រក្សាទុកទិន្នន័យគម្រោង (Ctrl+S) - Refresh មិនបាត់បង់ទិន្នន័យ"
+        >
+          {isSaving ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" />
+          ) : (
+            <Save className="w-3.5 h-3.5 text-emerald-400" />
+          )}
+          <span>រក្សាទុក</span>
+          <span className="hidden xl:inline text-[9px] text-emerald-400 font-mono">✓ Auto</span>
+        </button>
 
         {/* Preview Button */}
         <button

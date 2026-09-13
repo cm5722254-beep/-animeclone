@@ -47,10 +47,13 @@ UPLOADS_DIR = os.path.join(BASE_DIR, 'uploads')
 OUTPUTS_DIR = os.path.join(BASE_DIR, 'outputs')
 SAMPLES_DIR = os.path.join(BASE_DIR, 'samples')
 PUBLIC_DIR = os.path.join(BASE_DIR, 'public')
+DATA_DIR = os.path.join(BASE_DIR, 'data')
+ACTIVE_PROJECT_FILE = os.path.join(DATA_DIR, 'active_project.json')
 
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 os.makedirs(OUTPUTS_DIR, exist_ok=True)
 os.makedirs(SAMPLES_DIR, exist_ok=True)
+os.makedirs(DATA_DIR, exist_ok=True)
 
 khmer_dubber = KhmerDubber()
 active_jobs = {}
@@ -872,6 +875,38 @@ async def scan_timeline(body: ScanTimelineRequest):
         'characterVoiceMap': {k: v.get('voiceId') for k, v in char_map.items()}
     }
 
+# --- Project State Persistence (Never lose timeline/segments on browser refresh) ---
+@app.post('/api/project/save')
+async def save_project_state(request: Request):
+    try:
+        data = await request.json()
+        data['updated_at'] = time.time()
+        with open(ACTIVE_PROJECT_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        return {'success': True, 'message': 'គម្រោងត្រូវបានរក្សាទុកដោយជោគជ័យ!'}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save project: {str(e)}")
+
+@app.get('/api/project/load')
+async def load_project_state():
+    if not os.path.exists(ACTIVE_PROJECT_FILE):
+        return {'success': False, 'project': None}
+    try:
+        with open(ACTIVE_PROJECT_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        return {'success': True, 'project': data}
+    except Exception as e:
+        return {'success': False, 'error': str(e), 'project': None}
+
+@app.post('/api/project/clear')
+async def clear_project_state():
+    try:
+        if os.path.exists(ACTIVE_PROJECT_FILE):
+            os.remove(ACTIVE_PROJECT_FILE)
+        return {'success': True, 'message': 'Project cache cleared'}
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+
 @app.post('/api/dubbing/record-line')
 async def record_line(audio: UploadFile = File(...), lineIndex: int = Form(0)):
     out_name = f"user_recorded_line_{lineIndex}_{int(time.time() * 1000)}.wav"
@@ -1412,6 +1447,42 @@ def delete_character(char_id: str):
         json.dump(characters, f, ensure_ascii=False, indent=2)
 
     return {'success': True, 'message': 'Character removed successfully'}
+
+# --- Project Persistence (Never lose project data on browser reload) ---
+PROJECT_DATA_FILE = os.path.join(DATA_DIR, 'active_project.json')
+
+@app.post('/api/project/save')
+async def save_project_state(request: Request):
+    try:
+        data = await request.json()
+        with open(PROJECT_DATA_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        return {'success': True, 'message': 'Project state saved successfully'}
+    except Exception as e:
+        print(f"Error saving project: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get('/api/project/load')
+def load_project_state():
+    if not os.path.exists(PROJECT_DATA_FILE):
+        return {'success': True, 'project': None}
+    try:
+        with open(PROJECT_DATA_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        return {'success': True, 'project': data}
+    except Exception as e:
+        print(f"Error loading project: {e}")
+        return {'success': False, 'project': None, 'error': str(e)}
+
+@app.post('/api/project/clear')
+def clear_project_state():
+    try:
+        if os.path.exists(PROJECT_DATA_FILE):
+            os.remove(PROJECT_DATA_FILE)
+        return {'success': True, 'message': 'Project state cleared'}
+    except Exception as e:
+        print(f"Error clearing project: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get('/api/system/network-info')
 def get_network_info():

@@ -170,6 +170,8 @@ export const App: React.FC = () => {
   const [isDownloaderOpen, setIsDownloaderOpen] = useState(false);
   const [isSystemStatusOpen, setIsSystemStatusOpen] = useState(false);
   const [diskStats, setDiskStats] = useState<{ formattedSize: string; count: number } | null>(null);
+  const [isSavingProject, setIsSavingProject] = useState(false);
+  const isRestoringProjectRef = useRef(true);
 
   // Toast Helper with deduplication & max queue protection
   const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') => {
@@ -187,7 +189,107 @@ export const App: React.FC = () => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  // Initial Data Fetch
+  // Save Project State (localStorage + backend disk file)
+  const saveProjectToStorage = async (isManual = false) => {
+    try {
+      if (isManual) setIsSavingProject(true);
+      const projectPayload = {
+        timestamp: Date.now(),
+        uploadedFile,
+        segments,
+        outputVideo,
+        outputAudio,
+        cleanBgmUrl,
+        voiceMode,
+        dubbingScope,
+        maleLeadVoice,
+        femaleLeadVoice,
+        geminiModel,
+        videoEffects,
+        subtitleStyle,
+        activeTab,
+      };
+
+      // 1. Instant client-side persistence
+      localStorage.setItem('CHEATAZ_DABBER_PROJECT_STATE', JSON.stringify(projectPayload));
+
+      // 2. Persistent backend storage
+      await api.saveProject(projectPayload).catch(() => {});
+
+      if (isManual) {
+        showToast('💾 បានរក្សាទុកទិន្នន័យគម្រោងជោគជ័យ! (Refresh មិនបាត់បង់)', 'success');
+      }
+    } catch (err) {
+      if (isManual) {
+        showToast('⚠️ ការរក្សាទុកមានបញ្ហាខ្លះ ប៉ុន្តែទិន្នន័យក្នុង Browser ត្រូវបានរក្សាទុក', 'warning');
+      }
+    } finally {
+      if (isManual) {
+        setTimeout(() => setIsSavingProject(false), 500);
+      }
+    }
+  };
+
+  // Restore Project State from localStorage / backend on page refresh
+  const restoreSavedProject = async () => {
+    try {
+      let savedData: any = null;
+
+      // Check local storage first
+      const localStr = localStorage.getItem('CHEATAZ_DABBER_PROJECT_STATE');
+      if (localStr) {
+        try {
+          savedData = JSON.parse(localStr);
+        } catch (_) {}
+      }
+
+      // Check server if not in localStorage or to compare
+      if (!savedData) {
+        const remote = await api.loadProject().catch(() => null);
+        if (remote && remote.project) {
+          savedData = remote.project;
+        }
+      }
+
+      if (savedData) {
+        // Restore uploaded file (reconstruct playable URL if it was an uploaded file)
+        if (savedData.uploadedFile) {
+          const uf = savedData.uploadedFile;
+          if (!uf.url || uf.url.startsWith('blob:')) {
+            uf.url = `/media/uploads/${uf.filename}`;
+          }
+          setUploadedFile(uf);
+        }
+
+        if (Array.isArray(savedData.segments) && savedData.segments.length > 0) {
+          setSegments(savedData.segments);
+        }
+
+        if (savedData.outputVideo) setOutputVideo(savedData.outputVideo);
+        if (savedData.outputAudio) setOutputAudio(savedData.outputAudio);
+        if (savedData.cleanBgmUrl) setCleanBgmUrl(savedData.cleanBgmUrl);
+        if (savedData.voiceMode) setVoiceMode(savedData.voiceMode);
+        if (savedData.dubbingScope) setDubbingScope(savedData.dubbingScope);
+        if (savedData.maleLeadVoice) setMaleLeadVoice(savedData.maleLeadVoice);
+        if (savedData.femaleLeadVoice) setFemaleLeadVoice(savedData.femaleLeadVoice);
+        if (savedData.geminiModel) setGeminiModel(savedData.geminiModel);
+        if (savedData.videoEffects) setVideoEffects(savedData.videoEffects);
+        if (savedData.subtitleStyle) setSubtitleStyle(savedData.subtitleStyle);
+        if (savedData.activeTab) setActiveTab(savedData.activeTab);
+
+        showToast('🔄 បានស្ដារទិន្នន័យគម្រោងមុនរួចរាល់ (Project Restored)', 'info');
+      }
+    } catch (e) {
+      console.error('Error restoring project:', e);
+    } finally {
+      // Small delay before enabling auto-save to avoid overwriting with initial state
+      setTimeout(() => {
+        isRestoringProjectRef.current = false;
+      }, 1000);
+    }
+  };
+
+  // Initial Data Fetch & Project Restore
   useEffect(() => {
     // 1. Auth Check
     api
@@ -209,7 +311,36 @@ export const App: React.FC = () => {
 
     // 5. Disk Stats
     api.getOutputStats().then(setDiskStats).catch(() => {});
+
+    // 6. Auto-Restore Project Data (No data loss on refresh)
+    restoreSavedProject();
   }, []);
+
+  // Debounced Auto-save when segments, media or settings change
+  useEffect(() => {
+    if (isRestoringProjectRef.current) return;
+    if (!uploadedFile && segments.length === 0) return;
+
+    const timer = setTimeout(() => {
+      saveProjectToStorage(false);
+    }, 1200);
+
+    return () => clearTimeout(timer);
+  }, [
+    uploadedFile,
+    segments,
+    outputVideo,
+    outputAudio,
+    cleanBgmUrl,
+    voiceMode,
+    dubbingScope,
+    maleLeadVoice,
+    femaleLeadVoice,
+    geminiModel,
+    videoEffects,
+    subtitleStyle,
+    activeTab,
+  ]);
 
   // Studio Professional Keyboard Shortcuts (Space, Ctrl+S, Ctrl+Z, M, F)
   useEffect(() => {
@@ -219,7 +350,7 @@ export const App: React.FC = () => {
 
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
-        showToast('📁 គម្រោងត្រូវបានរក្សាទុក (Project Saved)', 'success');
+        saveProjectToStorage(true);
         return;
       }
 
@@ -542,11 +673,12 @@ export const App: React.FC = () => {
       {/* Header Bar */}
       <Header
         activeProjectTitle={uploadedFile?.originalName || uploadedFile?.filename || 'Perfect World EP145.mp4'}
-        isSaving={false}
+        isSaving={isSavingProject}
         user={user}
         onLogout={handleLogout}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenExport={() => setIsExportOpen(true)}
+        onSaveProject={() => saveProjectToStorage(true)}
         onUndo={() => showToast('បានត្រឡប់ក្រោយ (Undo)', 'info')}
         onRedo={() => showToast('បានធ្វើឡើងវិញ (Redo)', 'info')}
         onPreview={() => {
@@ -578,8 +710,19 @@ export const App: React.FC = () => {
           isCollapsed={isSidebarCollapsed}
           onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
           onNewProject={() => {
+            if (segments.length > 0 || uploadedFile) {
+              if (!window.confirm('តើអ្នកពិតជាចង់បង្កើតគម្រោងថ្មីមែនទេ? ទិន្នន័យចាស់នឹងត្រូវជម្រះចេញ។')) {
+                return;
+              }
+            }
             setUploadedFile(null);
+            setSegments([]);
+            setOutputVideo(null);
+            setOutputAudio(null);
+            localStorage.removeItem('CHEATAZ_DABBER_PROJECT_STATE');
+            api.clearProject().catch(() => {});
             setActiveTab('tab-dubbing');
+            showToast('✨ បានបង្កើតគម្រោងថ្មីរួចរាល់', 'info');
           }}
           onOpenExport={() => setIsExportOpen(true)}
           onOpenSettings={() => setIsSettingsOpen(true)}
@@ -597,8 +740,19 @@ export const App: React.FC = () => {
               voxStatus={voxStatus}
               diskStats={diskStats}
               onNewProject={() => {
+                if (segments.length > 0 || uploadedFile) {
+                  if (!window.confirm('តើអ្នកពិតជាចង់បង្កើតគម្រោងថ្មីមែនទេ? ទិន្នន័យចាស់នឹងត្រូវជម្រះចេញ។')) {
+                    return;
+                  }
+                }
                 setUploadedFile(null);
+                setSegments([]);
+                setOutputVideo(null);
+                setOutputAudio(null);
+                localStorage.removeItem('CHEATAZ_DABBER_PROJECT_STATE');
+                api.clearProject().catch(() => {});
                 setActiveTab('tab-dubbing');
+                showToast('✨ បានបង្កើតគម្រោងថ្មីរួចរាល់', 'info');
               }}
               onOpenStudio={() => setActiveTab('tab-dubbing')}
               onSelectProject={(f) => {
