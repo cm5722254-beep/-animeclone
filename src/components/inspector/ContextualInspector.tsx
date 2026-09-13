@@ -13,6 +13,7 @@ import {
   Film,
   Users,
   Clock,
+  Loader2,
 } from 'lucide-react';
 import { ProjectFile, TimelineSegment, CharacterVoice, VideoEffects } from '../../types';
 
