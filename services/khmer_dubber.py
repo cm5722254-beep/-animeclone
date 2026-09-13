@@ -466,8 +466,14 @@ class KhmerDubber:
             "   - 'elder': ព្រឹទ្ធាចារ្យ / តាគ្រូចាស់\n"
             "   - 'old_woman': យាយចាស់ / ម្តាយចាស់\n"
             "   - 'crowd': មហាជន\n"
-            "3. Theatrical Khmer Dubbing: Translate each line into authentic, highly dramatic, poetic, and cinematic Khmer matching Cambodian movie dubbing style. Infuse passionate emotion, dramatic interjections ('ឱ!', 'ឯង!', 'ឈប់ភ្លាម!', 'ហ៊ឺ...', 'ហេតុអ្វី?', 'ព្រះអើយ!', 'មិនអាចទេ!'), and acting punctuation (!, ?, ..., ~).\n"
-            "4. Accurate Timestamps: Relative start_time and end_time (in seconds, float or mm:ss).\n\n"
+            "3. Theatrical Khmer Dubbing & SYLLABLE SYNC (បកប្រែឱ្យស៊ីនឹងមាត់តួ និងអក្សរចិនដើម):\n"
+            "   - Translate each line into authentic, highly dramatic, poetic, and cinematic Khmer matching Cambodian movie dubbing style.\n"
+            "   - CRITICAL LIP-SYNC & PACING RULE: The Khmer translated dialogue MUST match the exact length, tempo, and syllable rhythm of the original Chinese spoken line so the dubbed audio fits perfectly within the original speech duration (មិនឱ្យវែងពេក ឬខ្លីពេក គឺត្រូវនឹងចលនាមាត់ និងអក្សរចិនដើម ១០០%).\n"
+            "   - Infuse passionate emotion, dramatic interjections ('ឱ!', 'ឯង!', 'ឈប់ភ្លាម!', 'ហ៊ឺ...', 'ហេតុអ្វី?', 'ព្រះអើយ!', 'មិនអាចទេ!'), and acting punctuation (!, ?, ..., ~).\n"
+            "4. EXACT MILLISECOND TIMESTAMPS (ម៉ោងចាប់ផ្តើម និងបញ្ចប់ឱ្យស៊ីគ្នា ១០០% នឹងអក្សរចិនដើម):\n"
+            "   - 'start_time': The precise millisecond the character starts speaking the Chinese words.\n"
+            "   - 'end_time': The precise millisecond the character stops speaking the Chinese words.\n"
+            "   - Accurate Timestamps: Relative start_time and end_time (in seconds, e.g. 1.25, 4.80).\n\n"
             "Output format: Return a JSON array enclosed in ```json ... ``` code block:\n"
             "```json\n"
             "[\n"
@@ -476,10 +482,10 @@ class KhmerDubber:
             "    \"speaker_name\": \"តួឯកប្រុស\",\n"
             "    \"speaker_role\": \"male_lead\",\n"
             "    \"gender\": \"male\",\n"
-            "    \"start_time\": 1.2,\n"
-            "    \"end_time\": 4.5,\n"
+            "    \"start_time\": 1.25,\n"
+            "    \"end_time\": 4.10,\n"
             "    \"chinese_text\": \"Original Chinese line\",\n"
-            "    \"khmer_translation\": \"Authentic theatrical Khmer dialogue (100% PURE KHMER, NO THAI)\",\n"
+            "    \"khmer_translation\": \"Authentic theatrical Khmer dialogue (100% PURE KHMER, NO THAI, EXACT DURATION FIT)\",\n"
             "    \"emotion\": \"heroic\"\n"
             "  }\n"
             "]\n"
@@ -728,10 +734,11 @@ class KhmerDubber:
                 if gap > 0.6:
                     max_allowed = min(max_allowed, gap - 0.15)
 
-            # Fit mouth movement
-            if aud_dur > max_allowed and max_allowed >= 1.0:
+            # Precision mouth movement fitting: ensure Khmer audio syncs directly with original Chinese subtitle duration
+            orig_slot = max(0.6, (seg.get('end_time', 0.0) - seg.get('start_time', 0.0)))
+            if aud_dur > max_allowed and max_allowed >= 0.8:
                 speed_ratio = aud_dur / max_allowed
-                clamped_speed = min(1.35, max(1.05, speed_ratio))
+                clamped_speed = min(1.45, max(1.05, speed_ratio))
                 stretched_path = os.path.join(temp_dir, f"fitted_py_{i}.wav")
                 try:
                     audio_processor.tune_audio_pitch_and_speed(seg['audioPath'], stretched_path, clamped_speed, 0)
@@ -740,13 +747,25 @@ class KhmerDubber:
                         seg['duration'] = audio_processor.get_media_duration(stretched_path)
                 except Exception as e:
                     print(f"Time stretch notice on line {i}: {e}")
+            elif aud_dur < orig_slot * 0.75 and orig_slot >= 1.5:
+                # If Khmer audio finished too quickly, gently stretch tempo so it doesn't leave awkward silence
+                slow_ratio = aud_dur / orig_slot
+                clamped_speed = max(0.85, min(0.98, slow_ratio))
+                stretched_path = os.path.join(temp_dir, f"fitted_slow_py_{i}.wav")
+                try:
+                    audio_processor.tune_audio_pitch_and_speed(seg['audioPath'], stretched_path, clamped_speed, 0)
+                    if os.path.exists(stretched_path) and os.path.getsize(stretched_path) > 1000:
+                        seg['audioPath'] = stretched_path
+                        seg['duration'] = audio_processor.get_media_duration(stretched_path)
+                except Exception as e:
+                    print(f"Gentle slow stretch notice on line {i}: {e}")
 
             # Guarantee ZERO speech overlap
             if i < len(valid) - 1:
                 next_seg = valid[i + 1]
                 cur_end = seg.get('start_time', 0.0) + seg['duration']
                 if cur_end > next_seg.get('start_time', 0.0):
-                    next_seg['start_time'] = cur_end + 0.15
+                    next_seg['start_time'] = cur_end + 0.12
 
         batch_size = 15
         sub_tracks = []
