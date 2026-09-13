@@ -206,11 +206,11 @@ export const api = {
 
   getDubbingStatus: (jobId: string) => request<any>(`/api/dubbing/status/${jobId}`),
 
-  scanTimeline: (filename: string, scope = 'full') =>
+  scanTimeline: (filename: string, scope = 'full', voiceMode = 'voice_actor_clone') =>
     request<{ success: boolean; duration: number; segments: TimelineSegment[] }>('/api/dubbing/scan-timeline', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ filename, scope }),
+      body: JSON.stringify({ filename, scope, voiceMode }),
     }),
 
   generateLine: (body: { text: string; lineIndex?: number; gender?: string; voiceId?: string; speakerId?: string; emotion?: string }) =>

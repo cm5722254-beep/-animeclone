@@ -109,7 +109,7 @@ class DubbingStartRequest(BaseModel):
     filename: str
     sourceLang: Optional[str] = 'zh'
     targetLang: Optional[str] = 'km'
-    voiceId: Optional[str] = 'voxcpm-voice-actor'
+    voiceId: Optional[str] = 'voice_actor_clone'
     scope: Optional[str] = 'full'
     castingSafetyMode: Optional[str] = 'safe_curated'
     characterVoiceMap: Optional[dict] = {}
@@ -120,6 +120,7 @@ class DubbingStartRequest(BaseModel):
 class ScanTimelineRequest(BaseModel):
     filename: str
     scope: Optional[str] = 'full'
+    voiceMode: Optional[str] = 'voice_actor_clone'
 
 class GenerateLineRequest(BaseModel):
     text: str
@@ -851,7 +852,11 @@ async def scan_timeline(body: ScanTimelineRequest):
         print(f"Movie voice sample extraction notice: {ve}")
 
     # 1-to-1 Unique Voice Assignment for each character (Zero Duplicate Voices, Auto Movie Clone fallback)
-    char_map = khmer_dubber.assign_unique_voices_to_segments(segments, movie_voice_map=movie_voice_map)
+    char_map = khmer_dubber.assign_unique_voices_to_segments(
+        segments,
+        movie_voice_map=movie_voice_map,
+        voice_mode=body.voiceMode or 'voice_actor_clone'
+    )
 
     formatted = []
     for idx, s in enumerate(segments):

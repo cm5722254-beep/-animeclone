@@ -196,13 +196,16 @@ export const ContextualInspector: React.FC<ContextualInspectorProps> = ({
                     className="flex-1 bg-[#07090e] border border-white/[0.12] rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-sky-400 cursor-pointer truncate"
                   >
                     <option value={`movie_clone:${selectedSegment?.speaker_id || selectedCharName}`} className="text-amber-400 font-semibold">
-                      🎯 Clone សំឡេងផ្ទាល់ពីរឿងដើម ({selectedCharName})
+                      🎯 ជម្រើសទី ១: Clone សំឡេងផ្ទាល់ពីរឿងដើម ({selectedCharName})
+                    </option>
+                    <option value={selectedSegment?.gender === 'female' || selectedCharName.includes('ស្រី') ? 'km-KH-SreymomNeural' : 'km-KH-PisethNeural'} className="text-emerald-400 font-semibold">
+                      🎙️ ជម្រើសទី ៣: សំឡេងខ្មែរធម្មជាតិ ({selectedSegment?.gender === 'female' || selectedCharName.includes('ស្រី') ? 'ស្រី (Sreymom)' : 'ប្រុស (Piseth)'})
                     </option>
                     {characters && characters.length > 0 ? (
                       <>
-                        <optgroup label="🎙️ សំឡេងតួប្រុស (Male Voices)">
+                        <optgroup label="🌸 ជម្រើសទី ២: សំឡេងតួស្រី (Female Voice Library)">
                           {characters
-                            .filter((c) => c.gender === 'male')
+                            .filter((c) => c.gender === 'female')
                             .map((c) => {
                               const clean = c.id.replace('voxcpm:', '');
                               const owner = voiceOwnerMap[clean] || voiceOwnerMap[c.filename] || voiceOwnerMap[c.id];
@@ -214,9 +217,9 @@ export const ContextualInspector: React.FC<ContextualInspectorProps> = ({
                               );
                             })}
                         </optgroup>
-                        <optgroup label="🌸 សំឡេងតួស្រី (Female Voices)">
+                        <optgroup label="🎙️ ជម្រើសទី ២: សំឡេងតួប្រុស (Male Voice Library)">
                           {characters
-                            .filter((c) => c.gender === 'female')
+                            .filter((c) => c.gender === 'male')
                             .map((c) => {
                               const clean = c.id.replace('voxcpm:', '');
                               const owner = voiceOwnerMap[clean] || voiceOwnerMap[c.filename] || voiceOwnerMap[c.id];
@@ -231,8 +234,8 @@ export const ContextualInspector: React.FC<ContextualInspectorProps> = ({
                       </>
                     ) : (
                       <>
+                        <option value="hang_phleung_char_6_female.mp3">🌸 Khmer Female 01 (តួឯកស្រី)</option>
                         <option value="hang_phleung_char_2_male.mp3">🎙️ Khmer Male 01 (តួឯកប្រុស)</option>
-                        <option value="hang_phleung_char_6_female.mp3">🎙️ Khmer Female 01 (តួឯកស្រី)</option>
                       </>
                     )}
                   </select>
@@ -388,17 +391,46 @@ export const ContextualInspector: React.FC<ContextualInspectorProps> = ({
               )}
 
               {/* Voice Mode */}
-              <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-semibold text-slate-300">🎭 របៀបសំឡេង (Voice Mode)</label>
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-semibold text-slate-300">🎭 របៀបសំឡេង (Voice Mode)</label>
+                  <span className="text-[10px] text-amber-400 font-mono font-bold">
+                    {(voiceMode === 'movie_clone_all' || voiceMode === 'movie-live-clone') && '🎯 ជម្រើសទី ១'}
+                    {(voiceMode === 'voice_actor_clone' || voiceMode === 'voxcpm-voice-actor') && '🎭 ជម្រើសទី ២'}
+                    {(voiceMode === 'khmer_natural' || voiceMode === 'pure_khmer') && '🎙️ ជម្រើសទី ៣'}
+                  </span>
+                </div>
                 <select
                   value={voiceMode}
                   onChange={(e) => onVoiceModeChange(e.target.value)}
-                  className="w-full bg-[#07090e] border border-white/[0.08] text-slate-200 text-xs rounded-lg px-2.5 py-1.5 cursor-pointer focus:border-sky-400 outline-none"
+                  className="w-full bg-[#07090e] border border-white/[0.12] text-slate-100 text-xs rounded-lg px-2.5 py-2 cursor-pointer focus:border-sky-400 outline-none font-medium"
                 >
-                  <option value="voxcpm-voice-actor">🎭 Auto Distinct Cast (៣៨+ សំឡេងតួអង្គ 1:1)</option>
-                  <option value="elevenlabs">🎙️ ElevenLabs AI Clone (Cloud Ultra-Realistic)</option>
-                  <option value="movie-live-clone">🎯 Movie Live Clone (កាត់សំឡេងពីរឿងដើម)</option>
+                  <option value="movie_clone_all">🎯 ជម្រើសទី ១: Clone សំឡេងផ្ទាល់ពីរឿងដើមទាំងអស់ (Movie Clone 100%)</option>
+                  <option value="voice_actor_clone">🎭 ជម្រើសទី ២: Clone សំឡេង Voice Actor ពី Library (៣៨+ សំឡេងខ្មែរ)</option>
+                  <option value="khmer_natural">🎙️ ជម្រើសទី ៣: សំឡេងខ្មែរធម្មជាតិ (Khmer Natural Theatrical Neural)</option>
                 </select>
+
+                {/* Voice Mode Explanation Card */}
+                <div className="text-[10.5px] p-2.5 rounded-lg bg-black/40 border border-white/[0.08] text-slate-300 leading-relaxed shadow-inner">
+                  {(voiceMode === 'movie_clone_all' || voiceMode === 'movie-live-clone') && (
+                    <div className="flex items-start gap-1.5 text-amber-300">
+                      <span className="shrink-0 text-sm">🎯</span>
+                      <span><b>ជម្រើសទី ១ (Movie Clone):</b> ស្រង់សំឡេងតួអង្គពិតប្រាកដពីរឿងដើមផ្ទាល់ មក Clone និយាយខ្មែរ ១០០% មិនលាយសំឡេងក្រៅឡើយ (១ តួអង្គ = ១ សំឡេងរឿងដើម)។</span>
+                    </div>
+                  )}
+                  {(voiceMode === 'voice_actor_clone' || voiceMode === 'voxcpm-voice-actor') && (
+                    <div className="flex items-start gap-1.5 text-sky-300">
+                      <span className="shrink-0 text-sm">🎭</span>
+                      <span><b>ជម្រើសទី ២ (Voice Actor):</b> ប្រើសំឡេង Voice Actor ខ្មែរ ៣៨+ តួអង្គក្នុង Library (ស្រីដាច់ដោយឡែក ប្រុសដាច់ដោយឡែក ១ តួអង្គ = ១ សំឡេង មិនច្រឡំភេទ)។</span>
+                    </div>
+                  )}
+                  {(voiceMode === 'khmer_natural' || voiceMode === 'pure_khmer') && (
+                    <div className="flex items-start gap-1.5 text-emerald-300">
+                      <span className="shrink-0 text-sm">🎙️</span>
+                      <span><b>ជម្រើសទី ៣ (Khmer Natural):</b> សំឡេងខ្មែរធម្មជាតិសុទ្ធសាធ (Edge-TTS Neural) ច្បាស់ ពិរោះ ស្រទន់ និងដាច់ដោយឡែកតាមតួអង្គនីមួយៗ (មិនលាយ Clone)។</span>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Scope Selection: 4 Buttons (2mn, 5mn, 7mn, 1 full movie) */}

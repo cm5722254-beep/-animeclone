@@ -24,6 +24,35 @@ def clean_pure_khmer(text: str) -> str:
     cleaned = re.sub(r'\s+', ' ', cleaned).strip()
     return cleaned
 
+def detect_speaker_gender(speaker_name: str = '', speaker_role: str = '', chinese_text: str = '', raw_gender: str = None) -> str:
+    """Accurately classify character gender without any gender confusion or crossover (ស្រី ឬ ប្រុស ដាច់ដោយឡែក)."""
+    if raw_gender and str(raw_gender).lower() in ['female', 'fem', 'f', 'ស្រី']:
+        return 'female'
+    if raw_gender and str(raw_gender).lower() in ['male', 'm', 'ប្រុស']:
+        return 'male'
+
+    text_to_check = f"{speaker_name} {speaker_role} {chinese_text}".lower()
+
+    # Female indicators
+    female_khmer = ['ស្រី', 'នាង', 'ម៉ាក់', 'យាយ', 'អ៊ំស្រី', 'ប្អូនស្រី', 'អ្នកនាង', 'ភរិយា', 'ម្ចាស់ក្សត្រី', 'តួស្រី', 'ក្មេងស្រី', 'កូនស្រី', 'អ្នកបម្រើស្រី', 'ស្រីកាច', 'ម៉ែ']
+    female_roles = ['female', 'woman', 'girl', 'lady', 'maid', 'queen', 'princess', 'sister', 'mother', 'servant_female', 'fierce_female', 'villain_female', 'old_woman']
+    female_chinese = ['小姐', '姑娘', '夫人', '公主', '王妃', '母', '姐', '妹', '女', '她', '丫鬟', '婆']
+
+    for kw in female_khmer + female_roles + female_chinese:
+        if kw in text_to_check:
+            return 'female'
+
+    # Male indicators
+    male_khmer = ['ប្រុស', 'លោក', 'បង', 'ឪពុក', 'តា', 'អ៊ំប្រុស', 'មេទ័ព', 'ប្អូនប្រុស', 'ស្វាមី', 'កូនចៅ', 'ព្រះអង្គ', 'ចៅហ្វាយ', 'តួប្រុស', 'ប្រុសកាច', 'ព្រឹទ្ធាចារ្យ']
+    male_roles = ['male', 'man', 'boy', 'general', 'governor', 'elder', 'uncle', 'king', 'prince', 'brother', 'father', 'fierce_male', 'old_uncle']
+    male_chinese = ['先生', '公子', '少爷', '王爷', '将领', '父', '兄', '弟', '男', '他', '大夫', '宗主', '掌门']
+
+    for kw in male_khmer + male_roles + male_chinese:
+        if kw in text_to_check:
+            return 'male'
+
+    return 'male'
+
 ROLE_THEATRICAL_PROFILES = {
     'male_lead': {'voice': 'km-KH-PisethNeural', 'pitch': '+0Hz', 'rate': '+0%'},
     'female_lead': {'voice': 'km-KH-SreymomNeural', 'pitch': '+2Hz', 'rate': '+0%'},
@@ -105,16 +134,17 @@ class KhmerDubber:
             text = "បាទ"
 
         options = options or {}
-        gender = options.get('gender', 'male')
-        emotion = options.get('emotion', 'neutral')
-        role = options.get('role', 'male_lead' if gender != 'female' else 'female_lead')
-        is_female = gender == 'female' or (voice_id and any(k in str(voice_id) for k in ['female', '14', '21'])) or (role and any(k in role for k in ['female', 'maid', 'woman', '1', '6', '14', '21']))
+        gender = options.get('gender')
+        speaker_name = options.get('speaker_name', '')
+        role = options.get('role', '')
+        detected_gender = detect_speaker_gender(speaker_name, role, '', gender)
+        is_female = detected_gender == 'female'
 
         # Built-in 100% Pure Khmer Neural Actor Dubbing Engine (Zero Thai accent, 100% Cambodian theatrical delivery)
         theatrical_style = ROLE_THEATRICAL_PROFILES.get(role, {})
         target_voice = theatrical_style.get('voice', 'km-KH-SreymomNeural' if is_female else 'km-KH-PisethNeural')
-        target_pitch = theatrical_style.get('pitch', '+0Hz')
-        target_rate = theatrical_style.get('rate', '+0%')
+        target_pitch = options.get('pitch') or theatrical_style.get('pitch', '+0Hz')
+        target_rate = options.get('rate') or theatrical_style.get('rate', '+0%')
 
         if voice_id and voice_id.startswith('km-KH-'):
             target_voice = voice_id
@@ -122,10 +152,11 @@ class KhmerDubber:
         # Emotion pitch and rate adjustments for movie drama acting
         base_pitch_val = 0
         try:
-            base_pitch_val = int(target_pitch.replace('Hz', '').replace('+', ''))
+            base_pitch_val = int(str(target_pitch).replace('Hz', '').replace('+', ''))
         except Exception:
             pass
 
+        emotion = options.get('emotion', 'neutral')
         if emotion in ['angry', 'fierce', 'heroic']:
             target_pitch = f"{base_pitch_val - 4:+d}Hz"
             target_rate = "+5%"
@@ -139,7 +170,20 @@ class KhmerDubber:
             target_pitch = f"{base_pitch_val + 10:+d}Hz"
             target_rate = "+10%"
 
-        # Preset reference audio mapping for 13 curated characters
+        # =========================================================================
+        # 🎙️ OPTION 3: KHMER NATURAL THEATRICAL (សំឡេងខ្មែរធម្មជាតិសុទ្ធសាធ - ហាមបញ្ជូលលាយគ្នា)
+        # =========================================================================
+        is_natural_mode = (
+            voice_id in ['khmer_natural', 'pure_khmer']
+            or options.get('voiceMode') in ['khmer_natural', 'pure_khmer']
+            or options.get('is_natural')
+            or (voice_id and str(voice_id).startswith('km-KH-'))
+        )
+        if is_natural_mode:
+            target_voice = 'km-KH-SreymomNeural' if is_female else 'km-KH-PisethNeural'
+            return await self.synthesize_khmer_speech(text, output_path, target_voice, pitch=target_pitch, rate=target_rate)
+
+        # Preset reference audio mapping for samples
         samples_dir = os.path.join(os.path.dirname(__file__), '..', 'samples')
         if voice_id and str(voice_id).startswith('voxcpm:'):
             sample_name = str(voice_id).replace('voxcpm:', '')
@@ -150,12 +194,23 @@ class KhmerDubber:
             elif os.path.exists(cand2):
                 reference_audio_path = cand2
 
-        if not reference_audio_path or not os.path.exists(reference_audio_path):
-            def_ref = os.path.join(samples_dir, 'main_lead_female.mp3' if is_female else 'main_lead_male.mp3')
-            if os.path.exists(def_ref):
-                reference_audio_path = def_ref
+        # Strict Gender check for reference audio: Female NEVER gets Male voice, Male NEVER gets Female voice!
+        if is_female:
+            if not reference_audio_path or not os.path.exists(reference_audio_path) or ('male' in os.path.basename(reference_audio_path).lower() and 'female' not in os.path.basename(reference_audio_path).lower()):
+                cand_fem = os.path.join(samples_dir, 'hang_phleung_char_6_female.mp3')
+                if not os.path.exists(cand_fem):
+                    cand_fem = os.path.join(samples_dir, 'main_lead_female.mp3')
+                reference_audio_path = cand_fem
+        else:
+            if not reference_audio_path or not os.path.exists(reference_audio_path) or ('female' in os.path.basename(reference_audio_path).lower()):
+                cand_male = os.path.join(samples_dir, 'hang_phleung_char_2_male.mp3')
+                if not os.path.exists(cand_male):
+                    cand_male = os.path.join(samples_dir, 'main_lead_male.mp3')
+                reference_audio_path = cand_male
 
-        # 1. ElevenLabs Ultra-Realistic Zero-GPU Cloud Voice Cloning
+        # =========================================================================
+        # 🎙️ OPTION 1 & 2: ZERO-SHOT VOICE CLONING (VoxCPM2 48kHz / ElevenLabs)
+        # =========================================================================
         is_eleven_mode = (
             os.getenv('VOXCPM_MODE') == 'elevenlabs'
             or voice_id == 'elevenlabs'
@@ -184,16 +239,11 @@ class KhmerDubber:
             except Exception as el_err:
                 print(f"⚠️ ElevenLabs notice, falling back: {el_err}")
 
-        # 2. Zero-Shot Voice Cloning via VoxCPM2 (48kHz Hi-Fi) if server URL is configured
+        # Zero-Shot Voice Cloning via VoxCPM2 (48kHz Hi-Fi) if server URL is configured
         if os.getenv('VOXCPM_API_URL'):
             try:
                 ref_to_use = reference_audio_path
-                if not ref_to_use or not os.path.exists(ref_to_use):
-                    ref_to_use = os.path.join(samples_dir, 'hang_phleung_char_6_female.mp3' if is_female else 'hang_phleung_char_2_male.mp3')
-                    if not os.path.exists(ref_to_use):
-                        ref_to_use = os.path.join(samples_dir, 'main_lead_female.mp3' if is_female else 'main_lead_male.mp3')
-
-                print(f"🎙️ Generating Zero-Shot Voice Clone via VoxCPM2 ({os.getenv('VOXCPM_API_URL')}) with ref: {ref_to_use or 'none'}... [Emotion: {emotion}]")
+                print(f"🎙️ Generating Zero-Shot Voice Clone via VoxCPM2 ({os.getenv('VOXCPM_API_URL')}) with ref: {ref_to_use or 'none'}... [Gender: {'female' if is_female else 'male'}, Emotion: {emotion}]")
                 await self.synthesize_with_voxcpm(text, output_path, ref_to_use if (ref_to_use and os.path.exists(ref_to_use)) else None)
                 if os.path.exists(output_path) and os.path.getsize(output_path) > 1000:
                     print(f"✅ VoxCPM2 48kHz Voice Clone generated successfully: {output_path}")
@@ -201,20 +251,38 @@ class KhmerDubber:
             except Exception as vox_err:
                 print(f"⚠️ VoxCPM2 API notice, falling back to 100% pure Khmer neural voice: {vox_err}")
 
-        # 3. Primary 100% Pure Authentic Cambodian Khmer Theatrical Neural Engine
+        # Fallback to authentic Khmer natural voice strictly matching gender
+        target_voice = 'km-KH-SreymomNeural' if is_female else 'km-KH-PisethNeural'
         return await self.synthesize_khmer_speech(text, output_path, target_voice, pitch=target_pitch, rate=target_rate)
 
-    def assign_unique_voices_to_segments(self, segments: list, user_voice_map: dict = None, male_lead_voice: str = None, female_lead_voice: str = None, movie_voice_map: dict = None) -> dict:
+    def assign_unique_voices_to_segments(
+        self,
+        segments: list,
+        user_voice_map: dict = None,
+        male_lead_voice: str = None,
+        female_lead_voice: str = None,
+        movie_voice_map: dict = None,
+        voice_mode: str = 'voice_actor_clone'
+    ) -> dict:
         """
-        Guarantees 1-to-1 unique voice assignment:
-        Each character gets an exclusive, dedicated voice with ZERO overlap across characters!
-        (សំឡេងទាំងអស់អាចប្រើបានតែតួអង្គមួយ មួយប្រើមួយសំឡេង មិនឱ្យជាន់គ្នាដាច់ខាត)
-        If available preset library runs out, automatically clones original voice from the movie!
-        (បើខ្វះសំឡេង គឺ Clone សំឡេងផ្ទាល់ពីរឿងដើមមកប្រើ)
+        Guarantees strictly separate, non-overlapping voice modes with 1-to-1 character locking and zero gender crossover:
+        - ជម្រើសទី ១ (movie_clone_all): CLONE ពីដើមទាំងអស់ (ស្រង់សំឡេងតួអង្គពិតប្រាកដពីរឿងដើមទាំងអស់ ១ តួអង្គ = ១ សំឡេង)
+        - ជម្រើសទី ២ (voice_actor_clone): CLONE VOICE ពី Library (៣៨+ សំឡេង Voice Actor ស្រីដាច់ដោយឡែក ប្រុសដាច់ដោយឡែក)
+        - ជម្រើសទី ៣ (khmer_natural): KHMER NATURAL សំឡេងខ្មែរធម្មជាតិ (Theatrical Edge-TTS មិនលាយ Clone ឡើយ)
         """
         samples_dir = os.path.join(os.path.dirname(__file__), '..', 'samples')
         json_path = os.path.join(os.path.dirname(__file__), '..', 'extracted_characters.json')
 
+        # Normalize voice_mode
+        vm = str(voice_mode).lower().strip()
+        if vm in ['movie_clone_all', 'movie-live-clone', 'movie_clone', 'option1', 'opt1', '1']:
+            normalized_mode = 'movie_clone_all'
+        elif vm in ['khmer_natural', 'pure_khmer', 'natural', 'option3', 'opt3', '3']:
+            normalized_mode = 'khmer_natural'
+        else:
+            normalized_mode = 'voice_actor_clone'
+
+        # Load library voices for Option 2
         all_chars = []
         if os.path.exists(json_path):
             try:
@@ -242,167 +310,212 @@ class KhmerDubber:
                     else:
                         if entry not in valid_male: valid_male.append(entry)
 
-        used_voices = set()
         user_voice_map = user_voice_map or {}
         movie_voice_map = movie_voice_map or {}
         character_voice_assignment = {}
+        used_voices = set()
 
-        # Identify unique characters across segments
+        # Step 1: Normalize and lock character gender across ALL segments so no character ever flips gender
+        speaker_gender_map = {}
+        for s in segments:
+            sid = s.get('speaker_id') or s.get('speaker_name') or 'speaker_1'
+            sname = s.get('speaker_name') or sid
+            srole = s.get('speaker_role') or ''
+            ctext = s.get('chinese_text') or ''
+            raw_gen = s.get('gender')
+            det = detect_speaker_gender(sname, srole, ctext, raw_gen)
+            if sid not in speaker_gender_map or det == 'female':
+                speaker_gender_map[sid] = det
+
+        # Apply locked gender to all segments
+        for s in segments:
+            sid = s.get('speaker_id') or s.get('speaker_name') or 'speaker_1'
+            s['gender'] = speaker_gender_map.get(sid, 'male')
+
+        # Step 2: Build unique speakers list
         unique_speakers = []
         seen_sids = set()
         for s in segments:
             sid = s.get('speaker_id') or s.get('speaker_name') or 'speaker_1'
             if sid not in seen_sids:
                 seen_sids.add(sid)
-                is_fem = s.get('gender') == 'female' or ('female' in str(s.get('speaker_role', ''))) or ('ស្រី' in str(s.get('speaker_name', '')))
+                gen = speaker_gender_map.get(sid, 'male')
                 unique_speakers.append({
                     'id': sid,
                     'name': s.get('speaker_name') or sid,
-                    'role': s.get('speaker_role') or ('female_lead' if is_fem else 'male_lead'),
-                    'gender': 'female' if is_fem else 'male'
+                    'role': s.get('speaker_role') or ('female_lead' if gen == 'female' else 'male_lead'),
+                    'gender': gen
                 })
 
-        # 1. First priority: explicit user overrides
-        for sp in unique_speakers:
-            sid = sp['id']
-            override_val = user_voice_map.get(sid) or user_voice_map.get(sp['name'])
-            if override_val:
-                # User specifically requested movie clone
-                if override_val.startswith('movie_clone:') or override_val == 'movie_clone':
-                    ms = movie_voice_map.get(sid) or movie_voice_map.get(sp['name'])
-                    if ms and os.path.exists(ms):
+        # =====================================================================
+        # 🎯 OPTION 1: MOVIE LIVE CLONE 100% (CLONE ពីដើមទាំងអស់)
+        # =====================================================================
+        if normalized_mode == 'movie_clone_all':
+            for sp in unique_speakers:
+                sid = sp['id']
+                is_fem = sp['gender'] == 'female'
+                ms = movie_voice_map.get(sid) or movie_voice_map.get(sp['name'])
+                if not ms or not os.path.exists(ms):
+                    # Pick an extracted movie voice of the SAME gender
+                    for other_sid, other_path in movie_voice_map.items():
+                        if speaker_gender_map.get(other_sid) == sp['gender'] and os.path.exists(other_path):
+                            ms = other_path
+                            break
+
+                default_fn = 'hang_phleung_char_6_female.mp3' if is_fem else 'hang_phleung_char_2_male.mp3'
+                default_audio = os.path.join(samples_dir, default_fn)
+                audio_path = ms if (ms and os.path.exists(ms)) else default_audio
+                fn = os.path.basename(audio_path)
+
+                character_voice_assignment[sid] = {
+                    'voiceId': f"movie_clone:{sid}",
+                    'filename': fn,
+                    'audioPath': audio_path,
+                    'label': f"🎯 Clone សំឡេងផ្ទាល់ពីរឿង ({sp['name']})",
+                    'role_key': sp['role'],
+                    'gender': sp['gender'],
+                    'is_movie_clone': True
+                }
+
+        # =====================================================================
+        # 🎙️ OPTION 3: KHMER NATURAL THEATRICAL (សំឡេងខ្មែរធម្មជាតិសុទ្ធសាធ)
+        # =====================================================================
+        elif normalized_mode == 'khmer_natural':
+            pitch_offsets = [0, -10, 8, -16, 12, -6, 14, -12, 6, -8, 16, -14, 10, -18]
+            for idx, sp in enumerate(unique_speakers):
+                sid = sp['id']
+                is_fem = sp['gender'] == 'female'
+                native_voice = 'km-KH-SreymomNeural' if is_fem else 'km-KH-PisethNeural'
+                theatrical = ROLE_THEATRICAL_PROFILES.get(sp['role'], {})
+                char_pitch = f"{pitch_offsets[idx % len(pitch_offsets)]:+d}Hz"
+                char_rate = theatrical.get('rate', '+0%')
+
+                character_voice_assignment[sid] = {
+                    'voiceId': native_voice,
+                    'filename': native_voice,
+                    'audioPath': None,
+                    'label': f"🎙️ សំឡេងខ្មែរធម្មជាតិ ({sp['name']})",
+                    'role_key': sp['role'],
+                    'gender': sp['gender'],
+                    'pitch': char_pitch,
+                    'rate': char_rate,
+                    'is_natural': True
+                }
+
+        # =====================================================================
+        # 🎭 OPTION 2: VOICE ACTOR LIBRARY (CLONE VOICE ៣៨+ តួអង្គក្នុង LIBRARY)
+        # =====================================================================
+        else:
+            # 1. User overrides (strictly adhering to same gender!)
+            for sp in unique_speakers:
+                sid = sp['id']
+                is_fem = sp['gender'] == 'female'
+                override_val = user_voice_map.get(sid) or user_voice_map.get(sp['name'])
+                if override_val:
+                    clean_fn = override_val.replace('voxcpm:', '')
+                    fp = os.path.join(samples_dir, clean_fn)
+                    # Enforce gender check on override
+                    is_override_male = 'male' in clean_fn.lower() and 'female' not in clean_fn.lower()
+                    is_override_female = 'female' in clean_fn.lower()
+                    mismatch = (is_fem and is_override_male) or (not is_fem and is_override_female)
+                    if os.path.exists(fp) and not mismatch and clean_fn not in used_voices:
                         character_voice_assignment[sid] = {
-                            'voiceId': f"movie_clone:{sid}",
-                            'filename': os.path.basename(ms),
-                            'audioPath': ms,
-                            'label': f"🎯 សំឡេង Clone ពីរឿង ({sp['name']})",
-                            'gender': sp['gender'],
-                            'is_movie_clone': True
+                            'voiceId': f"voxcpm:{clean_fn}",
+                            'filename': clean_fn,
+                            'audioPath': fp,
+                            'label': clean_fn,
+                            'role_key': sp['role'],
+                            'gender': sp['gender']
                         }
-                        used_voices.add(f"movie_clone:{sid}")
-                        continue
-                fn = override_val.replace('voxcpm:', '')
-                fp = os.path.join(samples_dir, fn)
-                if os.path.exists(fp) and fn not in used_voices:
-                    character_voice_assignment[sid] = {
-                        'voiceId': f"voxcpm:{fn}",
-                        'filename': fn,
-                        'audioPath': fp,
-                        'label': fn,
-                        'gender': sp['gender']
-                    }
-                    used_voices.add(fn)
+                        used_voices.add(clean_fn)
 
-        # 2. Second priority: Lead choices if not yet assigned or used
-        if male_lead_voice:
-            lead_fn = male_lead_voice.replace('voxcpm:', '')
-            if lead_fn not in used_voices and os.path.exists(os.path.join(samples_dir, lead_fn)):
-                for sp in unique_speakers:
-                    if sp['id'] not in character_voice_assignment and sp['gender'] == 'male':
-                        character_voice_assignment[sp['id']] = {
-                            'voiceId': f"voxcpm:{lead_fn}",
-                            'filename': lead_fn,
-                            'audioPath': os.path.join(samples_dir, lead_fn),
-                            'label': lead_fn,
-                            'gender': 'male'
-                        }
-                        used_voices.add(lead_fn)
-                        break
+            # 2. Leads assignment if specified and not yet used
+            if male_lead_voice:
+                lead_fn = male_lead_voice.replace('voxcpm:', '')
+                if lead_fn not in used_voices and os.path.exists(os.path.join(samples_dir, lead_fn)):
+                    for sp in unique_speakers:
+                        if sp['id'] not in character_voice_assignment and sp['gender'] == 'male':
+                            character_voice_assignment[sp['id']] = {
+                                'voiceId': f"voxcpm:{lead_fn}",
+                                'filename': lead_fn,
+                                'audioPath': os.path.join(samples_dir, lead_fn),
+                                'label': lead_fn,
+                                'role_key': sp['role'],
+                                'gender': 'male'
+                            }
+                            used_voices.add(lead_fn)
+                            break
 
-        if female_lead_voice:
-            lead_fn = female_lead_voice.replace('voxcpm:', '')
-            if lead_fn not in used_voices and os.path.exists(os.path.join(samples_dir, lead_fn)):
-                for sp in unique_speakers:
-                    if sp['id'] not in character_voice_assignment and sp['gender'] == 'female':
-                        character_voice_assignment[sp['id']] = {
-                            'voiceId': f"voxcpm:{lead_fn}",
-                            'filename': lead_fn,
-                            'audioPath': os.path.join(samples_dir, lead_fn),
-                            'label': lead_fn,
-                            'gender': 'female'
-                        }
-                        used_voices.add(lead_fn)
-                        break
+            if female_lead_voice:
+                lead_fn = female_lead_voice.replace('voxcpm:', '')
+                if lead_fn not in used_voices and os.path.exists(os.path.join(samples_dir, lead_fn)):
+                    for sp in unique_speakers:
+                        if sp['id'] not in character_voice_assignment and sp['gender'] == 'female':
+                            character_voice_assignment[sp['id']] = {
+                                'voiceId': f"voxcpm:{lead_fn}",
+                                'filename': lead_fn,
+                                'audioPath': os.path.join(samples_dir, lead_fn),
+                                'label': lead_fn,
+                                'role_key': sp['role'],
+                                'gender': 'female'
+                            }
+                            used_voices.add(lead_fn)
+                            break
 
-        # 3. Assign strictly unique unassigned voices to every remaining character
-        for sp in unique_speakers:
-            sid = sp['id']
-            if sid in character_voice_assignment:
-                continue
+            # 3. 1:1 Distinct Voice Allocation from Library (ZERO GENDER CROSSOVER)
+            for sp in unique_speakers:
+                sid = sp['id']
+                if sid in character_voice_assignment:
+                    continue
 
-            is_fem = sp['gender'] == 'female'
-            cand_pool = valid_female if is_fem else valid_male
-            chosen_char = None
+                is_fem = sp['gender'] == 'female'
+                gender_pool = valid_female if is_fem else valid_male
 
-            # Look for an unassigned voice in matching gender pool
-            for cand in cand_pool:
-                fn = cand.get('filename')
-                if fn and fn not in used_voices:
-                    chosen_char = cand
-                    used_voices.add(fn)
-                    break
-
-            # If matching pool exhausted, look in other pool
-            if not chosen_char:
-                other_pool = valid_male if is_fem else valid_female
-                for cand in other_pool:
+                # Find unassigned voice in matching gender pool
+                chosen_char = None
+                for cand in gender_pool:
                     fn = cand.get('filename')
                     if fn and fn not in used_voices:
                         chosen_char = cand
                         used_voices.add(fn)
                         break
 
-            # 4. If library is exhausted: CLONE VOICE DIRECTLY FROM MOVIE! (បើខ្វះ clone សំឡេងពីរឿង)
-            if not chosen_char:
-                ms = movie_voice_map.get(sid) or movie_voice_map.get(sp['name'])
-                if ms and os.path.exists(ms):
+                # If pool exhausted, recycle WITHIN SAME GENDER with pitch shift (NEVER cross to other gender!)
+                if not chosen_char and gender_pool:
+                    same_gender_count = len([x for x in character_voice_assignment.values() if x.get('gender') == sp['gender']])
+                    base_cand = gender_pool[same_gender_count % len(gender_pool)]
+                    fn = base_cand.get('filename')
                     character_voice_assignment[sid] = {
-                        'voiceId': f"movie_clone:{sid}",
-                        'filename': os.path.basename(ms),
-                        'audioPath': ms,
-                        'label': f"🎯 សំឡេង Clone ពីរឿង ({sp['name']})",
-                        'role_key': sp['role'],
-                        'gender': sp['gender'],
-                        'is_movie_clone': True
+                        'voiceId': f"voxcpm:{fn}",
+                        'filename': fn,
+                        'audioPath': os.path.join(samples_dir, fn),
+                        'label': f"{base_cand.get('label', fn)} (#{same_gender_count + 1})",
+                        'role_key': base_cand.get('role_key', sp['role']),
+                        'gender': sp['gender']
                     }
-                    used_voices.add(f"movie_clone:{sid}")
                     continue
 
-            # Fallback if no movie sample available yet: apply distinct character index
-            if not chosen_char:
-                idx = len(character_voice_assignment)
-                base = cand_pool[idx % len(cand_pool)] if cand_pool else {'filename': 'hang_phleung_char_2_male.mp3', 'label': 'Khmer Voice'}
-                fn = base.get('filename')
-                character_voice_assignment[sid] = {
-                    'voiceId': f"voxcpm:{fn}",
-                    'filename': fn,
-                    'audioPath': os.path.join(samples_dir, fn),
-                    'label': f"{base.get('label', fn)} (សំឡេងទី #{idx + 1})",
-                    'role_key': sp['role'],
-                    'gender': sp['gender']
-                }
-                used_voices.add(f"{fn}_{idx}")
-                continue
+                if chosen_char:
+                    fn = chosen_char.get('filename')
+                    character_voice_assignment[sid] = {
+                        'voiceId': f"voxcpm:{fn}",
+                        'filename': fn,
+                        'audioPath': os.path.join(samples_dir, fn),
+                        'label': chosen_char.get('label', fn),
+                        'role_key': chosen_char.get('role_key', sp['role']),
+                        'gender': sp['gender']
+                    }
 
-            fn = chosen_char.get('filename')
-            character_voice_assignment[sid] = {
-                'voiceId': f"voxcpm:{fn}",
-                'filename': fn,
-                'audioPath': os.path.join(samples_dir, fn),
-                'label': chosen_char.get('label', fn),
-                'role_key': chosen_char.get('role_key', sp['role']),
-                'gender': sp['gender']
-            }
-
-        # Apply assigned unique voices to every segment consistently from start to end
+        # Step 4: Lock each character's assigned voice to EVERY segment of that character from start to finish
         for s in segments:
             sid = s.get('speaker_id') or s.get('speaker_name') or 'speaker_1'
-            if sid in character_voice_assignment:
-                assigned = character_voice_assignment[sid]
-                s['voiceId'] = assigned['voiceId']
-                s['voiceFilename'] = assigned['filename']
+            assigned = character_voice_assignment.get(sid, {})
+            if assigned:
+                s['voiceId'] = assigned.get('voiceId')
+                s['voiceFilename'] = assigned.get('filename')
                 s['voiceLabel'] = assigned.get('label')
                 s['voiceAudioPath'] = assigned.get('audioPath')
+                s['gender'] = assigned.get('gender', s.get('gender'))
                 if assigned.get('is_movie_clone') and assigned.get('audioPath'):
                     s['movieVoiceSample'] = assigned.get('audioPath')
 
@@ -573,11 +686,19 @@ class KhmerDubber:
                             }
                             khmer = role_fallback.get(seg.get('speaker_role'), 'តើមានរឿងអ្វីកើតឡើង?')
 
+                        s_name = seg.get('speaker_name') or ''
+                        s_role = seg.get('speaker_role') or ''
+                        s_gen = detect_speaker_gender(s_name, s_role, chinese, seg.get('gender'))
+                        if not s_name:
+                            s_name = 'តួស្រី' if s_gen == 'female' else 'តួប្រុស'
+                        if not s_role:
+                            s_role = 'female_lead' if s_gen == 'female' else 'male_lead'
+
                         result.append({
                             'speaker_id': seg.get('speaker_id') or f"speaker_{idx + 1}",
-                            'speaker_name': seg.get('speaker_name') or ('តួស្រី' if seg.get('gender') == 'female' else 'តួប្រុស'),
-                            'speaker_role': seg.get('speaker_role') or ('female_lead' if seg.get('gender') == 'female' else 'male_lead'),
-                            'gender': seg.get('gender') or ('female' if 'female' in (seg.get('speaker_role') or '') else 'male'),
+                            'speaker_name': s_name,
+                            'speaker_role': s_role,
+                            'gender': s_gen,
                             'start_time': max(0.0, st + chunk_start_time),
                             'end_time': max(st + chunk_start_time + 0.5, et + chunk_start_time),
                             'chinese_text': chinese,
@@ -898,7 +1019,8 @@ class KhmerDubber:
             user_voice_map=user_voice_map,
             male_lead_voice=male_lead_opt,
             female_lead_voice=female_lead_opt,
-            movie_voice_map=auto_voice_map
+            movie_voice_map=auto_voice_map,
+            voice_mode=voice_id
         )
 
         if on_progress: on_progress(50, 'កំពុង Clone សំឡេងតួអង្គនីមួយៗតាមសាច់រឿង (Zero-Shot 48kHz Voice Cloning)...')
@@ -908,27 +1030,33 @@ class KhmerDubber:
             seg = dialogue_segments[i]
             char_name = seg.get('speaker_name') or seg.get('speaker_id')
             sid = seg.get('speaker_id') or char_name
-            is_female = seg.get('gender') == 'female' or ('female' in (seg.get('speaker_name') or '').lower()) or ('ស្រី' in (seg.get('speaker_name') or ''))
+            is_female = seg.get('gender') == 'female'
+            assigned_info = unique_char_map.get(sid) or unique_char_map.get(char_name) or {}
 
             ref_voice = reference_audio_path
             if not ref_voice:
-                assigned_info = unique_char_map.get(sid) or unique_char_map.get(char_name)
                 if assigned_info and assigned_info.get('audioPath') and os.path.exists(assigned_info['audioPath']):
                     ref_voice = assigned_info['audioPath']
-                elif auto_voice_map.get(sid):
+                elif auto_voice_map.get(sid) and os.path.exists(auto_voice_map[sid]):
                     ref_voice = auto_voice_map[sid]
-                else:
+                elif not assigned_info.get('is_natural'):
                     ref_voice = female_lead if is_female else male_lead
 
             line_output_path = os.path.join(output_dir, f"line_{i}_{seg.get('speaker_id')}.wav")
             prog = 50 + round(((i + 1) / total_lines) * 32)
-            if on_progress: on_progress(prog, f'កំពុង Clone សំឡេងតួអង្គ "{char_name}" ({i + 1}/{total_lines}): "{seg.get("khmer_translation", "")[:30]}..."')
+            if on_progress: on_progress(prog, f'កំពុងបញ្ជូលសំឡេងតួអង្គ "{char_name}" ({i + 1}/{total_lines}): "{seg.get("khmer_translation", "")[:30]}..."')
 
+            seg_voice_id = assigned_info.get('voiceId') or voice_id
             try:
-                await self.synthesize_realistic_speech(seg.get('khmer_translation', ''), line_output_path, voice_id, ref_voice, {
+                await self.synthesize_realistic_speech(seg.get('khmer_translation', ''), line_output_path, seg_voice_id, ref_voice, {
                     'gender': seg.get('gender'),
+                    'speaker_name': char_name,
                     'emotion': seg.get('emotion', 'dramatic'),
-                    'role': seg.get('speaker_role', 'male_lead' if seg.get('gender') != 'female' else 'female_lead')
+                    'role': seg.get('speaker_role', 'female_lead' if is_female else 'male_lead'),
+                    'pitch': assigned_info.get('pitch'),
+                    'rate': assigned_info.get('rate'),
+                    'is_natural': assigned_info.get('is_natural', False),
+                    'voiceMode': voice_id
                 })
                 if os.path.exists(line_output_path) and os.path.getsize(line_output_path) > 1000:
                     seg['audioPath'] = line_output_path
@@ -937,12 +1065,12 @@ class KhmerDubber:
             except Exception as e:
                 print(f"Line {i} primary synthesis fallback: {e}")
                 theatrical = ROLE_THEATRICAL_PROFILES.get(seg.get('speaker_role'), {})
-                fb_voice = theatrical.get('voice', 'km-KH-SreymomNeural' if seg.get('gender') == 'female' else 'km-KH-PisethNeural')
+                fb_voice = 'km-KH-SreymomNeural' if is_female else 'km-KH-PisethNeural'
                 speaker_list = list(unique_char_map.keys())
                 speaker_idx = speaker_list.index(sid) if sid in speaker_list else i
                 pitch_offsets = [0, -12, 6, -18, 12, -6, 16, -14, 8, -10]
-                fb_pitch = f"{pitch_offsets[speaker_idx % len(pitch_offsets)]:+d}Hz"
-                fb_rate = theatrical.get('rate', '+0%')
+                fb_pitch = assigned_info.get('pitch') or f"{pitch_offsets[speaker_idx % len(pitch_offsets)]:+d}Hz"
+                fb_rate = assigned_info.get('rate') or theatrical.get('rate', '+0%')
                 await self.synthesize_khmer_speech(seg.get('khmer_translation', ''), line_output_path, fb_voice, pitch=fb_pitch, rate=fb_rate)
                 seg['audioPath'] = line_output_path
 

@@ -321,48 +321,57 @@ export const CharacterCastDrawer: React.FC<CharacterCastDrawerProps> = ({
                           : 'border-white/[0.12] text-slate-100 focus:border-sky-400'
                       }`}
                     >
-                      <option value="">-- ជ្រើសរើសម្ចាស់សំឡេង --</option>
+                      <option value="">-- ជ្រើសរើសសំឡេងតួអង្គ --</option>
                       <option value={`movie_clone:${char.speaker_id}`} className="text-amber-400 font-semibold">
-                        🎯 Clone សំឡេងផ្ទាល់ពីរឿងដើម ({char.name})
+                        🎯 ជម្រើសទី ១: Clone សំឡេងផ្ទាល់ពីរឿងដើម ({char.name})
+                      </option>
+                      <option value={char.gender === 'female' ? 'km-KH-SreymomNeural' : 'km-KH-PisethNeural'} className="text-emerald-400 font-semibold">
+                        🎙️ ជម្រើសទី ៣: សំឡេងខ្មែរធម្មជាតិ ({char.gender === 'female' ? 'ស្រី - Sreymom' : 'ប្រុស - Piseth'})
                       </option>
 
-                      <optgroup label="🎙️ សំឡេងតួប្រុស (Male Voices)">
-                        {characters
-                          .filter((c) => c.gender === 'male')
-                          .map((c) => {
-                            const owner = voiceOwnerMap[c.filename] || voiceOwnerMap[c.id];
-                            const isOwnedByOther = owner && owner !== char.name;
-                            return (
-                              <option
-                                key={c.id}
-                                value={c.id}
-                                disabled={Boolean(isOwnedByOther)}
-                                className={isOwnedByOther ? 'text-slate-500' : ''}
-                              >
-                                {c.label} {isOwnedByOther ? `(⚠️ ជាប់ប្រើដោយ: ${owner})` : '✓ ទំនេរ'}
-                              </option>
-                            );
-                          })}
-                      </optgroup>
-
-                      <optgroup label="🌸 សំឡេងតួស្រី (Female Voices)">
-                        {characters
-                          .filter((c) => c.gender === 'female')
-                          .map((c) => {
-                            const owner = voiceOwnerMap[c.filename] || voiceOwnerMap[c.id];
-                            const isOwnedByOther = owner && owner !== char.name;
-                            return (
-                              <option
-                                key={c.id}
-                                value={c.id}
-                                disabled={Boolean(isOwnedByOther)}
-                                className={isOwnedByOther ? 'text-slate-500' : ''}
-                              >
-                                {c.label} {isOwnedByOther ? `(⚠️ ជាប់ប្រើដោយ: ${owner})` : '✓ ទំនេរ'}
-                              </option>
-                            );
-                          })}
-                      </optgroup>
+                      {char.gender === 'female' ? (
+                        <>
+                          <optgroup label="🌸 ជម្រើសទី ២: សំឡេងតួស្រី (Female Voice Library - ៣៨+ តួ)">
+                            {characters
+                              .filter((c) => c.gender === 'female')
+                              .map((c) => {
+                                const owner = voiceOwnerMap[c.filename] || voiceOwnerMap[c.id];
+                                const isOwnedByOther = owner && owner !== char.name;
+                                return (
+                                  <option
+                                    key={c.id}
+                                    value={c.id}
+                                    disabled={Boolean(isOwnedByOther)}
+                                    className={isOwnedByOther ? 'text-slate-500' : ''}
+                                  >
+                                    {c.label} {isOwnedByOther ? `(⚠️ ជាប់ប្រើដោយ: ${owner})` : '✓ ទំនេរ'}
+                                  </option>
+                                );
+                              })}
+                          </optgroup>
+                        </>
+                      ) : (
+                        <>
+                          <optgroup label="🎙️ ជម្រើសទី ២: សំឡេងតួប្រុស (Male Voice Library - ៣៨+ តួ)">
+                            {characters
+                              .filter((c) => c.gender === 'male')
+                              .map((c) => {
+                                const owner = voiceOwnerMap[c.filename] || voiceOwnerMap[c.id];
+                                const isOwnedByOther = owner && owner !== char.name;
+                                return (
+                                  <option
+                                    key={c.id}
+                                    value={c.id}
+                                    disabled={Boolean(isOwnedByOther)}
+                                    className={isOwnedByOther ? 'text-slate-500' : ''}
+                                  >
+                                    {c.label} {isOwnedByOther ? `(⚠️ ជាប់ប្រើដោយ: ${owner})` : '✓ ទំនេរ'}
+                                  </option>
+                                );
+                              })}
+                          </optgroup>
+                        </>
+                      )}
                     </select>
                   </div>
                 </div>

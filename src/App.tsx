@@ -50,7 +50,7 @@ export const App: React.FC = () => {
   // Media & Dubbing
   const [uploadedFile, setUploadedFile] = useState<ProjectFile | null>(null);
   const [recentFiles, setRecentFiles] = useState<ProjectFile[]>([]);
-  const [voiceMode, setVoiceMode] = useState('voxcpm-voice-actor');
+  const [voiceMode, setVoiceMode] = useState('movie_clone_all');
   const [dubbingScope, setDubbingScope] = useState('120');
   const [maleLeadVoice, setMaleLeadVoice] = useState('hang_phleung_char_2_male.mp3');
   const [femaleLeadVoice, setFemaleLeadVoice] = useState('hang_phleung_char_6_female.mp3');
@@ -571,7 +571,7 @@ export const App: React.FC = () => {
     showToast('AI Gemini កំពុងស្កេន និងស្រង់ឃ្លាសន្ទនារឿង...', 'info');
     try {
       // 180s scope for fast, responsive dialogue extraction without hitting Gemini backoffs
-      const res = await api.scanTimeline(uploadedFile.filename, '180');
+      const res = await api.scanTimeline(uploadedFile.filename, '180', voiceMode);
       if (res.success && res.segments && res.segments.length > 0) {
         setSegments(sanitizeSegments(res.segments));
         showToast(`ស្កេនជោគជ័យ! រកឃើញ ${res.segments.length} ឃ្លាសន្ទនាក្នុងរឿង`, 'success');

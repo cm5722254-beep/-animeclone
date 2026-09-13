@@ -142,6 +142,7 @@ export const DubbingStudio: React.FC<DubbingStudioProps> = ({
   };
 
   // Handler to auto-cast 1:1 unique voices to all characters
+  // Handler to auto-cast 1:1 unique voices to all characters based on active voiceMode
   const handleAutoCastUniqueVoices = () => {
     if (!onChangeSegments) return;
     const uniqueKeys = Array.from(new Set(segments.map((s) => s.speaker_name || s.speaker_id || 'តួអង្គ')));
@@ -149,7 +150,7 @@ export const DubbingStudio: React.FC<DubbingStudioProps> = ({
     const femalePool = characters.filter((c) => c.gender === 'female');
     const used = new Set<string>();
 
-    const mapping: Record<string, { voiceId: string; filename: string; label: string }> = {};
+    const mapping: Record<string, { voiceId: string; filename: string; label: string; gender: 'male' | 'female' }> = {};
 
     uniqueKeys.forEach((k) => {
       const seg = segments.find((s) => (s.speaker_name || s.speaker_id || 'តួអង្គ') === k);
@@ -158,26 +159,51 @@ export const DubbingStudio: React.FC<DubbingStudioProps> = ({
         seg?.speaker_role?.includes('female') ||
         k.includes('ស្រី') ||
         k.toLowerCase().includes('female');
-      const pool = isFem ? femalePool : malePool;
-      const other = isFem ? malePool : femalePool;
+      const gen: 'male' | 'female' = isFem ? 'female' : 'male';
 
-      let chosen = pool.find((c) => !used.has(c.filename));
-      if (!chosen) chosen = other.find((c) => !used.has(c.filename));
-
-      if (chosen) {
-        used.add(chosen.filename);
-        mapping[k] = {
-          voiceId: chosen.id || `voxcpm:${chosen.filename}`,
-          filename: chosen.filename,
-          label: chosen.label,
-        };
-      } else {
-        // All preset voices exhausted: automatically clone voice from original movie!
+      // 🎯 Option 1: Movie Live Clone 100%
+      if (voiceMode === 'movie_clone_all' || voiceMode === 'movie-live-clone') {
         mapping[k] = {
           voiceId: `movie_clone:${seg?.speaker_id || k}`,
-          filename: seg?.movieVoiceSample ? seg.movieVoiceSample.split('/').pop()! : 'movie_original_clone.mp3',
-          label: `🎯 សំឡេង Clone ពីរឿង (${k})`,
+          filename: seg?.movieVoiceSample ? seg.movieVoiceSample.split('/').pop()! : (isFem ? 'main_lead_female.mp3' : 'main_lead_male.mp3'),
+          label: `🎯 ជម្រើសទី ១: Clone សំឡេងផ្ទាល់ពីរឿង (${k})`,
+          gender: gen,
         };
+      }
+      // 🎙️ Option 3: Khmer Natural Theatrical
+      else if (voiceMode === 'khmer_natural' || voiceMode === 'pure_khmer') {
+        mapping[k] = {
+          voiceId: isFem ? 'km-KH-SreymomNeural' : 'km-KH-PisethNeural',
+          filename: isFem ? 'km-KH-SreymomNeural' : 'km-KH-PisethNeural',
+          label: `🎙️ ជម្រើសទី ៣: សំឡេងខ្មែរធម្មជាតិ (${k})`,
+          gender: gen,
+        };
+      }
+      // 🎭 Option 2: Voice Actor Library (Strictly Zero Gender Crossover)
+      else {
+        const pool = isFem ? femalePool : malePool;
+        let chosen = pool.find((c) => !used.has(c.filename));
+        // If pool exhausted: recycle WITHIN SAME GENDER pool (NEVER pick from opposite gender!)
+        if (!chosen && pool.length > 0) {
+          chosen = pool[used.size % pool.length];
+        }
+
+        if (chosen) {
+          used.add(chosen.filename);
+          mapping[k] = {
+            voiceId: chosen.id || `voxcpm:${chosen.filename}`,
+            filename: chosen.filename,
+            label: chosen.label,
+            gender: gen,
+          };
+        } else {
+          mapping[k] = {
+            voiceId: isFem ? 'hang_phleung_char_6_female.mp3' : 'hang_phleung_char_2_male.mp3',
+            filename: isFem ? 'hang_phleung_char_6_female.mp3' : 'hang_phleung_char_2_male.mp3',
+            label: isFem ? '🌸 Khmer Female 01' : '🎙️ Khmer Male 01',
+            gender: gen,
+          };
+        }
       }
     });
 
@@ -187,6 +213,7 @@ export const DubbingStudio: React.FC<DubbingStudioProps> = ({
       if (m) {
         return {
           ...s,
+          gender: m.gender,
           voiceId: m.voiceId,
           voiceFilename: m.filename,
           voiceLabel: m.label,
