@@ -249,7 +249,7 @@ class _MainStudioScreenState extends State<MainStudioScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg, style: const TextStyle(color: Colors.white)),
-        backgroundColor: color.withOpacity(0.9),
+        backgroundColor: color.withValues(alpha: 0.9),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
@@ -291,9 +291,9 @@ class _MainStudioScreenState extends State<MainStudioScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withOpacity(0.15),
+                    color: const Color(0xFF10B981).withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFF10B981).withOpacity(0.35)),
+                    border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.35)),
                   ),
                   child: const Text(
                     '🇰🇭 Khmer Neural Only',
@@ -329,7 +329,7 @@ class _MainStudioScreenState extends State<MainStudioScreen> {
               decoration: BoxDecoration(
                 color: const Color(0xFF0F1629),
                 shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFF6366F1).withOpacity(0.4), width: 2),
+                border: Border.all(color: const Color(0xFF6366F1).withValues(alpha: 0.4), width: 2),
                 boxShadow: [
                   BoxKey(0xFF6366F1).glow(25),
                 ],
@@ -387,7 +387,7 @@ class _MainStudioScreenState extends State<MainStudioScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF0F1629),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
       ),
       child: Row(
         children: [
@@ -413,7 +413,7 @@ class _MainStudioScreenState extends State<MainStudioScreen> {
                 decoration: BoxDecoration(
                   color: const Color(0xFF0F1629),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.white.withOpacity(0.08)),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -438,9 +438,9 @@ class _MainStudioScreenState extends State<MainStudioScreen> {
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(vertical: 24),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF6366F1).withOpacity(0.08),
+                            color: const Color(0xFF6366F1).withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFF6366F1).withOpacity(0.35), style: BorderStyle.solid),
+                            border: Border.all(color: const Color(0xFF6366F1).withValues(alpha: 0.35), style: BorderStyle.solid),
                           ),
                           child: const Column(
                             children: [
@@ -496,7 +496,7 @@ class _MainStudioScreenState extends State<MainStudioScreen> {
                 decoration: BoxDecoration(
                   color: const Color(0xFF0F1629),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.white.withOpacity(0.08)),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -508,7 +508,7 @@ class _MainStudioScreenState extends State<MainStudioScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.15),
+                            color: Colors.green.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: const Text('Khmer Neural', style: TextStyle(fontSize: 10, color: Colors.greenAccent)),
@@ -521,7 +521,7 @@ class _MainStudioScreenState extends State<MainStudioScreen> {
                     OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFF94A3B8),
-                        side: BorderSide(color: Colors.white.withOpacity(0.15)),
+                        side: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
                       onPressed: () {
@@ -553,9 +553,9 @@ class _MainStudioScreenState extends State<MainStudioScreen> {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: const Color(0xFF0B101D),
-            border: Border(top: BorderSide(color: Colors.white.withOpacity(0.08))),
+            border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.08))),
             boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 15, offset: const Offset(0, -3)),
+              BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 15, offset: const Offset(0, -3)),
             ],
           ),
           child: Column(
@@ -630,7 +630,7 @@ class _MainStudioScreenState extends State<MainStudioScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF141C33),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -647,9 +647,9 @@ class _MainStudioScreenState extends State<MainStudioScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: (isFemale ? Colors.pink : Colors.blue).withOpacity(0.15),
+                    color: (isFemale ? Colors.pink : Colors.blue).withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: (isFemale ? Colors.pink : Colors.blue).withOpacity(0.3)),
+                    border: Border.all(color: (isFemale ? Colors.pink : Colors.blue).withValues(alpha: 0.3)),
                   ),
                   child: Text(
                     isFemale ? '🌸 [F] ស្រី (Sreymom)' : '👑 [M] ប្រុស (Piseth)',
@@ -696,7 +696,7 @@ class _MainStudioScreenState extends State<MainStudioScreen> {
               hintStyle: const TextStyle(color: Colors.white30),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.white.withOpacity(0.08)),
+                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
               ),
             ),
             onChanged: (val) => line.text = val,
@@ -744,7 +744,7 @@ class BoxKey {
   BoxKey(this.colorHex);
 
   BoxShadow glow(double radius) => BoxShadow(
-    color: Color(colorHex).withOpacity(0.3),
+    color: Color(colorHex).withValues(alpha: 0.3),
     blurRadius: radius,
     spreadRadius: 2,
   );

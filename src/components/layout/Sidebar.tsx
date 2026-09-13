@@ -36,6 +36,37 @@ interface SidebarProps {
   user?: User | null;
 }
 
+interface NavItemProps {
+  icon: React.ReactNode;
+  label: string;
+  active?: boolean;
+  onClick: () => void;
+  isCollapsed: boolean;
+  badge?: string;
+  badgeVariant?: 'sky' | 'indigo' | 'success' | 'warning' | 'danger';
+  title?: string;
+}
+
+const SidebarNavItem: React.FC<NavItemProps> = ({
+  icon, label, active, onClick, isCollapsed, badge, badgeVariant = 'sky', title,
+}) => (
+  <button
+    onClick={onClick}
+    title={title || label}
+    className={`nav-item ${active ? 'active' : ''} ${isCollapsed ? 'justify-center px-0' : ''}`}
+  >
+    <span className="nav-icon w-4 h-4 shrink-0">{icon}</span>
+    {!isCollapsed && (
+      <>
+        <span className="flex-1 text-left truncate">{label}</span>
+        {badge && (
+          <span className={`badge badge-${badgeVariant} text-[9px] py-0`}>{badge}</span>
+        )}
+      </>
+    )}
+  </button>
+);
+
 export const Sidebar: React.FC<SidebarProps> = ({
   activeTab,
   onSelectTab,
@@ -50,305 +81,263 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   return (
     <aside
-      className={`bg-[#0a0e17] border-r border-white/[0.08] flex flex-col justify-between transition-all duration-200 select-none z-30 ${
-        isCollapsed ? 'w-16' : 'w-56'
+      className={`sidebar-root flex flex-col justify-between select-none transition-all duration-200 ${
+        isCollapsed ? 'w-[54px]' : 'w-[210px]'
       }`}
     >
-      {/* Top Section */}
-      <div className="py-3 px-2 flex-1 overflow-y-auto flex flex-col gap-4">
-        {/* Main Dashboard item */}
-        <button
+      {/* ── Nav Sections ── */}
+      <div className="py-2.5 px-1.5 flex-1 overflow-y-auto flex flex-col gap-3">
+
+        {/* Dashboard */}
+        <SidebarNavItem
+          icon={<LayoutDashboard className="w-4 h-4" />}
+          label="Dashboard"
+          active={activeTab === 'tab-dashboard'}
           onClick={() => onSelectTab('tab-dashboard')}
-          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
-            activeTab === 'tab-dashboard'
-              ? 'bg-sky-500/15 text-sky-400 border border-sky-500/30 shadow-sm'
-              : 'text-slate-300 hover:text-white hover:bg-white/[0.04]'
-          } ${isCollapsed ? 'justify-center px-0' : ''}`}
-          title="Dashboard"
-        >
-          <LayoutDashboard className="w-4 h-4 shrink-0 text-sky-400" />
-          {!isCollapsed && <span>Dashboard</span>}
-        </button>
+          isCollapsed={isCollapsed}
+        />
 
-        {/* Category: WORKSPACE */}
-        <div className="flex flex-col gap-1">
-          {!isCollapsed && (
-            <div className="text-[10px] font-bold tracking-wider text-slate-500 px-3 uppercase">
-              Workspace
-            </div>
-          )}
+        {/* WORKSPACE */}
+        <div className="flex flex-col gap-0.5">
+          {!isCollapsed && <div className="nav-category">Workspace</div>}
 
-          <button
+          <SidebarNavItem
+            icon={<FolderKanban className="w-4 h-4" />}
+            label="Projects"
             onClick={() => onSelectTab('tab-dashboard')}
-            className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
-              isCollapsed ? 'justify-center px-0' : ''
-            } text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]`}
-            title="Projects"
-          >
-            <FolderKanban className="w-4 h-4 shrink-0" />
-            {!isCollapsed && <span>Projects</span>}
-          </button>
+            isCollapsed={isCollapsed}
+          />
 
-          <button
+          <SidebarNavItem
+            icon={<Clapperboard className="w-4 h-4 text-sky-400" />}
+            label="Studio"
+            active={activeTab === 'tab-dubbing'}
             onClick={() => onSelectTab('tab-dubbing')}
-            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
-              activeTab === 'tab-dubbing'
-                ? 'bg-gradient-to-r from-sky-600/30 to-indigo-600/30 text-sky-300 border border-sky-500/40 shadow-sm shadow-sky-500/10'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
-            } ${isCollapsed ? 'justify-center px-0' : ''}`}
-            title="Studio"
-          >
-            <Clapperboard className="w-4 h-4 shrink-0 text-sky-400" />
-            {!isCollapsed && <span>Studio</span>}
-          </button>
+            isCollapsed={isCollapsed}
+            badge="AI"
+            badgeVariant="sky"
+          />
 
           <button
             onClick={onNewProject}
-            className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-xs font-medium text-slate-400 hover:text-sky-300 hover:bg-white/[0.04] transition-colors ${
-              isCollapsed ? 'justify-center px-0' : ''
-            }`}
             title="+ New Project"
+            className={`nav-item group ${isCollapsed ? 'justify-center px-0' : ''}`}
           >
-            <PlusCircle className="w-4 h-4 shrink-0 text-slate-400" />
-            {!isCollapsed && <span>+ New Project</span>}
+            <PlusCircle className="w-4 h-4 shrink-0 text-slate-500 group-hover:text-emerald-400 transition-colors" />
+            {!isCollapsed && (
+              <span className="text-slate-500 group-hover:text-emerald-400 transition-colors">
+                + New Project
+              </span>
+            )}
           </button>
         </div>
 
-        {/* Category: PRODUCTION */}
-        <div className="flex flex-col gap-1">
-          {!isCollapsed && (
-            <div className="text-[10px] font-bold tracking-wider text-slate-500 px-3 uppercase">
-              Production
-            </div>
-          )}
+        {/* PRODUCTION */}
+        <div className="flex flex-col gap-0.5">
+          {!isCollapsed && <div className="nav-category">Production</div>}
 
-          <button
+          <SidebarNavItem
+            icon={<Mic2 className="w-4 h-4" />}
+            label="Dubbing"
+            active={activeTab === 'tab-dubbing'}
             onClick={() => onSelectTab('tab-dubbing')}
-            className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
-              activeTab === 'tab-dubbing'
-                ? 'text-sky-400 font-semibold'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
-            } ${isCollapsed ? 'justify-center px-0' : ''}`}
-            title="Dubbing"
-          >
-            <Mic2 className="w-4 h-4 shrink-0" />
-            {!isCollapsed && <span>Dubbing</span>}
-          </button>
+            isCollapsed={isCollapsed}
+          />
 
-          <button
+          <SidebarNavItem
+            icon={<Volume2 className="w-4 h-4" />}
+            label="AI Voices"
+            active={activeTab === 'tab-character'}
             onClick={() => onSelectTab('tab-character')}
-            className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
-              activeTab === 'tab-character'
-                ? 'bg-sky-500/15 text-sky-400 font-semibold'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
-            } ${isCollapsed ? 'justify-center px-0' : ''}`}
-            title="AI Voices"
-          >
-            <Volume2 className="w-4 h-4 shrink-0" />
-            {!isCollapsed && <span>AI Voices</span>}
-          </button>
+            isCollapsed={isCollapsed}
+          />
 
-          <button
+          <SidebarNavItem
+            icon={<Users2 className="w-4 h-4" />}
+            label="Characters"
             onClick={() => onSelectTab('tab-character')}
-            className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] transition-all ${
-              isCollapsed ? 'justify-center px-0' : ''
-            }`}
-            title="Characters"
-          >
-            <Users2 className="w-4 h-4 shrink-0" />
-            {!isCollapsed && <span>Characters</span>}
-          </button>
+            isCollapsed={isCollapsed}
+          />
 
-          <button
+          <SidebarNavItem
+            icon={<Languages className="w-4 h-4" />}
+            label="Translation"
+            active={activeTab === 'tab-translator'}
             onClick={() => onSelectTab('tab-translator')}
-            className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
-              activeTab === 'tab-translator'
-                ? 'bg-sky-500/15 text-sky-400 font-semibold'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
-            } ${isCollapsed ? 'justify-center px-0' : ''}`}
-            title="Translation"
-          >
-            <Languages className="w-4 h-4 shrink-0" />
-            {!isCollapsed && <span>Translation</span>}
-          </button>
+            isCollapsed={isCollapsed}
+          />
 
-          <button
+          <SidebarNavItem
+            icon={<Subtitles className="w-4 h-4" />}
+            label="Subtitles"
+            active={activeTab === 'tab-subtitles'}
             onClick={() => onSelectTab('tab-subtitles')}
-            className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
-              activeTab === 'tab-subtitles'
-                ? 'bg-sky-500/15 text-sky-400 font-semibold'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
-            } ${isCollapsed ? 'justify-center px-0' : ''}`}
-            title="Subtitles"
-          >
-            <Subtitles className="w-4 h-4 shrink-0" />
-            {!isCollapsed && <span>Subtitles</span>}
-          </button>
+            isCollapsed={isCollapsed}
+          />
 
-          <button
+          <SidebarNavItem
+            icon={<SlidersHorizontal className="w-4 h-4" />}
+            label="Audio Mixer"
+            active={activeTab === 'tab-mixer'}
             onClick={() => onSelectTab('tab-mixer')}
-            className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
-              activeTab === 'tab-mixer'
-                ? 'bg-sky-500/15 text-sky-400 font-semibold'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
-            } ${isCollapsed ? 'justify-center px-0' : ''}`}
-            title="Audio Mixer"
-          >
-            <SlidersHorizontal className="w-4 h-4 shrink-0" />
-            {!isCollapsed && <span>Audio Mixer</span>}
-          </button>
+            isCollapsed={isCollapsed}
+          />
         </div>
 
-        {/* Category: DELIVERY */}
-        <div className="flex flex-col gap-1">
-          {!isCollapsed && (
-            <div className="text-[10px] font-bold tracking-wider text-slate-500 px-3 uppercase">
-              Delivery
-            </div>
-          )}
+        {/* DELIVERY */}
+        <div className="flex flex-col gap-0.5">
+          {!isCollapsed && <div className="nav-category">Delivery</div>}
 
-          <button
+          <SidebarNavItem
+            icon={<Share2 className="w-4 h-4 text-sky-400" />}
+            label="Export"
             onClick={onOpenExport}
-            className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] transition-all ${
-              isCollapsed ? 'justify-center px-0' : ''
-            }`}
-            title="Export"
-          >
-            <Share2 className="w-4 h-4 shrink-0 text-sky-400" />
-            {!isCollapsed && <span>Export</span>}
-          </button>
+            isCollapsed={isCollapsed}
+          />
 
-          <button
+          <SidebarNavItem
+            icon={<History className="w-4 h-4" />}
+            label="Render History"
             onClick={() => onSelectTab('tab-dashboard')}
-            className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] transition-all ${
-              isCollapsed ? 'justify-center px-0' : ''
-            }`}
-            title="Render History"
-          >
-            <History className="w-4 h-4 shrink-0" />
-            {!isCollapsed && <span>Render History</span>}
-          </button>
+            isCollapsed={isCollapsed}
+          />
         </div>
 
-        {/* Category: SYSTEM */}
-        <div className="flex flex-col gap-1">
-          {!isCollapsed && (
-            <div className="text-[10px] font-bold tracking-wider text-slate-500 px-3 uppercase">
-              System
-            </div>
-          )}
+        {/* SYSTEM */}
+        <div className="flex flex-col gap-0.5">
+          {!isCollapsed && <div className="nav-category">System</div>}
 
-          <button
+          <SidebarNavItem
+            icon={<Cpu className="w-4 h-4" />}
+            label="API & AI"
             onClick={onOpenSettings}
-            className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] transition-all ${
-              isCollapsed ? 'justify-center px-0' : ''
-            }`}
-            title="API & AI"
-          >
-            <Cpu className="w-4 h-4 shrink-0" />
-            {!isCollapsed && <span>API & AI</span>}
-          </button>
+            isCollapsed={isCollapsed}
+          />
 
-          <button
+          <SidebarNavItem
+            icon={<HardDrive className="w-4 h-4" />}
+            label="Storage"
             onClick={onOpenSettings}
-            className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] transition-all ${
-              isCollapsed ? 'justify-center px-0' : ''
-            }`}
-            title="Storage"
-          >
-            <HardDrive className="w-4 h-4 shrink-0" />
-            {!isCollapsed && <span>Storage</span>}
-          </button>
+            isCollapsed={isCollapsed}
+          />
 
-          <button
+          <SidebarNavItem
+            icon={<Settings className="w-4 h-4" />}
+            label="Settings"
             onClick={onOpenSettings}
-            className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] transition-all ${
-              isCollapsed ? 'justify-center px-0' : ''
-            }`}
-            title="Settings"
-          >
-            <Settings className="w-4 h-4 shrink-0" />
-            {!isCollapsed && <span>Settings</span>}
-          </button>
+            isCollapsed={isCollapsed}
+          />
         </div>
       </div>
 
-      {/* Bottom: Subscription Card, System Status & Collapse Toggle */}
-      <div className="p-2 border-t border-white/[0.08] flex flex-col gap-2">
+      {/* ── Bottom Panel ── */}
+      <div className="p-1.5 border-t border-white/[0.06] flex flex-col gap-1.5">
+
+        {/* Subscription info (expanded only) */}
         {!isCollapsed && user && (() => {
           const subInfo = getSubscriptionInfo(user);
           return (
             <div
               onClick={onOpenSettings}
-              className="p-2.5 rounded-xl bg-[#111827] border border-white/[0.08] hover:border-sky-500/30 flex flex-col gap-1 cursor-pointer transition-all group"
+              className="p-2.5 rounded-xl cursor-pointer transition-all group"
+              style={{
+                background: 'rgba(10,14,28,0.9)',
+                border: '1px solid rgba(255,255,255,0.07)',
+              }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLElement).style.borderColor = 'rgba(56,189,248,0.25)';
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.07)';
+              }}
               title={`${subInfo.title} | ${subInfo.expiryText} (ចុចដើម្បីមើលលម្អិត)`}
             >
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] text-slate-400 font-semibold">កញ្ចប់គណនី (Plan)</span>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] text-slate-500 font-semibold tracking-wide">PLAN</span>
                 <span
-                  className={`text-[9px] px-1.5 py-0.2 rounded font-bold font-mono border ${
+                  className={`text-[9px] px-1.5 py-0.5 rounded-md font-bold font-mono border ${
                     subInfo.color === 'emerald'
-                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                      ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/25'
                       : subInfo.color === 'amber'
-                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/30 shadow-[0_0_8px_rgba(245,158,11,0.2)]'
-                      : 'bg-slate-500/20 text-slate-300 border-slate-500/30'
+                      ? 'bg-amber-500/15 text-amber-300 border-amber-500/25'
+                      : 'bg-slate-500/15 text-slate-400 border-slate-500/25'
                   }`}
                 >
                   {subInfo.badge}
                 </span>
               </div>
-              <div className="text-[11px] font-bold text-white truncate group-hover:text-sky-300 transition-colors">
+              <div className="text-[11px] font-bold text-slate-200 truncate group-hover:text-sky-300 transition-colors">
                 {subInfo.title}
               </div>
-              <div className="text-[9.5px] text-amber-300/90 font-medium truncate">
+              <div className="text-[9.5px] text-amber-400/75 font-medium truncate mt-0.5">
                 {subInfo.expiryText}
               </div>
             </div>
           );
         })()}
 
+        {/* System Status */}
         {!isCollapsed ? (
           <button
             onClick={onOpenSystemStatus}
-            className="w-full p-2.5 rounded-xl bg-[#111827] border border-white/[0.08] hover:border-sky-500/30 flex items-center justify-between text-left transition-all group"
+            className="w-full p-2.5 rounded-xl flex items-center justify-between text-left transition-all group"
+            style={{
+              background: 'rgba(10,14,28,0.9)',
+              border: '1px solid rgba(255,255,255,0.07)',
+            }}
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLElement).style.borderColor = 'rgba(56,189,248,0.22)';
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.07)';
+            }}
             title="Click to view System Status"
           >
             <div className="flex items-center gap-2">
               <span
-                className={`w-2 h-2 rounded-full ${
+                className={`w-2 h-2 rounded-full flex-shrink-0 ${
                   isSystemOnline
-                    ? 'bg-emerald-400 shadow-[0_0_8px_#34d399]'
-                    : 'bg-amber-400 shadow-[0_0_8px_#fbbf24]'
+                    ? 'bg-emerald-400'
+                    : 'bg-amber-400'
                 }`}
+                style={{
+                  boxShadow: isSystemOnline
+                    ? '0 0 0 2px rgba(52,211,153,0.15), 0 0 8px #34d399'
+                    : '0 0 8px #fbbf24',
+                  animation: isSystemOnline ? 'statusPulse 2.5s ease-in-out infinite' : undefined,
+                }}
               />
-              <div className="flex flex-col">
-                <span className="text-[11px] font-semibold text-slate-200">
-                  System Status
-                </span>
+              <div className="flex flex-col leading-tight">
+                <span className="text-[11px] font-semibold text-slate-200">System Status</span>
                 <span className="text-[9px] text-slate-500 group-hover:text-sky-400 transition-colors">
-                  {isSystemOnline ? 'All Systems Online' : 'Check Engine Status'}
+                  {isSystemOnline ? 'All Systems Online' : 'Check Engine'}
                 </span>
               </div>
             </div>
-            <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-sky-400 transition-colors" />
+            <ChevronRight className="w-3.5 h-3.5 text-slate-600 group-hover:text-sky-400 transition-all group-hover:translate-x-0.5" />
           </button>
         ) : (
           <button
             onClick={onOpenSystemStatus}
-            className="w-full flex items-center justify-center p-2 rounded-xl bg-[#111827] hover:bg-white/[0.06] text-slate-400 transition-colors"
+            className="w-full flex items-center justify-center p-2 rounded-xl hover:bg-white/[0.04] text-slate-400 transition-colors"
+            style={{ border: '1px solid rgba(255,255,255,0.06)' }}
             title="System Status"
           >
             <span
               className={`w-2.5 h-2.5 rounded-full ${
-                isSystemOnline ? 'bg-emerald-400 shadow-[0_0_8px_#34d399]' : 'bg-amber-400'
+                isSystemOnline ? 'bg-emerald-400' : 'bg-amber-400'
               }`}
+              style={{
+                boxShadow: isSystemOnline ? '0 0 8px #34d399' : '0 0 8px #fbbf24',
+              }}
             />
           </button>
         )}
 
+        {/* Collapse Toggle */}
         <button
           onClick={onToggleCollapse}
-          className="w-full flex items-center justify-center py-1.5 text-slate-500 hover:text-slate-300 rounded-lg hover:bg-white/[0.04] transition-colors"
+          className="w-full flex items-center justify-center py-1.5 text-slate-600 hover:text-slate-300 rounded-lg hover:bg-white/[0.04] transition-all"
           title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
         >
           {isCollapsed ? (

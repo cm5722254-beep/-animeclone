@@ -6,7 +6,7 @@ import { AiDubbingWorkflow } from './AiDubbingWorkflow';
 import { VideoEffectsPanel } from '../effects/VideoEffectsPanel';
 import { CharacterCastDrawer } from './CharacterCastDrawer';
 import { ProjectFile, TimelineSegment, VideoEffects, SubtitleStyle, CharacterVoice } from '../../types';
-import { Sliders, X, Film, Mic2, Languages, Volume2, Subtitles, Share2, Sparkles, Video, Users } from 'lucide-react';
+import { Sliders, X, Film, Mic2, Languages, Volume2, Subtitles, Share2, Sparkles, Video, Users, Wand2, CheckCircle2, Download } from 'lucide-react';
 
 interface DubbingStudioProps {
   uploadedFile: ProjectFile | null;
@@ -104,8 +104,27 @@ export const DubbingStudio: React.FC<DubbingStudioProps> = ({
   const [showSubtitles, setShowSubtitles] = useState(true);
   const [subTab, setSubTab] = useState<'media' | 'dubbing' | 'translation' | 'voices' | 'subtitles' | 'audio' | 'export'>('dubbing');
 
-  // Video source: prioritize dubbed result, then uploaded media
-  const activeVideoSrc = dubbingOutputVideo || uploadedFile?.url || '';
+  const [videoSourceMode, setVideoSourceMode] = useState<'original' | 'dubbed'>('original');
+
+  // Auto-switch to dubbed video when a new dubbing output is generated
+  React.useEffect(() => {
+    if (dubbingOutputVideo) {
+      setVideoSourceMode('dubbed');
+    } else {
+      setVideoSourceMode('original');
+    }
+  }, [dubbingOutputVideo]);
+
+  // When a new file is uploaded or selected, always show the original uploaded video
+  React.useEffect(() => {
+    setVideoSourceMode('original');
+  }, [uploadedFile?.filename]);
+
+  // Video source: prioritize original uploaded video when in original mode or before dubbing
+  const activeVideoSrc =
+    videoSourceMode === 'dubbed' && dubbingOutputVideo
+      ? dubbingOutputVideo
+      : (uploadedFile?.url || '');
 
   // Current active subtitle
   const activeSegment = segments.find(
@@ -284,7 +303,87 @@ export const DubbingStudio: React.FC<DubbingStudioProps> = ({
       {/* Upper Half: 3-Column Studio Layout (Video Canvas + Workflow Stepper + Contextual Inspector) */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden border-b border-white/[0.08] relative">
         {/* Left Column: 16:9 Video Canvas */}
-        <div className="flex-1 flex flex-col items-center justify-center p-3 relative overflow-hidden bg-black/40">
+        <div className="flex-1 flex flex-col items-center justify-between p-2.5 relative overflow-hidden bg-black/40">
+          {/* Quick Action Floating Bar for fast user workflow */}
+          <div className="w-full mb-2 px-3 py-1.5 rounded-xl bg-[#090d18]/90 border border-white/[0.08] backdrop-blur-md flex items-center justify-between gap-2 overflow-x-auto select-none shadow-lg shadow-black/40">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onScanTimeline}
+                disabled={isScanningTimeline || !uploadedFile}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  isScanningTimeline
+                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse'
+                    : 'bg-gradient-to-r from-sky-500 to-indigo-600 hover:brightness-110 text-white shadow-sm shadow-sky-500/20 hover:scale-[1.02] active:scale-[0.98]'
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+                title="ស្កេនសំឡេងសន្ទនា និងបកប្រែជាអក្សររត់ស្វ័យប្រវត្តិ"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>{isScanningTimeline ? 'កំពុងស្កេន...' : '🔍 ស្កេន AI & Subtitle'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowCharacterCastDrawer(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.1] text-slate-200 text-xs font-semibold transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                title="ចាត់ចែង និងជ្រើសរើសសំឡេងតួអង្គខ្មែរ"
+              >
+                <Users className="w-3.5 h-3.5 text-indigo-400" />
+                <span>🎭 តួអង្គ ({uniqueCharsCount})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onOpenTab?.('tab-subtitles')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.1] text-slate-200 text-xs font-semibold transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                title="បើកផ្ទាំងកាត់តអក្សររត់ និងទាញយក SRT"
+              >
+                <Subtitles className="w-3.5 h-3.5 text-rose-400" />
+                <span>📝 អក្សររត់ ({segments.length})</span>
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {dubbingOutputVideo && (
+                <div className="flex items-center gap-1 bg-black/50 p-0.5 rounded-lg border border-white/[0.1]">
+                  <button
+                    type="button"
+                    onClick={() => setVideoSourceMode('original')}
+                    className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                      videoSourceMode === 'original'
+                        ? 'bg-sky-500/30 text-sky-300 border border-sky-400/40 shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    🎥 វីដេអូដើម
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setVideoSourceMode('dubbed')}
+                    className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                      videoSourceMode === 'dubbed'
+                        ? 'bg-amber-500/30 text-amber-300 border border-amber-400/40 shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    ⚡ បាន Dub
+                  </button>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={onStartDubbing}
+                disabled={isDubbing || !uploadedFile}
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:brightness-110 text-black font-extrabold text-xs transition-all shadow-md shadow-amber-500/25 hover:scale-[1.02] active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                title="ចាប់ផ្តើមបញ្ចូលសំឡេងរឿងខ្មែរ Hi-Fi"
+              >
+                <Wand2 className="w-3.5 h-3.5" />
+                <span>{isDubbing ? `Dubbing (${dubbingProgress}%)` : '⚡ បញ្ចូលសំឡេងភ្លាមៗ'}</span>
+              </button>
+            </div>
+          </div>
+
           <VideoPreview
             src={activeVideoSrc}
             currentTime={currentTime}

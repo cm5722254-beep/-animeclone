@@ -1,0 +1,71 @@
+{
+  "timestamp": 1789315652291,
+  "uploadedFile": {
+    "filename": "mediaFile-1789311819080-158-4k.mp4",
+    "originalName": "158-4k.mp4",
+    "size": 1199174828,
+    "type": "video",
+    "url": "/media/uploads/mediaFile-1789311819080-158-4k.mp4"
+  },
+  "segments": [],
+  "outputVideo": null,
+  "outputAudio": null,
+  "cleanBgmUrl": null,
+  "voiceMode": "movie_clone_all",
+  "dubbingScope": "full",
+  "maleLeadVoice": "hang_phleung_char_2_male.mp3",
+  "femaleLeadVoice": "hang_phleung_char_6_female.mp3",
+  "geminiModel": "gemini-3.5-flash",
+  "videoEffects": {
+    "brightness": 100,
+    "contrast": 100,
+    "saturation": 100,
+    "sepia": 0,
+    "blur": 0,
+    "aspectRatio": "16:9",
+    "lutPreset": "none",
+    "letterbox": false,
+    "vignette": false,
+    "filmGrain": false,
+    "vhsGlitch": false,
+    "glowBloom": false,
+    "colorTint": "none",
+    "watermark": {
+      "enabled": true,
+      "text": " អាទិទេព DABBER PRO",
+      "position": "center",
+      "opacity": 27,
+      "fontSize": 12,
+      "fontFamily": "Outfit",
+      "textColor": "#ffffff",
+      "showBadge": true
+    },
+    "styleText": {
+      "enabled": false,
+      "title": "សង្គ្រាមអាទិទេព",
+      "subtitle": "បញ្ចូលសំឡេងខ្មែរដោយ AI Dubbing",
+      "badge": "ភាគ ០១ - ចប់",
+      "stylePreset": "gold3d",
+      "position": "bottom-left",
+      "fontSize": 26,
+      "fontFamily": "Koulen",
+      "showBanner": true
+    },
+    "effect3dEnabled": false,
+    "effect3dPreset": "none",
+    "effect3dIntensity": 80,
+    "effect3dDepth": 75
+  },
+  "subtitleStyle": {
+    "fontSize": 20,
+    "fontFamily": "Kantumruy Pro",
+    "textColor": "#ffffff",
+    "strokeColor": "#000000",
+    "strokeWidth": 2,
+    "backgroundColor": "rgba(0,0,0,0.65)",
+    "position": "bottom",
+    "animation": "none"
+  },
+  "activeTab": "tab-dubbing",
+  "updated_at": 1789315652.2935007
+}

@@ -436,6 +436,12 @@ export const App: React.FC = () => {
   };
 
   const handleUploadFile = async (file: File) => {
+    // 0. Reset previous video's dubbed output and old segments immediately
+    setOutputVideo(null);
+    setOutputAudio(null);
+    setCleanBgmUrl(null);
+    setSegments([]);
+
     // 1. Instant Zero-Wait Local Preview (0.01s instant loading)
     const localBlobUrl = URL.createObjectURL(file);
     const instantFile: ProjectFile = {
@@ -455,6 +461,10 @@ export const App: React.FC = () => {
     showToast(`⚡ បានផ្ទុកវីដេអូលើអេក្រង់ភ្លាមៗ! កំពុងរក្សាទុកក្នុង Server...`, 'info');
 
     try {
+      localStorage.removeItem('CHEATAZ_DABBER_PROJECT_STATE');
+    } catch (_) {}
+
+    try {
       const res = await api.uploadFile(file, (percent, loaded, total) => {
         setUploadProgress(percent);
         setUploadInfo({
@@ -470,6 +480,8 @@ export const App: React.FC = () => {
           url: res.url || res.file.url || `/media/uploads/${res.file.filename}`,
         };
         setUploadedFile(verifiedFile);
+        setOutputVideo(null);
+        setOutputAudio(null);
         setRecentFiles((prev) => [verifiedFile, ...prev.filter((f) => f.filename !== verifiedFile.filename)]);
         setIsUploadingFile(false);
         showToast(`🎉 វីដេអូ "${file.name}" បាន Upload ជោគជ័យ 100%! ចុច "Start Dubbing" ដើម្បីចាប់ផ្តើម`, 'success');
@@ -673,7 +685,7 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#07090e] text-slate-100 font-khmer">
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#040608] text-slate-100 font-khmer">
       {/* Header Bar */}
       <Header
         activeProjectTitle={uploadedFile?.originalName || uploadedFile?.filename || 'Perfect World EP145.mp4'}
@@ -736,7 +748,7 @@ export const App: React.FC = () => {
         />
 
         {/* Dynamic Studio Views */}
-        <main className="flex-1 flex flex-col overflow-hidden bg-[#05070c]">
+        <main className="flex-1 flex flex-col overflow-hidden bg-[#04060a]">
           {activeTab === 'tab-dashboard' && (
             <DashboardView
               files={recentFiles}
@@ -761,6 +773,10 @@ export const App: React.FC = () => {
               onOpenStudio={() => setActiveTab('tab-dubbing')}
               onSelectProject={(f) => {
                 setUploadedFile(f);
+                setOutputVideo(null);
+                setOutputAudio(null);
+                setCleanBgmUrl(null);
+                setSegments([]);
                 setActiveTab('tab-dubbing');
               }}
               onRefresh={loadFiles}
@@ -777,7 +793,13 @@ export const App: React.FC = () => {
               uploadProgress={uploadProgress}
               uploadInfo={uploadInfo}
               onUploadFile={handleUploadFile}
-              onRemoveFile={() => setUploadedFile(null)}
+              onRemoveFile={() => {
+                setUploadedFile(null);
+                setOutputVideo(null);
+                setOutputAudio(null);
+                setCleanBgmUrl(null);
+                setSegments([]);
+              }}
               voiceMode={voiceMode}
               onVoiceModeChange={setVoiceMode}
               dubbingScope={dubbingScope}

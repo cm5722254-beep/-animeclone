@@ -538,5 +538,32 @@
     "gender": "female",
     "is_curated": true,
     "words": "ត្រូវហើយ តើលោកជាអ្នកណា?"
+  },
+  {
+    "id": "voxcpm:custom_voice_20260912_female.mp3",
+    "filename": "custom_voice_20260912_female.mp3",
+    "label": "🌸 តួស្រី សំឡេងផ្ទាល់ខ្លួន (20260912 - ឈុតទី ១)",
+    "role_key": "female_lead",
+    "gender": "female",
+    "is_curated": true,
+    "words": "សំឡេងគំរូដើមស្រង់ចេញពី 20260912_045310.aac សម្រាប់ Clone និង Dubbing"
+  },
+  {
+    "id": "voxcpm:custom_voice_20260912_female_2.mp3",
+    "filename": "custom_voice_20260912_female_2.mp3",
+    "label": "🌸 តួស្រី សំឡេងផ្ទាល់ខ្លួន (20260912 - ឈុតទី ២)",
+    "role_key": "female_lead",
+    "gender": "female",
+    "is_curated": true,
+    "words": "សំឡេងគំរូដើមស្រង់ចេញពី 20260912_045310.aac (Alternate Scene)"
+  },
+  {
+    "id": "voxcpm:custom_voice_20260912_full.mp3",
+    "filename": "custom_voice_20260912_full.mp3",
+    "label": "🎙️ សំឡេងដើមពេញលេញ (20260912_045310 Full)",
+    "role_key": "female_lead",
+    "gender": "female",
+    "is_curated": true,
+    "words": "សំឡេងគំរូដើមពេញលេញ 3 នាទី"
   }
 ]

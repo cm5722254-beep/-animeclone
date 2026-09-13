@@ -111,6 +111,16 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
     }
   }, [videoEffects?.styleText?.title, videoEffects?.styleText?.subtitle, videoEffects?.styleText?.badge]);
 
+  // Force video element to load new source immediately when src changes
+  useEffect(() => {
+    if (videoRef.current && src) {
+      try {
+        videoRef.current.load();
+      } catch (_) {}
+      onTimeUpdate(0);
+    }
+  }, [src]);
+
   // Global mousemove and mouseup listener for drag & resize
   useEffect(() => {
     if (!isDraggingTitle && !isResizingTitle) return;
@@ -476,6 +486,7 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
           }}
         >
           <video
+            key={src}
             ref={videoRef}
             src={src}
             playsInline
