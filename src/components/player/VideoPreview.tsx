@@ -479,7 +479,8 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
             ref={videoRef}
             src={src}
             playsInline
-            preload="metadata"
+            crossOrigin="anonymous"
+            preload="auto"
             style={{ filter: filterString }}
             onTimeUpdate={() => {
               if (videoRef.current) onTimeUpdate(videoRef.current.currentTime);
@@ -487,7 +488,11 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
             onLoadedMetadata={() => {
               if (videoRef.current) onDurationChange(videoRef.current.duration);
             }}
-            className="w-full h-full object-contain transition-all duration-150"
+            onError={(e) => {
+              console.warn("Video failed to load or requires re-fetch:", src);
+            }}
+            className="w-full h-full object-contain transition-all duration-150 cursor-pointer"
+            onClick={onTogglePlay}
           />
 
           {/* 3D Dynamic Spatial Overlays */}

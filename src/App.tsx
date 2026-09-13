@@ -254,10 +254,8 @@ export const App: React.FC = () => {
       if (savedData) {
         // Restore uploaded file (reconstruct playable URL if it was an uploaded file)
         if (savedData.uploadedFile) {
-          const uf = savedData.uploadedFile;
-          if (!uf.url || uf.url.startsWith('blob:')) {
-            uf.url = `/media/uploads/${uf.filename}`;
-          }
+          const uf = { ...savedData.uploadedFile };
+          uf.url = `/media/uploads/${uf.filename}`;
           setUploadedFile(uf);
         }
 
