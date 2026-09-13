@@ -4,8 +4,9 @@ import { ContextualInspector } from '../inspector/ContextualInspector';
 import { MultiTrackTimeline } from '../timeline/MultiTrackTimeline';
 import { AiDubbingWorkflow } from './AiDubbingWorkflow';
 import { VideoEffectsPanel } from '../effects/VideoEffectsPanel';
+import { CharacterCastDrawer } from './CharacterCastDrawer';
 import { ProjectFile, TimelineSegment, VideoEffects, SubtitleStyle, CharacterVoice } from '../../types';
-import { Sliders, X, Film, Mic2, Languages, Volume2, Subtitles, Share2, Sparkles, Video } from 'lucide-react';
+import { Sliders, X, Film, Mic2, Languages, Volume2, Subtitles, Share2, Sparkles, Video, Users } from 'lucide-react';
 
 interface DubbingStudioProps {
   uploadedFile: ProjectFile | null;
@@ -99,6 +100,7 @@ export const DubbingStudio: React.FC<DubbingStudioProps> = ({
   const [playbackRate, setPlaybackRate] = useState(1.0);
   const [zoom, setZoom] = useState(100);
   const [showEffectsDrawer, setShowEffectsDrawer] = useState(false);
+  const [showCharacterCastDrawer, setShowCharacterCastDrawer] = useState(false);
   const [showSubtitles, setShowSubtitles] = useState(true);
   const [subTab, setSubTab] = useState<'media' | 'dubbing' | 'translation' | 'voices' | 'subtitles' | 'audio' | 'export'>('dubbing');
 
@@ -111,12 +113,103 @@ export const DubbingStudio: React.FC<DubbingStudioProps> = ({
   );
   const currentSubtitle = activeSegment?.khmer_translation || activeSegment?.chinese_text;
 
+  // Compute unique characters count
+  const uniqueCharsCount = React.useMemo(() => {
+    const sids = new Set(segments.map((s) => s.speaker_name || s.speaker_id || 'តួអង្គ'));
+    return sids.size;
+  }, [segments]);
+
+  // Handler to change voice for a character across all segments
+  const handleChangeVoiceForCharacter = (charKey: string, newVoiceId: string) => {
+    if (!onChangeSegments) return;
+    const clean = newVoiceId.replace('voxcpm:', '');
+    const matched = characters.find((c) => c.id === newVoiceId || c.filename === clean);
+    const updated = segments.map((s) => {
+      const k = s.speaker_name || s.speaker_id || 'តួអង្គ';
+      if (k === charKey || s.speaker_id === charKey || s.speaker_name === charKey) {
+        return {
+          ...s,
+          voiceId: newVoiceId,
+          voiceFilename: clean,
+          voiceLabel: matched ? matched.label : clean,
+          gender: matched ? matched.gender : s.gender,
+        };
+      }
+      return s;
+    });
+    onChangeSegments(updated);
+    onShowToast(`បានកំណត់សំឡេងថ្មីសម្រាប់តួអង្គ "${charKey}"!`, 'success');
+  };
+
+  // Handler to auto-cast 1:1 unique voices to all characters
+  const handleAutoCastUniqueVoices = () => {
+    if (!onChangeSegments) return;
+    const uniqueKeys = Array.from(new Set(segments.map((s) => s.speaker_name || s.speaker_id || 'តួអង្គ')));
+    const malePool = characters.filter((c) => c.gender === 'male');
+    const femalePool = characters.filter((c) => c.gender === 'female');
+    const used = new Set<string>();
+
+    const mapping: Record<string, { voiceId: string; filename: string; label: string }> = {};
+
+    uniqueKeys.forEach((k) => {
+      const seg = segments.find((s) => (s.speaker_name || s.speaker_id || 'តួអង្គ') === k);
+      const isFem =
+        seg?.gender === 'female' ||
+        seg?.speaker_role?.includes('female') ||
+        k.includes('ស្រី') ||
+        k.toLowerCase().includes('female');
+      const pool = isFem ? femalePool : malePool;
+      const other = isFem ? malePool : femalePool;
+
+      let chosen = pool.find((c) => !used.has(c.filename));
+      if (!chosen) chosen = other.find((c) => !used.has(c.filename));
+
+      if (chosen) {
+        used.add(chosen.filename);
+        mapping[k] = {
+          voiceId: chosen.id || `voxcpm:${chosen.filename}`,
+          filename: chosen.filename,
+          label: chosen.label,
+        };
+      } else {
+        // All preset voices exhausted: automatically clone voice from original movie!
+        mapping[k] = {
+          voiceId: `movie_clone:${seg?.speaker_id || k}`,
+          filename: seg?.movieVoiceSample ? seg.movieVoiceSample.split('/').pop()! : 'movie_original_clone.mp3',
+          label: `🎯 សំឡេង Clone ពីរឿង (${k})`,
+        };
+      }
+    });
+
+    const updated = segments.map((s) => {
+      const k = s.speaker_name || s.speaker_id || 'តួអង្គ';
+      const m = mapping[k];
+      if (m) {
+        return {
+          ...s,
+          voiceId: m.voiceId,
+          voiceFilename: m.filename,
+          voiceLabel: m.label,
+        };
+      }
+      return s;
+    });
+
+    onChangeSegments(updated);
+    onShowToast(`បានចាត់ចែងសំឡេង ១ តួអង្គ = ១ សំឡេងដោយស្វ័យប្រវត្តិ (គ្មានជាន់គ្នា)!`, 'success');
+  };
+
   // Sub-navigation pills
   const subNavItems = [
     { id: 'media', label: 'Media', icon: <Video className="w-3.5 h-3.5" />, action: () => setSubTab('media') },
     { id: 'dubbing', label: 'Dubbing', icon: <Film className="w-3.5 h-3.5" />, action: () => setSubTab('dubbing') },
     { id: 'translation', label: 'Translation', icon: <Languages className="w-3.5 h-3.5" />, action: () => onOpenTab?.('tab-translator') },
-    { id: 'voices', label: 'Voices', icon: <Mic2 className="w-3.5 h-3.5" />, action: () => onOpenTab?.('tab-character') },
+    {
+      id: 'voices',
+      label: `Voices (${uniqueCharsCount})`,
+      icon: <Users className="w-3.5 h-3.5 text-sky-400" />,
+      action: () => setShowCharacterCastDrawer(true),
+    },
     { id: 'subtitles', label: 'Subtitles', icon: <Subtitles className="w-3.5 h-3.5" />, action: () => onOpenTab?.('tab-subtitles') },
     { id: 'audio', label: 'Audio', icon: <Volume2 className="w-3.5 h-3.5" />, action: () => onOpenTab?.('tab-mixer') },
     { id: 'export', label: 'Export', icon: <Share2 className="w-3.5 h-3.5" />, action: () => onOpenExport?.() },
@@ -220,6 +313,8 @@ export const DubbingStudio: React.FC<DubbingStudioProps> = ({
           isDubbing={isDubbing}
           dubbingProgress={dubbingProgress}
           hasDubbedOutput={Boolean(dubbingOutputVideo || dubbingOutputAudio)}
+          dubbingScope={dubbingScope}
+          onDubbingScopeChange={onDubbingScopeChange}
           onStartDubbing={onStartDubbing}
           onScanTimeline={onScanTimeline}
         />
@@ -234,10 +329,6 @@ export const DubbingStudio: React.FC<DubbingStudioProps> = ({
           onRemoveFile={onRemoveFile}
           voiceMode={voiceMode}
           onVoiceModeChange={onVoiceModeChange}
-          maleLeadVoice={maleLeadVoice}
-          onMaleLeadChange={onMaleLeadChange}
-          femaleLeadVoice={femaleLeadVoice}
-          onFemaleLeadChange={onFemaleLeadChange}
           dubbingScope={dubbingScope}
           onDubbingScopeChange={onDubbingScopeChange}
           geminiModel={geminiModel}
@@ -253,6 +344,13 @@ export const DubbingStudio: React.FC<DubbingStudioProps> = ({
           selectedSegmentIndex={selectedSegmentIndex}
           onSelectSegment={onSelectSegment}
           characters={characters}
+          onSelectCharacterVoice={(vId) => {
+            const curSeg = segments[selectedSegmentIndex];
+            if (curSeg) {
+              handleChangeVoiceForCharacter(curSeg.speaker_name || curSeg.speaker_id || 'តួអង្គ', vId);
+            }
+          }}
+          onOpenCharacterCast={() => setShowCharacterCastDrawer(true)}
           videoEffects={videoEffects}
           onChangeEffects={onChangeEffects}
         />
@@ -274,6 +372,18 @@ export const DubbingStudio: React.FC<DubbingStudioProps> = ({
         onAssemble={onAssemble}
         zoom={zoom}
         onZoomChange={setZoom}
+        onShowToast={onShowToast}
+      />
+
+      {/* 1:1 Unique Character Voice Casting Drawer / Modal */}
+      <CharacterCastDrawer
+        isOpen={showCharacterCastDrawer}
+        onClose={() => setShowCharacterCastDrawer(false)}
+        segments={segments}
+        characters={characters}
+        onChangeVoiceForCharacter={handleChangeVoiceForCharacter}
+        onAutoCastUniqueVoices={handleAutoCastUniqueVoices}
+        onPreviewVoice={onPreviewVoice}
         onShowToast={onShowToast}
       />
     </div>

@@ -27,9 +27,9 @@ import { User, CharacterVoice, TimelineSegment, ProjectFile, StudioConfig, Voxcp
 import { Mic, Volume2 } from 'lucide-react';
 
 const DEFAULT_PRESET_TIMELINE_SEGMENTS: TimelineSegment[] = [
-  { line_index: 0, start_time: 1.2, end_time: 4.8, speaker_name: "Xiao Yan (តួឯកប្រុស)", gender: "male", speaker_role: "male_lead", voiceId: "voxcpm:vp_character_20_female.mp3", chinese_text: "你好，欢迎来到这里。", khmer_translation: "សួស្តី សូមស្វាគមន៍មកកាន់ទីនេះ!", status: "ready" },
-  { line_index: 1, start_time: 5.5, end_time: 9.0, speaker_name: "Yun Yun (តួឯកស្រី)", gender: "female", speaker_role: "female_lead", voiceId: "voxcpm:vp_character_1_female.mp3", chinese_text: "今天的天气真好，我们走吧。", khmer_translation: "អាកាសធាតុថ្ងៃនេះពិតជាល្អណាស់ តោះពួកយើងចេញដំណើរទៅ។", status: "ready" },
-  { line_index: 2, start_time: 10.2, end_time: 14.5, speaker_name: "Elder Gu (ព្រឹទ្ធាចារ្យ)", gender: "male", speaker_role: "elder", voiceId: "voxcpm:vp_character_19_male.mp3", chinese_text: "大家一定要小心前方的危险！", khmer_translation: "អ្នកទាំងអស់គ្នាត្រូវតែប្រុងប្រយ័ត្ននឹងគ្រោះថ្នាក់នៅខាងមុខ!", status: "ready" }
+  { line_index: 0, start_time: 1.2, end_time: 4.8, speaker_name: "Xiao Yan (តួឯកប្រុស)", gender: "male", speaker_role: "male_lead", voiceId: "voxcpm:kxev_char_01_male.mp3", voiceFilename: "kxev_char_01_male.mp3", voiceLabel: "👑 អ្នកប្រុសធំ ផេ (តួឯកប្រុស)", chinese_text: "你好，欢迎来到这里。", khmer_translation: "សួស្តី សូមស្វាគមន៍មកកាន់ទីនេះ!", status: "ready" },
+  { line_index: 1, start_time: 5.5, end_time: 9.0, speaker_name: "Yun Yun (តួឯកស្រី)", gender: "female", speaker_role: "female_lead", voiceId: "voxcpm:kxev_char_02_female.mp3", voiceFilename: "kxev_char_02_female.mp3", voiceLabel: "🌸 ប្អូនស្រី ស៊ាវអ៊ី (តួឯកស្រី)", chinese_text: "今天的天气真好，我们走吧。", khmer_translation: "អាកាសធាតុថ្ងៃនេះពិតជាល្អណាស់ តោះពួកយើងចេញដំណើរទៅ។", status: "ready" },
+  { line_index: 2, start_time: 10.2, end_time: 14.5, speaker_name: "Elder Gu (ព្រឹទ្ធាចារ្យ)", gender: "male", speaker_role: "elder", voiceId: "voxcpm:kxev_char_04_male.mp3", voiceFilename: "kxev_char_04_male.mp3", voiceLabel: "💼 លោកប្រធាន (ព្រឹទ្ធាចារ្យ)", chinese_text: "大家一定要小心前方的危险！", khmer_translation: "អ្នកទាំងអស់គ្នាត្រូវតែប្រុងប្រយ័ត្ននឹងគ្រោះថ្នាក់នៅខាងមុខ!", status: "ready" }
 ];
 
 export const App: React.FC = () => {
@@ -361,6 +361,16 @@ export const App: React.FC = () => {
     setDubbingProgress(5);
     setDubbingMessage('កំពុងចាប់ផ្តើម AI Video Dubbing Pipeline...');
 
+    // Collect 1:1 character voice mappings from current timeline segments
+    const characterVoiceMap: Record<string, string> = {};
+    segments.forEach((s) => {
+      const charKey = s.speaker_name || s.speaker_id;
+      if (charKey && s.voiceId) {
+        characterVoiceMap[charKey] = s.voiceId;
+        if (s.speaker_id) characterVoiceMap[s.speaker_id] = s.voiceId;
+      }
+    });
+
     try {
       const res = await api.startDubbing({
         filename: uploadedFile.filename,
@@ -368,6 +378,7 @@ export const App: React.FC = () => {
         targetLang: 'km',
         voiceId: voiceMode,
         scope: dubbingScope,
+        characterVoiceMap,
         maleLeadVoice,
         femaleLeadVoice,
         geminiModel,
@@ -574,6 +585,7 @@ export const App: React.FC = () => {
           onOpenSettings={() => setIsSettingsOpen(true)}
           onOpenSystemStatus={() => setIsSystemStatusOpen(true)}
           isSystemOnline={Boolean(voxStatus && (voxStatus.online || voxStatus.configured))}
+          user={user}
         />
 
         {/* Dynamic Studio Views */}
@@ -854,6 +866,8 @@ export const App: React.FC = () => {
         onClose={() => setIsSettingsOpen(false)}
         onShowToast={showToast}
         onRefreshConfig={loadConfigAndStatus}
+        user={user}
+        onLogout={handleLogout}
       />
 
       <ExportModal

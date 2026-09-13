@@ -18,6 +18,7 @@ import {
   Smartphone,
 } from 'lucide-react';
 import { User, VoxcpmStatus } from '../../types';
+import { getSubscriptionInfo } from '../../utils/subscription';
 
 interface HeaderProps {
   activeProjectTitle: string;
@@ -247,24 +248,62 @@ export const Header: React.FC<HeaderProps> = ({
           <Settings className="w-4 h-4" />
         </button>
 
-        {/* User Profile / Avatar */}
-        {user ? (
-          <div className="relative group">
+        {/* User Profile / Avatar & Logout Button */}
+        {user ? (() => {
+          const subInfo = getSubscriptionInfo(user);
+          return (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={onOpenSettings}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#111827] border border-white/[0.1] hover:border-sky-500/40 text-slate-200 text-xs font-medium transition-all group"
+                title={`${subInfo.title} | ${subInfo.expiryText} (ចុចដើម្បីមើលការកំណត់)`}
+              >
+                <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-indigo-500 via-sky-600 to-purple-600 flex items-center justify-center text-white font-bold text-xs shadow-sm shrink-0">
+                  {user.username.charAt(0).toUpperCase()}
+                </div>
+
+                <div className="flex flex-col items-start leading-tight">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-xs max-w-[85px] truncate text-slate-200">
+                      {user.username}
+                    </span>
+                    <span
+                      className={`text-[9px] px-1.5 py-0.2 rounded font-bold font-mono border ${
+                        subInfo.color === 'emerald'
+                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                          : subInfo.color === 'amber'
+                          ? 'bg-amber-500/20 text-amber-300 border-amber-500/30 shadow-[0_0_8px_rgba(245,158,11,0.2)]'
+                          : 'bg-slate-500/20 text-slate-300 border-slate-500/30'
+                      }`}
+                    >
+                      {subInfo.badge}
+                    </span>
+                  </div>
+
+                  <span className="text-[9.5px] text-slate-400 group-hover:text-amber-300 transition-colors truncate max-w-[140px]">
+                    {subInfo.expiryText}
+                  </span>
+                </div>
+              </button>
+
+            {/* Logout Button */}
             <button
-              onClick={onOpenSettings}
-              className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 border border-white/[0.15] flex items-center justify-center text-white font-bold text-xs shadow-sm overflow-hidden"
-              title={`${user.username} (${user.tier.toUpperCase()})`}
+              onClick={onLogout}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 hover:border-rose-500/50 text-rose-300 text-xs font-bold transition-all active:scale-95 shadow-sm"
+              title="ចាកចេញពីគណនី (Log Out)"
             >
-              <span>{user.username.charAt(0).toUpperCase()}</span>
+              <LogOut className="w-3.5 h-3.5 text-rose-400" />
+              <span>ចាកចេញ</span>
             </button>
           </div>
-        ) : (
+        );
+      })() : (
           <button
             onClick={onOpenAuthModal}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-slate-300 text-xs font-medium border border-white/[0.08]"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 text-xs font-semibold border border-sky-500/30 shadow-sm transition-all active:scale-95"
           >
             <UserIcon className="w-3.5 h-3.5" />
-            <span>Login</span>
+            <span>ចូលប្រើ (Login)</span>
           </button>
         )}
       </div>

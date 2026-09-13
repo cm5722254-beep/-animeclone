@@ -18,8 +18,10 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   ChevronRight,
+  Sparkles,
 } from 'lucide-react';
-import { TabId } from '../../types';
+import { TabId, User } from '../../types';
+import { getSubscriptionInfo } from '../../utils/subscription';
 
 interface SidebarProps {
   activeTab: TabId;
@@ -31,6 +33,7 @@ interface SidebarProps {
   onOpenSettings: () => void;
   onOpenSystemStatus: () => void;
   isSystemOnline?: boolean;
+  user?: User | null;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -43,6 +46,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenSettings,
   onOpenSystemStatus,
   isSystemOnline = true,
+  user,
 }) => {
   return (
     <aside
@@ -269,8 +273,40 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
-      {/* Bottom: System Status Card & Collapse Toggle */}
+      {/* Bottom: Subscription Card, System Status & Collapse Toggle */}
       <div className="p-2 border-t border-white/[0.08] flex flex-col gap-2">
+        {!isCollapsed && user && (() => {
+          const subInfo = getSubscriptionInfo(user);
+          return (
+            <div
+              onClick={onOpenSettings}
+              className="p-2.5 rounded-xl bg-[#111827] border border-white/[0.08] hover:border-sky-500/30 flex flex-col gap-1 cursor-pointer transition-all group"
+              title={`${subInfo.title} | ${subInfo.expiryText} (ចុចដើម្បីមើលលម្អិត)`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-slate-400 font-semibold">កញ្ចប់គណនី (Plan)</span>
+                <span
+                  className={`text-[9px] px-1.5 py-0.2 rounded font-bold font-mono border ${
+                    subInfo.color === 'emerald'
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                      : subInfo.color === 'amber'
+                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/30 shadow-[0_0_8px_rgba(245,158,11,0.2)]'
+                      : 'bg-slate-500/20 text-slate-300 border-slate-500/30'
+                  }`}
+                >
+                  {subInfo.badge}
+                </span>
+              </div>
+              <div className="text-[11px] font-bold text-white truncate group-hover:text-sky-300 transition-colors">
+                {subInfo.title}
+              </div>
+              <div className="text-[9.5px] text-amber-300/90 font-medium truncate">
+                {subInfo.expiryText}
+              </div>
+            </div>
+          );
+        })()}
+
         {!isCollapsed ? (
           <button
             onClick={onOpenSystemStatus}

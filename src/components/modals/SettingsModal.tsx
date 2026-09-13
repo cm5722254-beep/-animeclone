@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { X, Sliders, ExternalLink, Save, Copy, HardDrive, Trash2 } from 'lucide-react';
+import { X, Sliders, ExternalLink, Save, Copy, HardDrive, Trash2, LogOut, User as UserIcon, Calendar, ShieldCheck, Sparkles, Clock, Crown } from 'lucide-react';
 import { api } from '../../services/api';
+import { User } from '../../types';
+import { getSubscriptionInfo } from '../../utils/subscription';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   onShowToast: (msg: string, type: 'success' | 'error' | 'info') => void;
   onRefreshConfig: () => void;
+  user?: User | null;
+  onLogout?: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -14,6 +18,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onClose,
   onShowToast,
   onRefreshConfig,
+  user,
+  onLogout,
 }) => {
   const [elevenKey, setElevenKey] = useState('');
   const [geminiKey, setGeminiKey] = useState('');
@@ -94,6 +100,76 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
         {/* Body */}
         <div className="p-6 overflow-y-auto flex flex-col gap-4 text-xs">
+          {/* User Account & Subscription Status */}
+          {user && (() => {
+            const subInfo = getSubscriptionInfo(user);
+            return (
+              <div className="bg-[#0b0f19] border border-white/[0.12] rounded-2xl p-4 flex flex-col gap-3.5 shadow-md">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 via-sky-600 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-md border border-white/[0.1]">
+                      {user.username.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-white flex items-center gap-2">
+                        <span>{user.username}</span>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold font-mono border ${
+                          subInfo.color === 'emerald'
+                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                            : subInfo.color === 'amber'
+                            ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                            : 'bg-slate-500/20 text-slate-300 border-slate-500/30'
+                        }`}>
+                          {subInfo.badge}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-400 mt-0.5">
+                        តួនាទី៖ <span className="font-semibold text-slate-300">{user.role === 'admin' ? '👑 Master Admin' : '👤 សមាជិក (Member)'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {onLogout && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onLogout();
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
+                    >
+                      <LogOut className="w-3.5 h-3.5 text-rose-400" />
+                      <span>ចាកចេញ</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Subscription Details Box */}
+                <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <Calendar className="w-4 h-4 text-amber-400 shrink-0" />
+                    <div className="flex flex-col">
+                      <span className="text-[10.5px] text-slate-400">កញ្ចប់ & ថ្ងៃផុតកំណត់ (Plan & Expiration)</span>
+                      <div className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                        <span>{subInfo.title}</span>
+                        <span>•</span>
+                        <span>{subInfo.formattedDate}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#070a12] border border-white/[0.08] text-[11px] self-stretch sm:self-auto justify-between sm:justify-start">
+                    <span className="text-slate-400">ស្ថានភាព៖</span>
+                    <span className={`font-bold ${
+                      subInfo.isPremium ? 'text-emerald-400' : 'text-slate-400'
+                    }`}>
+                      {subInfo.isPremium ? (subInfo.isLifetime ? '🌟 ពេញមួយជីវិត (Lifetime)' : `Active (${subInfo.daysLeft} ថ្ងៃ)`) : 'Free Limited'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
           {/* ElevenLabs */}
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">

@@ -847,17 +847,30 @@ async def scan_timeline(body: ScanTimelineRequest):
     except Exception as ve:
         print(f"Movie voice sample extraction notice: {ve}")
 
+    # 1-to-1 Unique Voice Assignment for each character (Zero Duplicate Voices, Auto Movie Clone fallback)
+    char_map = khmer_dubber.assign_unique_voices_to_segments(segments, movie_voice_map=movie_voice_map)
+
     formatted = []
     for idx, s in enumerate(segments):
+        sid = s.get('speaker_id') or s.get('speaker_name') or 'speaker_1'
+        assigned = char_map.get(sid, {})
         formatted.append({
             **s,
             'line_index': idx,
-            'movieVoiceSample': f"/media/outputs/{os.path.basename(movie_voice_map[s['speaker_id']])}" if s.get('speaker_id') in movie_voice_map else None,
+            'voiceId': s.get('voiceId') or assigned.get('voiceId', 'voxcpm:kxev_char_01_male.mp3'),
+            'voiceFilename': s.get('voiceFilename') or assigned.get('filename'),
+            'voiceLabel': s.get('voiceLabel') or assigned.get('label'),
+            'movieVoiceSample': f"/media/outputs/{os.path.basename(movie_voice_map[sid])}" if sid in movie_voice_map else None,
             'audioUrl': None,
             'source': 'pending'
         })
 
-    return {'success': True, 'duration': duration, 'segments': formatted}
+    return {
+        'success': True,
+        'duration': duration,
+        'segments': formatted,
+        'characterVoiceMap': {k: v.get('voiceId') for k, v in char_map.items()}
+    }
 
 @app.post('/api/dubbing/record-line')
 async def record_line(audio: UploadFile = File(...), lineIndex: int = Form(0)):

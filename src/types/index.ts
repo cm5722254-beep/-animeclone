@@ -29,6 +29,8 @@ export interface TimelineSegment {
   speaker_role?: string;
   gender?: 'male' | 'female';
   voiceId?: string;
+  voiceFilename?: string;
+  voiceLabel?: string;
   chinese_text?: string;
   khmer_translation?: string;
   audioUrl?: string | null;

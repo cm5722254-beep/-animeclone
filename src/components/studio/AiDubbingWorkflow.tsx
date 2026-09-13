@@ -9,6 +9,8 @@ interface AiWorkflowProps {
   isDubbing: boolean;
   dubbingProgress: number;
   hasDubbedOutput: boolean;
+  dubbingScope?: string;
+  onDubbingScopeChange?: (scope: string) => void;
   onStartDubbing?: () => void;
   onScanTimeline?: () => void;
 }
@@ -21,6 +23,8 @@ export const AiDubbingWorkflow: React.FC<AiWorkflowProps> = ({
   isDubbing,
   dubbingProgress,
   hasDubbedOutput,
+  dubbingScope = '120',
+  onDubbingScopeChange,
   onStartDubbing,
   onScanTimeline,
 }) => {
@@ -172,11 +176,45 @@ export const AiDubbingWorkflow: React.FC<AiWorkflowProps> = ({
       </div>
 
       {/* Quick Action in Footer */}
-      <div className="p-3 border-t border-white/[0.08] bg-[#070a12]">
+      <div className="p-3 border-t border-white/[0.08] bg-[#070a12] flex flex-col gap-2">
+        {/* 4 Scope Selection Buttons */}
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center justify-between text-[10px]">
+            <span className="text-slate-400 font-medium">ជម្រើស Generate វីដេអូ:</span>
+            <span className="font-mono font-bold text-amber-400">
+              {dubbingScope === '120' ? '២ នាទី' : dubbingScope === '300' ? '៥ នាទី' : dubbingScope === '420' ? '៧ នាទី' : '១រឿងពេញ'}
+            </span>
+          </div>
+          <div className="grid grid-cols-4 gap-1 bg-[#0d121f] p-1 rounded-xl border border-white/[0.06]">
+            {[
+              { id: '120', label: '២ នាទី' },
+              { id: '300', label: '៥ នាទី' },
+              { id: '420', label: '៧ នាទី' },
+              { id: 'full', label: 'ពេញ' },
+            ].map((btn) => {
+              const isSelected = dubbingScope === btn.id;
+              return (
+                <button
+                  key={btn.id}
+                  type="button"
+                  onClick={() => onDubbingScopeChange?.(btn.id)}
+                  className={`py-1 rounded-lg text-[10.5px] font-bold text-center transition-all cursor-pointer ${
+                    isSelected
+                      ? 'bg-gradient-to-r from-amber-500 to-amber-400 text-black shadow-sm font-extrabold ring-1 ring-amber-300'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.05]'
+                  }`}
+                >
+                  {btn.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <button
           onClick={onStartDubbing}
           disabled={isDubbing || !hasVideo}
-          className="w-full py-2 rounded-xl bg-gradient-to-r from-sky-500 via-indigo-600 to-blue-600 hover:brightness-110 disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-sky-600/25 active:scale-95 transition-all"
+          className="w-full py-2 rounded-xl bg-gradient-to-r from-sky-500 via-indigo-600 to-blue-600 hover:brightness-110 disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-sky-600/25 active:scale-95 transition-all cursor-pointer disabled:cursor-not-allowed"
         >
           {isDubbing ? (
             <>
