@@ -471,12 +471,21 @@ export const ContextualInspector: React.FC<ContextualInspectorProps> = ({
               {/* Master Start Dubbing Action inside Inspector */}
               <div className="pt-2 flex flex-col gap-2">
                 <button
-                  onClick={onStartDubbing}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onStartDubbing();
+                  }}
                   disabled={isDubbing || !uploadedFile}
                   className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-sky-500 via-indigo-600 to-blue-600 hover:brightness-110 disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-sky-600/30 active:scale-95 transition-all cursor-pointer disabled:cursor-not-allowed"
                 >
-                  <Sparkles className="w-4 h-4 text-sky-200" />
-                  <span>{isDubbing ? 'កំពុងបញ្ចូលសំឡេង AI...' : 'ដំណើរការបញ្ចូលសំឡេង AI'}</span>
+                  {isDubbing ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-amber-300" />
+                  ) : (
+                    <Sparkles className="w-4 h-4 text-sky-200" />
+                  )}
+                  <span>{isDubbing ? `កំពុងបញ្ចូលសំឡេង AI (${dubbingProgress}%)...` : 'ដំណើរការបញ្ចូលសំឡេង AI'}</span>
                 </button>
 
                 {isDubbing && (

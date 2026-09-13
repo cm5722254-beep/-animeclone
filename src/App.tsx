@@ -466,10 +466,15 @@ export const App: React.FC = () => {
       });
 
       if (res.success && res.file) {
-        setUploadedFile(res.file);
-        setRecentFiles((prev) => [res.file, ...prev.filter((f) => f.filename !== res.file.filename)]);
+        // Ensure playable URL points directly to server static mount
+        const verifiedFile = {
+          ...res.file,
+          url: res.url || res.file.url || `/media/uploads/${res.file.filename}`,
+        };
+        setUploadedFile(verifiedFile);
+        setRecentFiles((prev) => [verifiedFile, ...prev.filter((f) => f.filename !== verifiedFile.filename)]);
         setIsUploadingFile(false);
-        showToast(`🎉 វីដេអូ "${file.name}" ត្រូវបានរក្សាទុកក្នុង Server រួចរាល់!`, 'success');
+        showToast(`🎉 វីដេអូ "${file.name}" បាន Upload ជោគជ័យ 100%! ចុច "Start Dubbing" ដើម្បីចាប់ផ្តើម`, 'success');
       }
     } catch (err: any) {
       setIsUploadingFile(false);
@@ -479,18 +484,19 @@ export const App: React.FC = () => {
 
   const handleStartDubbing = async () => {
     if (!uploadedFile) {
-      showToast('សូមបញ្ចូលវីដេអូជាមុនសិន!', 'warning');
+      showToast('⚠️ សូមបញ្ចូល ឬ Upload វីដេអូជាមុនសិន!', 'warning');
       return;
     }
 
     if (isUploadingFile) {
-      showToast('⚡ វីដេអូកំពុង Upload ចូល Server... សូមរង់ចាំឱ្យពេញ ១០០% សិន (ប្រហែលប៉ុន្មានវិនាទី)', 'warning');
+      showToast('⚡ វីដេអូកំពុងផ្ញើចូល Server សូមរង់ចាំឱ្យពេញ ១០០% សិន (ប្រហែលប៉ុន្មានវិនាទី)...', 'warning');
       return;
     }
 
     setIsDubbing(true);
-    setDubbingProgress(5);
-    setDubbingMessage('កំពុងចាប់ផ្តើម AI Video Dubbing Pipeline...');
+    setDubbingProgress(10);
+    setDubbingMessage('🚀 កំពុងដំណើរការ AI Dubbing ស្រង់សំឡេង និងតួអង្គក្នុងរឿង...');
+    showToast('🚀 កំពុងដំណើរការ AI Dubbing វីដេអូ សូមរង់ចាំបន្តិច...', 'info');
 
     // Collect 1:1 character voice mappings from current timeline segments
     const characterVoiceMap: Record<string, string> = {};

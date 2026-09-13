@@ -212,18 +212,24 @@ export const AiDubbingWorkflow: React.FC<AiWorkflowProps> = ({
         </div>
 
         <button
-          onClick={onStartDubbing}
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onStartDubbing?.();
+          }}
           disabled={isDubbing || !hasVideo}
-          className="w-full py-2 rounded-xl bg-gradient-to-r from-sky-500 via-indigo-600 to-blue-600 hover:brightness-110 disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-sky-600/25 active:scale-95 transition-all cursor-pointer disabled:cursor-not-allowed"
+          className="w-full py-2.5 rounded-xl bg-gradient-to-r from-sky-500 via-indigo-600 to-blue-600 hover:brightness-110 disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-sky-600/25 active:scale-95 transition-all cursor-pointer disabled:cursor-not-allowed"
+          title="ចុចដើម្បីចាប់ផ្តើមបញ្ចូលសំឡេងរឿងដោយ AI"
         >
           {isDubbing ? (
             <>
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              <span>Generating...</span>
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-300" />
+              <span>កំពុង Dubbing ({dubbingProgress}%)...</span>
             </>
           ) : (
             <>
-              <Sparkles className="w-3.5 h-3.5" />
+              <Sparkles className="w-3.5 h-3.5 text-sky-200" />
               <span>{hasDubbedOutput ? 'Re-Dub Video' : 'Start Dubbing'}</span>
             </>
           )}
