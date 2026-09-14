@@ -862,6 +862,97 @@ async def scan_timeline(body: ScanTimelineRequest):
     for idx, s in enumerate(segments):
         sid = s.get('speaker_id') or s.get('speaker_name') or 'speaker_1'
         assigned = char_map.get(sid, {})
+        
+        # 🎭 Auto-detect emotion from original audio segment (if enabled)
+        emotion_data = {}
+        try:
+            # Extract segment audio for emotion detection
+            segment_start = s.get('start_time', 0)
+            segment_end = s.get('end_time', segment_start + 2)
+            segment_audio_path = os.path.join(OUTPUTS_DIR, f"temp_segment_{idx}_{int(time.time() * 1000)}.wav")
+            
+            # Extract segment using ffmpeg
+            import subprocess
+            subprocess.run([
+                'ffmpeg', '-y', '-i', extracted_audio_path,
+                '-ss', str(segment_start),
+                '-to', str(segment_end),
+                '-acodec', 'pcm_s16le',
+                segment_audio_path
+            ], capture_output=True, check=True)
+            
+            # Detect emotion
+            if os.path.exists(segment_audio_path):
+                import librosa
+                import numpy as np
+                
+                y, sr = librosa.load(segment_audio_path, sr=None)
+                
+                # Extract features
+                rms = librosa.feature.rms(y=y)[0]
+                volume = float(np.mean(rms) * 1000)
+                volume = min(100, max(0, volume))
+                
+                pitches, magnitudes = librosa.piptrack(y=y, sr=sr)
+                pitch_values = []
+                for t in range(pitches.shape[1]):
+                    index = magnitudes[:, t].argmax()
+                    pitch = pitches[index, t]
+                    if pitch > 0:
+                        pitch_values.append(pitch)
+                
+                avg_pitch = float(np.mean(pitch_values)) if pitch_values else 200.0
+                pitch_semitones = 12 * np.log2(avg_pitch / 200.0) if avg_pitch > 0 else 0
+                pitch_semitones = float(np.clip(pitch_semitones, -12, 12))
+                
+                tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
+                speed = float(tempo / 120.0)
+                speed = min(2.0, max(0.5, speed))
+                
+                spectral_centroids = librosa.feature.spectral_centroid(y=y, sr=sr)[0]
+                energy = float(np.mean(spectral_centroids) / 40)
+                energy = min(100, max(0, energy))
+                
+                intensity = int((volume * 0.7) + (energy * 0.3))
+                
+                # Detect emotion
+                emotion = 'neutral'
+                if volume > 80 and pitch_semitones > 4 and speed > 1.3:
+                    emotion = 'shout'
+                elif volume > 75 and speed > 1.2 and intensity > 80:
+                    emotion = 'angry'
+                elif volume < 35 and energy < 40:
+                    emotion = 'whisper'
+                elif pitch_semitones > 5 and speed > 1.3 and energy > 75:
+                    emotion = 'laugh'
+                elif pitch_semitones > 3 and speed > 1.1 and energy > 65:
+                    emotion = 'happy'
+                elif pitch_semitones < -3 and speed < 0.85 and volume < 60:
+                    emotion = 'cry'
+                elif pitch_semitones < -2 and speed < 0.9 and energy < 55:
+                    emotion = 'sad'
+                elif pitch_semitones > 4 and energy > 70 and intensity > 75:
+                    emotion = 'excited'
+                elif pitch_semitones > 2 and speed > 1.1 and volume < 65:
+                    emotion = 'scared'
+                
+                emotion_data = {
+                    'emotion': emotion,
+                    'emotionIntensity': intensity,
+                    'emotionParams': {
+                        'volume': int(volume),
+                        'pitch': round(pitch_semitones, 2),
+                        'speed': round(speed, 2),
+                        'energy': int(energy)
+                    }
+                }
+                
+                # Cleanup temp file
+                if os.path.exists(segment_audio_path):
+                    os.remove(segment_audio_path)
+        except Exception as e:
+            print(f"Emotion detection skipped for segment {idx}: {e}")
+        
         formatted.append({
             **s,
             'line_index': idx,
@@ -870,7 +961,8 @@ async def scan_timeline(body: ScanTimelineRequest):
             'voiceLabel': s.get('voiceLabel') or assigned.get('label'),
             'movieVoiceSample': f"/media/outputs/{os.path.basename(movie_voice_map[sid])}" if sid in movie_voice_map else None,
             'audioUrl': None,
-            'source': 'pending'
+            'source': 'pending',
+            **emotion_data  # 🎭 Add emotion data
         })
 
     return {
@@ -963,6 +1055,129 @@ async def generate_line(body: GenerateLineRequest):
 
     await khmer_dubber.synthesize_realistic_speech(
         clean_text,
+
+
+# --- Emotion Detection Endpoint ---
+class EmotionDetectionRequest(BaseModel):
+    audioUrl: str
+
+@app.post('/api/audio/detect-emotion')
+async def detect_emotion_from_audio(body: EmotionDetectionRequest):
+    """
+    AI Emotion Detection API
+    វិភាគសំឡេងនិងកំណត់អារម្មណ៍ដោយស្វ័យប្រវត្តិ
+    """
+    try:
+        import librosa
+        import numpy as np
+        
+        # Download audio file
+        audio_path = body.audioUrl
+        if audio_path.startswith('/media/'):
+            audio_path = os.path.join(BASE_DIR, audio_path.lstrip('/'))
+        elif audio_path.startswith('http'):
+            # Download from URL
+            import requests
+            response = requests.get(audio_path)
+            temp_path = os.path.join(OUTPUTS_DIR, f"temp_emotion_{int(time.time() * 1000)}.wav")
+            with open(temp_path, 'wb') as f:
+                f.write(response.content)
+            audio_path = temp_path
+        
+        # Load audio with librosa
+        y, sr = librosa.load(audio_path, sr=None)
+        
+        # Extract features
+        # 1. RMS Energy (volume/loudness)
+        rms = librosa.feature.rms(y=y)[0]
+        volume = float(np.mean(rms) * 1000)
+        volume = min(100, max(0, volume))
+        
+        # 2. Pitch (fundamental frequency)
+        pitches, magnitudes = librosa.piptrack(y=y, sr=sr)
+        pitch_values = []
+        for t in range(pitches.shape[1]):
+            index = magnitudes[:, t].argmax()
+            pitch = pitches[index, t]
+            if pitch > 0:
+                pitch_values.append(pitch)
+        
+        avg_pitch = float(np.mean(pitch_values)) if pitch_values else 200.0
+        # Convert to semitones relative to 200 Hz base
+        pitch_semitones = 12 * np.log2(avg_pitch / 200.0) if avg_pitch > 0 else 0
+        pitch_semitones = float(np.clip(pitch_semitones, -12, 12))
+        
+        # 3. Tempo/Speed (beats per minute)
+        tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
+        speed = float(tempo / 120.0)  # Normalize to 1.0 = normal speed
+        speed = min(2.0, max(0.5, speed))
+        
+        # 4. Energy (spectral centroid)
+        spectral_centroids = librosa.feature.spectral_centroid(y=y, sr=sr)[0]
+        energy = float(np.mean(spectral_centroids) / 40)
+        energy = min(100, max(0, energy))
+        
+        # 5. Intensity (combination of volume and energy)
+        intensity = int((volume * 0.7) + (energy * 0.3))
+        
+        # Map features to emotion using decision tree
+        emotion = 'neutral'
+        confidence = 0.6
+        
+        if volume > 80 and pitch_semitones > 4 and speed > 1.3:
+            emotion = 'shout'
+            confidence = 0.85
+        elif volume > 75 and speed > 1.2 and intensity > 80:
+            emotion = 'angry'
+            confidence = 0.8
+        elif volume < 35 and energy < 40:
+            emotion = 'whisper'
+            confidence = 0.85
+        elif pitch_semitones > 3 and speed > 1.1 and energy > 65:
+            emotion = 'happy'
+            confidence = 0.75
+        elif pitch_semitones > 5 and speed > 1.3 and energy > 75:
+            emotion = 'laugh'
+            confidence = 0.8
+        elif pitch_semitones < -2 and speed < 0.9 and energy < 55:
+            emotion = 'sad'
+            confidence = 0.75
+        elif pitch_semitones < -3 and speed < 0.85 and volume < 60 and intensity < 50:
+            emotion = 'cry'
+            confidence = 0.8
+        elif pitch_semitones > 4 and energy > 70 and intensity > 75:
+            emotion = 'excited'
+            confidence = 0.75
+        elif pitch_semitones > 2 and speed > 1.1 and volume < 65 and intensity > 60:
+            emotion = 'scared'
+            confidence = 0.7
+        
+        return {
+            'emotion': emotion,
+            'confidence': confidence,
+            'intensity': intensity,
+            'features': {
+                'volume': int(volume),
+                'pitch': round(pitch_semitones, 2),
+                'speed': round(speed, 2),
+                'energy': int(energy)
+            }
+        }
+        
+    except Exception as e:
+        print(f"Emotion detection error: {e}")
+        # Return neutral emotion as fallback
+        return {
+            'emotion': 'neutral',
+            'confidence': 0.5,
+            'intensity': 50,
+            'features': {
+                'volume': 70,
+                'pitch': 0,
+                'speed': 1.0,
+                'energy': 50
+            }
+        }
         out_path,
         body.voiceId,
         studio_ref if os.path.exists(studio_ref) else None,

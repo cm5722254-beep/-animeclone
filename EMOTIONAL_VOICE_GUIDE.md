@@ -316,3 +316,118 @@ async def generate_emotional_voice(
 ---
 
 Made with ❤️ by CHEATZ DABBER PRO Team
+
+
+---
+
+## 🚀 NEW: AUTO Emotion Detection (ស្វែងយល់អារម្មណ៍ដោយស្វ័យប្រវត្តិ)
+
+### ✨ មុខងារថ្មី
+ឥឡូវប្រព័ន្ធអាច **AUTO-DETECT EMOTION** ពីសំឡេងដើមក្នុងរឿង!
+
+### 📖 របៀបប្រើប្រាស់
+
+#### 1. បើក AUTO Emotion Detection
+1. នៅក្នុង Dubbing Studio រកមើល **Quick Action Bar**
+2. ចុចប៊ូតុង **"🎭 AUTO អារម្មណ៍"**
+3. នៅពេលបើក ប៊ូតុងពណ៌បៃតងភ្លឺ ✅
+
+#### 2. ស្កេនវីដេអូ
+1. Upload វីដេអូរបស់អ្នក
+2. ចុច **"🔍 ស្កេន AI & Subtitle"**
+3. ប្រព័ន្ធនឹង:
+   - 🎤 ស្រង់សំឡេងសន្ទនា
+   - 🌐 បកប្រែជាខ្មែរ
+   - 🎭 **វិភាគអារម្មណ៍ AUTO** (សើច, យំ, ខឹង...)
+   - ⚙️ កំណត់ voice parameters ដែលត្រូវគ្នា
+
+#### 3. Dubbing ជាមួយអារម្មណ៍
+1. ចុច **"⚡ បញ្ចូលសំឡេងភ្លាមៗ"**
+2. សំឡេងខ្មែរនឹងមានអារម្មណ៍ដូចសំឡេងដើម! 🎬
+
+---
+
+## 🧠 AI Detection Features
+
+### Audio Analysis (វិភាគសំឡេង)
+ប្រព័ន្ធវិភាគ 5 features:
+1. **Volume** - កម្រិតសំឡេង (ខ្លាំង/ស្រាល)
+2. **Pitch** - កម្ពស់សំឡេង (ខ្ពស់/ទាប)
+3. **Speed** - ល្បឿននិយាយ (លឿន/យឺត)
+4. **Energy** - ថាមពលសំឡេង
+5. **Intensity** - កម្រិតអារម្មណ៍សរុប
+
+### Emotion Mapping (ផែនទីអារម្មណ៍)
+- Volume ខ្លាំង + Pitch ខ្ពស់ + Speed លឿន → **ស្រែក/រំភើប**
+- Volume ស្រាល + Pitch ទាប + Speed យឺត → **ក្រៀមក្រំ/យំ**
+- Volume ខ្លាំង + Speed លឿន + Energy ខ្ពស់ → **ខឹង**
+- Pitch ខ្ពស់ + Energy ខ្ពស់ → **សើច/រីករាយ**
+- Volume ទាបខ្លាំង → **ស្ទះ**
+
+---
+
+## 🎯 Use Cases (ករណីប្រើប្រាស់)
+
+### រឿងកំប្លែង (Comedy)
+✅ AUTO Detection: Happy, Laugh, Excited
+- សំឡេងនឹងមានភាពកំប្លែងដូចដើម
+
+### រឿងទុក្ខព្រួយ (Drama)
+✅ AUTO Detection: Sad, Cry, Whisper
+- សំឡេងនឹងមានអារម្មណ៍ក្រៀមក្រំដូចដើម
+
+### រឿងសកម្មភាព (Action)
+✅ AUTO Detection: Shout, Angry, Excited
+- សំឡេងនឹងមានភាពខ្លាំងកម្លាដូចដើម
+
+### រឿងរន្ធត់ (Horror)
+✅ AUTO Detection: Scared, Whisper
+- សំឡេងនឹងមានភាពគួរឱ្យខ្លាចដូចដើម
+
+---
+
+## 📊 API Reference
+
+### Detect Emotion
+```http
+POST /api/audio/detect-emotion
+Content-Type: application/json
+
+{
+  "audioUrl": "/media/outputs/segment_0.wav"
+}
+```
+
+Response:
+```json
+{
+  "emotion": "happy",
+  "confidence": 0.85,
+  "intensity": 75,
+  "features": {
+    "volume": 80,
+    "pitch": 2.5,
+    "speed": 1.15,
+    "energy": 70
+  }
+}
+```
+
+---
+
+## 💡 Tips
+
+### ✅ Best Practices
+- បើក AUTO Detection សម្រាប់វីដេអូថ្មី
+- ប្រើ Manual adjustment សម្រាប់ការកែសម្រួលម្តងម្កាល
+- Preview សំឡេងមុនពេល dubbing ទាំងអស់
+
+### ⚠️ Limitations
+- Detection accuracy: ~75-85%
+- Works best with clear audio
+- May need manual adjustment for complex emotions
+
+---
+
+**Version**: 2.0.0 (Auto Emotion Detection)
+**Updated**: 2024

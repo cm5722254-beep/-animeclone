@@ -508,13 +508,25 @@ export const App: React.FC = () => {
     setDubbingMessage('🚀 កំពុងដំណើរការ AI Dubbing ស្រង់សំឡេង និងតួអង្គក្នុងរឿង...');
     showToast('🚀 កំពុងដំណើរការ AI Dubbing វីដេអូ សូមរង់ចាំបន្តិច...', 'info');
 
-    // Collect 1:1 character voice mappings from current timeline segments
+    // Collect 1:1 character voice mappings + emotion data from current timeline segments
     const characterVoiceMap: Record<string, string> = {};
+    const emotionData: Record<string, any> = {};
+    
     segments.forEach((s) => {
       const charKey = s.speaker_name || s.speaker_id;
       if (charKey && s.voiceId) {
         characterVoiceMap[charKey] = s.voiceId;
         if (s.speaker_id) characterVoiceMap[s.speaker_id] = s.voiceId;
+      }
+      
+      // Include emotion parameters if present
+      if (s.emotion) {
+        const segmentKey = `${s.start_time}-${s.end_time}`;
+        emotionData[segmentKey] = {
+          emotion: s.emotion,
+          emotionIntensity: s.emotionIntensity,
+          emotionParams: s.emotionParams,
+        };
       }
     });
 
@@ -526,6 +538,7 @@ export const App: React.FC = () => {
         voiceId: voiceMode,
         scope: dubbingScope,
         characterVoiceMap,
+        emotionData, // 🎭 Send emotion data to backend
         maleLeadVoice,
         femaleLeadVoice,
         geminiModel,

@@ -105,6 +105,7 @@ export const DubbingStudio: React.FC<DubbingStudioProps> = ({
   const [subTab, setSubTab] = useState<'media' | 'dubbing' | 'translation' | 'voices' | 'subtitles' | 'audio' | 'export'>('dubbing');
 
   const [videoSourceMode, setVideoSourceMode] = useState<'original' | 'dubbed'>('original');
+  const [autoEmotionDetection, setAutoEmotionDetection] = useState(true); // 🎭 Auto detect emotions
 
   // Auto-switch to dubbed video when a new dubbing output is generated
   React.useEffect(() => {
@@ -330,6 +331,29 @@ export const DubbingStudio: React.FC<DubbingStudioProps> = ({
               >
                 <Users className="w-3.5 h-3.5 text-indigo-400" />
                 <span>🎭 តួអង្គ ({uniqueCharsCount})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setAutoEmotionDetection(!autoEmotionDetection)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${
+                  autoEmotionDetection
+                    ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300 shadow-sm shadow-emerald-500/20'
+                    : 'bg-white/[0.06] border-white/[0.1] text-slate-400 hover:bg-white/[0.12] hover:text-slate-200'
+                }`}
+                title={autoEmotionDetection ? 'បិទការស្វែងយល់អារម្មណ៍ដោយស្វ័យប្រវត្តិ' : 'បើកការស្វែងយល់អារម្មណ៍ដោយស្វ័យប្រវត្តិ'}
+              >
+                {autoEmotionDetection ? (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>🎭 AUTO អារម្មណ៍</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>🎭 អារម្មណ៍ធម្មតា</span>
+                  </>
+                )}
               </button>
 
               <button
