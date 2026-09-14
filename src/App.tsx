@@ -50,7 +50,7 @@ export const App: React.FC = () => {
   // Media & Dubbing
   const [uploadedFile, setUploadedFile] = useState<ProjectFile | null>(null);
   const [recentFiles, setRecentFiles] = useState<ProjectFile[]>([]);
-  const [voiceMode, setVoiceMode] = useState('movie_clone_all');
+  const [voiceMode, setVoiceMode] = useState('voice_actor_clone'); // Default: Voice Actor Library
   const [dubbingScope, setDubbingScope] = useState('120');
   const [maleLeadVoice, setMaleLeadVoice] = useState('hang_phleung_char_2_male.mp3');
   const [femaleLeadVoice, setFemaleLeadVoice] = useState('hang_phleung_char_6_female.mp3');

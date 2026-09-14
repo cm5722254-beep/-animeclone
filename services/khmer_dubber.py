@@ -26,31 +26,34 @@ def clean_pure_khmer(text: str) -> str:
 
 def detect_speaker_gender(speaker_name: str = '', speaker_role: str = '', chinese_text: str = '', raw_gender: str = None) -> str:
     """Accurately classify character gender without any gender confusion or crossover (ស្រី ឬ ប្រុស ដាច់ដោយឡែក)."""
-    if raw_gender and str(raw_gender).lower() in ['female', 'fem', 'f', 'ស្រី']:
+    # Priority 1: Raw gender from AI if explicitly provided
+    if raw_gender and str(raw_gender).lower() in ['female', 'fem', 'f', 'ស្រី', 'woman', 'girl']:
         return 'female'
-    if raw_gender and str(raw_gender).lower() in ['male', 'm', 'ប្រុស']:
+    if raw_gender and str(raw_gender).lower() in ['male', 'm', 'ប្រុស', 'man', 'boy']:
         return 'male'
 
     text_to_check = f"{speaker_name} {speaker_role} {chinese_text}".lower()
 
-    # Female indicators
-    female_khmer = ['ស្រី', 'នាង', 'ម៉ាក់', 'យាយ', 'អ៊ំស្រី', 'ប្អូនស្រី', 'អ្នកនាង', 'ភរិយា', 'ម្ចាស់ក្សត្រី', 'តួស្រី', 'ក្មេងស្រី', 'កូនស្រី', 'អ្នកបម្រើស្រី', 'ស្រីកាច', 'ម៉ែ']
-    female_roles = ['female', 'woman', 'girl', 'lady', 'maid', 'queen', 'princess', 'sister', 'mother', 'servant_female', 'fierce_female', 'villain_female', 'old_woman']
-    female_chinese = ['小姐', '姑娘', '夫人', '公主', '王妃', '母', '姐', '妹', '女', '她', '丫鬟', '婆']
+    # Female indicators (មាតិកាស្រី) - MUST CHECK FIRST to avoid false male detection
+    female_khmer = ['ស្រី', 'នាង', 'ម៉ាក់', 'យាយ', 'អ៊ំស្រី', 'ប្អូនស្រី', 'អ្នកនាង', 'ភរិយា', 'ម្ចាស់ក្សត្រី', 'តួស្រី', 'ក្មេងស្រី', 'កូនស្រី', 'អ្នកបម្រើស្រី', 'ស្រីកាច', 'ម៉ែ', 'មេម៉ាយ', 'ក្រមុំ', 'កូនស្រីតូច', 'នារី']
+    female_roles = ['female', 'woman', 'girl', 'lady', 'maid', 'queen', 'princess', 'sister', 'mother', 'servant_female', 'fierce_female', 'villain_female', 'old_woman', 'bride', 'teacher_female', 'wife']
+    female_chinese = ['小姐', '姑娘', '夫人', '公主', '王妃', '母', '姐', '妹', '女', '她', '丫鬟', '婆', '太太', '新娘', '媽', '妃']
 
+    # Check female indicators FIRST (higher priority)
     for kw in female_khmer + female_roles + female_chinese:
         if kw in text_to_check:
             return 'female'
 
-    # Male indicators
-    male_khmer = ['ប្រុស', 'លោក', 'បង', 'ឪពុក', 'តា', 'អ៊ំប្រុស', 'មេទ័ព', 'ប្អូនប្រុស', 'ស្វាមី', 'កូនចៅ', 'ព្រះអង្គ', 'ចៅហ្វាយ', 'តួប្រុស', 'ប្រុសកាច', 'ព្រឹទ្ធាចារ្យ']
-    male_roles = ['male', 'man', 'boy', 'general', 'governor', 'elder', 'uncle', 'king', 'prince', 'brother', 'father', 'fierce_male', 'old_uncle']
-    male_chinese = ['先生', '公子', '少爷', '王爷', '将领', '父', '兄', '弟', '男', '他', '大夫', '宗主', '掌门']
+    # Male indicators (មាតិកាប្រុស)
+    male_khmer = ['ប្រុស', 'លោក', 'បង', 'ឪពុក', 'តា', 'អ៊ំប្រុស', 'មេទ័ព', 'ប្អូនប្រុស', 'ស្វាមី', 'កូនចៅ', 'ព្រះអង្គ', 'ចៅហ្វាយ', 'តួប្រុស', 'ប្រុសកាច', 'ព្រឹទ្ធាចារ្យ', 'ឪពុកពោះម៉ាយ', 'កូនប្រុស', 'តួឯកប្រុស', 'ភ្នាក់ងារ']
+    male_roles = ['male', 'man', 'boy', 'general', 'governor', 'elder', 'uncle', 'king', 'prince', 'brother', 'father', 'fierce_male', 'old_uncle', 'president', 'mediator', 'staff', 'soldier', 'warrior', 'hero']
+    male_chinese = ['先生', '公子', '少爷', '王爷', '将领', '父', '兄', '弟', '男', '他', '大夫', '宗主', '掌门', '师傅', '老爷', '哥', '侠', '爹']
 
     for kw in male_khmer + male_roles + male_chinese:
         if kw in text_to_check:
             return 'male'
 
+    # Default: male (conservative default to prevent false female classification)
     return 'male'
 
 ROLE_THEATRICAL_PROFILES = {

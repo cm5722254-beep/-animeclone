@@ -415,13 +415,13 @@ export const ContextualInspector: React.FC<ContextualInspectorProps> = ({
                   {(voiceMode === 'movie_clone_all' || voiceMode === 'movie-live-clone') && (
                     <div className="flex items-start gap-1.5 text-amber-300">
                       <span className="shrink-0 text-sm">🎯</span>
-                      <span><b>ជម្រើសទី ១ (Movie Clone):</b> ស្រង់សំឡេងតួអង្គពិតប្រាកដពីរឿងដើមផ្ទាល់ មក Clone និយាយខ្មែរ ១០០% មិនលាយសំឡេងក្រៅឡើយ (១ តួអង្គ = ១ សំឡេងរឿងដើម)។</span>
+                      <span><b>ជម្រើសទី ១ (Movie Clone):</b> ស្រង់សំឡេងតួអង្គពិតប្រាកដពីរឿងដើមផ្ទាល់ មក Clone និយាយខ្មែរ ១០០% មិនលាយសំឡេងក្រៅឡើយ (១ តួអង្គ = ១ សំឡេងរឿងដើម)។ <b className="text-amber-400">⚠️ ត្រូវការស្កេនរឿងជាមុនសិន!</b></span>
                     </div>
                   )}
                   {(voiceMode === 'voice_actor_clone' || voiceMode === 'voxcpm-voice-actor') && (
                     <div className="flex items-start gap-1.5 text-sky-300">
                       <span className="shrink-0 text-sm">🎭</span>
-                      <span><b>ជម្រើសទី ២ (Voice Actor):</b> ប្រើសំឡេង Voice Actor ខ្មែរ ៣៨+ តួអង្គក្នុង Library (ស្រីដាច់ដោយឡែក ប្រុសដាច់ដោយឡែក ១ តួអង្គ = ១ សំឡេង មិនច្រឡំភេទ)។</span>
+                      <span><b>ជម្រើសទី ២ (Voice Actor - ណែនាំ):</b> ប្រើសំឡេង Voice Actor ខ្មែរ ៣៨+ តួអង្គក្នុង Library (ស្រីដាច់ដោយឡែក ប្រុសដាច់ដោយឡែក ១ តួអង្គ = ១ សំឡេង <b className="text-green-400">✅ មិនច្រឡំភេទ!</b>)។</span>
                     </div>
                   )}
                   {(voiceMode === 'khmer_natural' || voiceMode === 'pure_khmer') && (
