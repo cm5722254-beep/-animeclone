@@ -1055,6 +1055,18 @@ async def generate_line(body: GenerateLineRequest):
 
     await khmer_dubber.synthesize_realistic_speech(
         clean_text,
+        out_path,
+        body.voiceId,
+        studio_ref if os.path.exists(studio_ref) else None,
+        {'gender': body.gender, 'emotion': body.emotion, 'role': body.speakerId}
+    )
+    
+    return {
+        'success': True,
+        'lineIndex': body.lineIndex,
+        'audioUrl': f"/media/outputs/{out_name}",
+        'filename': out_name
+    }
 
 
 # --- Emotion Detection Endpoint ---
