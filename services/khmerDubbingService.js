@@ -941,16 +941,31 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
       genre = 'ancient',
       emotionIntensity = 'dramatic',
       maleLeadVoice = 'hang_phleung_char_2_male.mp3',
-      femaleLeadVoice = 'hang_phleung_char_6_female.mp3'
+      femaleLeadVoice = 'hang_phleung_char_6_female.mp3',
+      segments: customSegments = null
     } = options;
 
     const videoDuration = await audioProcessor.getMediaDuration(videoPath);
     const maxDuration = (scope === 'full' || !scope) ? null : parseInt(scope, 10);
 
-    onProgress(15, `AI Gemini កំពុងវិភាគសាច់រឿង (${genre === 'modern' ? 'រឿងសម័យ' : 'រឿងបុរាណ'}) និងបកប្រែគ្រប់តួអង្គក្នុងវីដេអូ...`);
-
-    // 1. Transcribe & Diarize all dialogue segments across the storyline
-    const dialogueSegments = await this.extractDialogueTimeline(extractedAudioPath, videoDuration, scope, onProgress, sourceLang, true, genre, emotionIntensity);
+    let dialogueSegments;
+    if (customSegments && Array.isArray(customSegments) && customSegments.length > 0) {
+      onProgress(20, `កំពុងប្រើប្រាស់ឃ្លាសន្ទនា និងសំឡេងតួអង្គដែលបានជ្រើសរើសរួចរាល់ (${customSegments.length} ឃ្លា)...`);
+      dialogueSegments = customSegments.map((s, idx) => ({
+        ...s,
+        speaker_id: s.speaker_id || `speaker_${idx + 1}`,
+        speaker_name: s.speaker_name || `តួអង្គ_${idx + 1}`,
+        khmer_translation: s.khmer_translation || s.chinese_text || '',
+        start_time: Number(s.start_time || 0),
+        end_time: Number(s.end_time || (Number(s.start_time || 0) + 2.5)),
+        gender: s.gender || (s.speaker_name && s.speaker_name.includes('ស្រី') ? 'female' : 'male'),
+        emotion: s.emotion || 'dramatic'
+      }));
+    } else {
+      onProgress(15, `AI Gemini កំពុងវិភាគសាច់រឿង (${genre === 'modern' ? 'រឿងសម័យ' : 'រឿងបុរាណ'}) និងបកប្រែគ្រប់តួអង្គក្នុងវីដេអូ...`);
+      // 1. Transcribe & Diarize all dialogue segments across the storyline
+      dialogueSegments = await this.extractDialogueTimeline(extractedAudioPath, videoDuration, scope, onProgress, sourceLang, true, genre, emotionIntensity);
+    }
 
     console.log(`Total dialogue segments found: ${dialogueSegments.length}`);
 
@@ -988,7 +1003,7 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
       throw new Error('AI មិនអាចស្រង់ឃ្លាសន្ទនាចេញពីវីដេអូបានទេ (0 dialogue found)។ សូមពិនិត្យមើលសម្លេងក្នុងវីដេអូ ឬសាកល្បងម្ដងទៀត។');
     }
 
-    onProgress(42, `បានរកឃើញតួអង្គ និងឃ្លាសន្ទនាសរុប ${dialogueSegments.length} បន្ទាត់! កំពុងចាត់តាំងសំឡេងតួអង្គ (Curated Cast & Safe Fallback)...`);
+    onProgress(42, `បានកំណត់តួអង្គ និងឃ្លាសន្ទនាសរុប ${dialogueSegments.length} បន្ទាត់! កំពុងត្រៀមសំឡេងតួអង្គ...`);
 
     // 2. Extract real voice samples for EACH character from the movie itself if available
     const autoExtractedVoiceMap = await this.extractCharacterVoiceSamples(extractedAudioPath, dialogueSegments, outputDir);
@@ -1004,23 +1019,37 @@ Output format: Return a JSON array enclosed in \`\`\`json ... \`\`\` code block:
       const seg = dialogueSegments[i];
       const charName = seg.speaker_name || seg.speaker_id;
 
-      // Check if user requested direct live movie vocal cloning:
+      // Check if user requested direct live movie vocal cloning or specific voice:
       let refVoice = referenceAudioPath;
       if (!refVoice) {
-        if (voiceId === 'movie-live-clone' || castingSafetyMode === 'live_movie_clone') {
-          // DIRECT MOVIE VOCAL CLONING (NO PRE-SAVED SAMPLES USED)
-          if (autoExtractedVoiceMap && autoExtractedVoiceMap[seg.speaker_id] && fs.existsSync(autoExtractedVoiceMap[seg.speaker_id])) {
+        // Priority 1: User explicitly assigned voice for this character / segment!
+        const assignedVoice = seg.voiceId || seg.voiceFilename || (userVoiceMap && (userVoiceMap[seg.speaker_id] || userVoiceMap[seg.speaker_name]));
+        if (assignedVoice) {
+          const cleanVoice = assignedVoice.replace('voxcpm:', '');
+          const samplePath = path.join(__dirname, '../samples', cleanVoice);
+          if (fs.existsSync(samplePath)) {
+            refVoice = samplePath;
+          } else if (cleanVoice.startsWith('movie_clone:') && autoExtractedVoiceMap && autoExtractedVoiceMap[seg.speaker_id]) {
             refVoice = autoExtractedVoiceMap[seg.speaker_id];
-            console.log(`[Movie-Live-Clone] Line ${i} (${seg.speaker_id}) cloned directly from live movie snippet: ${refVoice}`);
+          }
+        }
+
+        if (!refVoice) {
+          if (voiceId === 'movie-live-clone' || castingSafetyMode === 'live_movie_clone') {
+            // DIRECT MOVIE VOCAL CLONING (NO PRE-SAVED SAMPLES USED)
+            if (autoExtractedVoiceMap && autoExtractedVoiceMap[seg.speaker_id] && fs.existsSync(autoExtractedVoiceMap[seg.speaker_id])) {
+              refVoice = autoExtractedVoiceMap[seg.speaker_id];
+              console.log(`[Movie-Live-Clone] Line ${i} (${seg.speaker_id}) cloned directly from live movie snippet: ${refVoice}`);
+            } else {
+              refVoice = distinctSpeakerVoiceMap[seg.speaker_id] || this.resolveCuratedRoleVoice(seg, castingSafetyMode, userVoiceMap, maleLeadVoice, femaleLeadVoice);
+            }
+          } else if (voiceId && voiceId.startsWith('voxcpm:')) {
+            const sampleName = voiceId.replace('voxcpm:', '');
+            refVoice = path.join(__dirname, '../samples', sampleName);
           } else {
+            // Use distinct voice per speaker so characters NEVER have the same voice
             refVoice = distinctSpeakerVoiceMap[seg.speaker_id] || this.resolveCuratedRoleVoice(seg, castingSafetyMode, userVoiceMap, maleLeadVoice, femaleLeadVoice);
           }
-        } else if (voiceId && voiceId.startsWith('voxcpm:')) {
-          const sampleName = voiceId.replace('voxcpm:', '');
-          refVoice = path.join(__dirname, '../samples', sampleName);
-        } else {
-          // Use distinct voice per speaker so characters NEVER have the same voice
-          refVoice = distinctSpeakerVoiceMap[seg.speaker_id] || this.resolveCuratedRoleVoice(seg, castingSafetyMode, userVoiceMap, maleLeadVoice, femaleLeadVoice);
         }
       }
 

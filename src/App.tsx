@@ -543,6 +543,7 @@ export const App: React.FC = () => {
         maleLeadVoice,
         femaleLeadVoice,
         geminiModel,
+        segments: segments && segments.length > 0 ? segments : undefined,
       });
 
       if (res.jobId) {
@@ -613,10 +614,19 @@ export const App: React.FC = () => {
 
   const handleAssemble = async () => {
     if (!uploadedFile) {
-      showToast('សូមបញ្ចូលវីដេអូជាមុនសិន!', 'warning');
+      showToast('⚠️ សូមបញ្ចូលវីដេអូជាមុនសិន!', 'warning');
       return;
     }
-    showToast('កំពុងប្រមូលផ្តុំកាត់តសំឡេងខ្មែរ និងលុបសំឡេងចិនដើម...', 'info');
+    if (!segments || segments.length === 0) {
+      showToast('⚠️ មិនទាន់មានឃ្លាសន្ទនាសម្រាប់បញ្ចូលសំឡេងឡើយ!', 'warning');
+      return;
+    }
+
+    setIsDubbing(true);
+    setDubbingProgress(20);
+    setDubbingMessage(`🎬 កំពុង Generate វីដេអូតាមសំឡេងតួអង្គ (${segments.length} ឃ្លា)...`);
+    showToast(`🎬 កំពុង Generate វីដេអូតាមសំឡេងតួអង្គដែលបានរើស (${segments.length} ឃ្លា)...`, 'info');
+
     try {
       const res = await api.assembleCustom({
         filename: uploadedFile.filename,
@@ -626,10 +636,18 @@ export const App: React.FC = () => {
       });
       if (res.success) {
         setOutputVideo(res.outputVideo);
-        showToast('កាត់តវីដេអូសម្រេចបានជោគជ័យ គ្មានសំឡេងចិនលាយឡំ!', 'success');
+        if (res.outputAudio) setOutputAudio(res.outputAudio);
+        setIsDubbing(false);
+        setDubbingProgress(100);
+        showToast('🎉 បាន Generate វីដេអូតាមសំឡេងតួអង្គសម្រេចដោយជោគជ័យ ១០០%!', 'success');
+        setActiveTab('tab-dubbing');
+      } else {
+        setIsDubbing(false);
+        showToast('ការបង្កើតវីដេអូមិនទាន់ជោគជ័យ', 'error');
       }
     } catch (e: any) {
-      showToast(`កំហុស: ${e.message}`, 'error');
+      setIsDubbing(false);
+      showToast(`កំហុសក្នុងការ Generate វីដេអូ: ${e.message}`, 'error');
     }
   };
 
@@ -1064,6 +1082,8 @@ export const App: React.FC = () => {
               }}
               onOpenExportModal={() => setIsExportOpen(true)}
               onShowToast={showToast}
+              onGenerateCustomVideo={handleAssemble}
+              isGenerating={isDubbing}
             />
           )}
 

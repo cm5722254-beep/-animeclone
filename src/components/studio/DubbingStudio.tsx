@@ -358,6 +358,7 @@ export const DubbingStudio: React.FC<DubbingStudioProps> = ({
         onSwitchEngine={onSwitchEngine}
         voxStatus={voxStatus}
         onOpenVoxModal={onOpenVoxModal}
+        onGenerateCustomVideo={onAssemble}
       />
 
       {/* ── Video Effects Panel Drawer ── */}

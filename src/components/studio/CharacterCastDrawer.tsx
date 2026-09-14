@@ -30,6 +30,7 @@ interface CharacterCastDrawerProps {
   onSwitchEngine?: (mode: string) => void;
   voxStatus?: any;
   onOpenVoxModal?: () => void;
+  onGenerateCustomVideo?: () => void;
 }
 
 export const CharacterCastDrawer: React.FC<CharacterCastDrawerProps> = ({
@@ -45,6 +46,7 @@ export const CharacterCastDrawer: React.FC<CharacterCastDrawerProps> = ({
   onSwitchEngine,
   voxStatus,
   onOpenVoxModal,
+  onGenerateCustomVideo,
 }) => {
   const [playingAudio, setPlayingAudio] = useState<string | null>(null);
   const [audioElem, setAudioElem] = useState<HTMLAudioElement | null>(null);
@@ -445,17 +447,34 @@ export const CharacterCastDrawer: React.FC<CharacterCastDrawerProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 px-6 border-t border-white/[0.08] bg-[#070a12] flex items-center justify-between">
+        <div className="p-4 px-6 border-t border-white/[0.08] bg-[#070a12] flex items-center justify-between flex-wrap gap-3">
           <div className="text-xs text-slate-400">
             រាល់ការផ្លាស់ប្តូរ នឹងត្រូវអនុវត្តលើគ្រប់បន្ទាត់សន្ទនារបស់តួអង្គនោះលើ Timeline ដោយស្វ័យប្រវត្តិ។
           </div>
 
-          <button
-            onClick={onClose}
-            className="px-5 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-black font-bold text-xs shadow-md shadow-sky-500/20 transition-all active:scale-95"
-          >
-            រួចរាល់ (Done)
-          </button>
+          <div className="flex items-center gap-3">
+            {onGenerateCustomVideo && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onGenerateCustomVideo();
+                }}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-sky-500 hover:brightness-110 text-white font-extrabold text-xs shadow-lg shadow-emerald-500/25 transition-all active:scale-95 border border-emerald-400/40 cursor-pointer"
+                title="បង្កើតវីដេអូបញ្ចូលសំឡេងខ្មែរ តាមសំឡេងតួអង្គដែលបានជ្រើសរើស (1 Character = 1 Voice)"
+              >
+                <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
+                <span>🎬 Generate វីដេអូតាមសំឡេងតួអង្គ</span>
+              </button>
+            )}
+
+            <button
+              onClick={onClose}
+              className="px-5 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-black font-bold text-xs shadow-md shadow-sky-500/20 transition-all active:scale-95 cursor-pointer"
+            >
+              រួចរាល់ (Done)
+            </button>
+          </div>
         </div>
       </div>
     </div>

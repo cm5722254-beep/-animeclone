@@ -560,7 +560,8 @@ app.post('/api/dubbing/start', async (req, res) => {
     genre = 'ancient',
     emotionIntensity = 'dramatic',
     maleLeadVoice = 'hang_phleung_char_2_male.mp3',
-    femaleLeadVoice = 'hang_phleung_char_6_female.mp3'
+    femaleLeadVoice = 'hang_phleung_char_6_female.mp3',
+    segments = null
   } = req.body;
   if (!filename) {
     return res.status(400).json({ error: 'Filename is required' });
@@ -617,7 +618,7 @@ app.post('/api/dubbing/start', async (req, res) => {
           inputPath,
           extractedAudioPath,
           OUTPUTS_DIR,
-          { sourceLang, voiceId, scope, castingSafetyMode, characterVoiceMap, genre, emotionIntensity, maleLeadVoice, femaleLeadVoice },
+          { sourceLang, voiceId, scope, castingSafetyMode, characterVoiceMap, genre, emotionIntensity, maleLeadVoice, femaleLeadVoice, segments },
           (progress, message) => {
             job.progress = progress;
             job.message = message;
@@ -1128,15 +1129,26 @@ app.post('/api/dubbing/assemble-custom', async (req, res) => {
         if (fs.existsSync(p)) audioPath = p;
       }
 
-      // If user hasn't manually recorded or generated this line, auto-synthesize it in Khmer so ZERO lines are dropped!
+      // If user hasn't manually recorded or generated this line, auto-synthesize it in Khmer using their selected voice!
       if (!audioPath && (seg.khmer_translation || seg.chinese_text)) {
         const textToSpeak = (seg.khmer_translation || seg.chinese_text || '').trim();
         if (textToSpeak) {
           const autoLinePath = path.join(OUTPUTS_DIR, `auto_studio_line_${i}_${Date.now()}.wav`);
           try {
-            const isFemale = seg.gender === 'female' || (seg.speaker_name && seg.speaker_name.includes('ស្រី'));
-            const fallbackVoice = isFemale ? 'km-KH-SreymomNeural' : 'km-KH-PisethNeural';
-            await khmerDubber.synthesizeKhmerSpeech(textToSpeak, autoLinePath, fallbackVoice);
+            const rawVoice = (seg.voiceId || seg.voiceFilename || '').replace('voxcpm:', '');
+            const sampleRef = path.join(__dirname, 'samples', rawVoice);
+            if (rawVoice && fs.existsSync(sampleRef)) {
+              await khmerDubber.synthesizeRealisticSpeech(textToSpeak, autoLinePath, 'voxcpm-voice-actor', sampleRef, {
+                gender: seg.gender,
+                emotion: seg.emotion || 'dramatic'
+              });
+            } else {
+              const isFemale = seg.gender === 'female' || (seg.speaker_name && seg.speaker_name.includes('ស្រី'));
+              const fallbackVoice = (seg.voiceId && (seg.voiceId.includes('Neural') || seg.voiceId.includes('km-KH')))
+                ? seg.voiceId
+                : (isFemale ? 'km-KH-SreymomNeural' : 'km-KH-PisethNeural');
+              await khmerDubber.synthesizeKhmerSpeech(textToSpeak, autoLinePath, fallbackVoice);
+            }
             if (fs.existsSync(autoLinePath) && fs.statSync(autoLinePath).size > 1000) {
               audioPath = autoLinePath;
             }

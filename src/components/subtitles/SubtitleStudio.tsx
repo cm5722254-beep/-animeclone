@@ -26,6 +26,8 @@ interface SubtitleProps {
   onUpdateSegment: (index: number, updated: Partial<TimelineSegment>) => void;
   onOpenExportModal: () => void;
   onShowToast: (msg: string, type: 'success' | 'error' | 'info') => void;
+  onGenerateCustomVideo?: () => void;
+  isGenerating?: boolean;
 }
 
 function formatTimecode(seconds: number): string {
@@ -47,6 +49,8 @@ export const SubtitleStudio: React.FC<SubtitleProps> = ({
   onUpdateSegment,
   onOpenExportModal,
   onShowToast,
+  onGenerateCustomVideo,
+  isGenerating = false,
 }) => {
   const [search, setSearch] = useState('');
   const [tagFilter, setTagFilter] = useState<'all' | 'm' | 'f' | 'think' | 'ready'>('all');
@@ -250,6 +254,29 @@ export const SubtitleStudio: React.FC<SubtitleProps> = ({
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Primary Action: Generate Video from Selected Voices & Characters */}
+          {onGenerateCustomVideo && (
+            <button
+              id="btn-generate-video-from-cast"
+              onClick={onGenerateCustomVideo}
+              disabled={isGenerating}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-sky-500 hover:brightness-110 text-white font-extrabold text-xs transition-all shadow-[0_0_20px_rgba(52,211,153,0.35)] hover:scale-[1.03] active:scale-[0.97] cursor-pointer disabled:opacity-60 border border-emerald-300/40"
+              title="បង្កើតវីដេអូបញ្ចូលសំឡេងខ្មែរ តាមសំឡេងតួអង្គដែលបានជ្រើសរើស (1 Character = 1 Voice)"
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  <span>កំពុង Generate វីដេអូ...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
+                  <span>🎬 Generate វីដេអូតាមសំឡេងតួអង្គ</span>
+                </>
+              )}
+            </button>
+          )}
+
           <button
             onClick={handleCopySrt}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/[0.05] border border-white/[0.1] hover:bg-white/[0.1] text-slate-200 text-xs font-semibold transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
