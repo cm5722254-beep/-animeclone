@@ -1069,11 +1069,20 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
             <SkipForward className="w-4 h-4" />
           </button>
 
-          {/* Monospace Timecode */}
-          <div className="font-mono text-xs font-semibold px-2 py-1 text-slate-300">
-            <span className="text-sky-400">{formatTimecode(currentTime)}</span>
-            <span className="text-slate-600 mx-1">/</span>
-            <span className="text-slate-400">{formatTimecode(duration)}</span>
+          {/* Monospace Timecode + Progress Percentage */}
+          <div className="flex items-center gap-2">
+            <div className="font-mono text-xs font-semibold px-2 py-1 text-slate-300">
+              <span className="text-sky-400">{formatTimecode(currentTime)}</span>
+              <span className="text-slate-600 mx-1">/</span>
+              <span className="text-slate-400">{formatTimecode(duration)}</span>
+            </div>
+            
+            {/* Progress Percentage (ភាគរយ) */}
+            <div className="px-2 py-0.5 rounded-md bg-sky-500/10 border border-sky-500/20">
+              <span className="text-xs font-bold text-sky-400 font-mono">
+                {duration > 0 ? Math.round((currentTime / duration) * 100) : 0}%
+              </span>
+            </div>
           </div>
         </div>
 
