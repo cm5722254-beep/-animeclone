@@ -729,6 +729,9 @@ export const App: React.FC = () => {
         onOpenAdmin={() => setIsAdminOpen(true)}
         onOpenDownloader={() => setIsDownloaderOpen(true)}
         onOpenThumbnailStudio={handleOpenThumbnailStudio}
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
+        videoCount={recentFiles.length}
       />
 
       {/* Main Workspace Layout */}

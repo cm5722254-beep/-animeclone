@@ -19,6 +19,10 @@ import {
   Save,
   Loader2,
   Zap,
+  Mic2,
+  Languages,
+  Subtitles,
+  Volume2,
 } from 'lucide-react';
 import { User, VoxcpmStatus } from '../../types';
 import { getSubscriptionInfo } from '../../utils/subscription';
@@ -42,6 +46,9 @@ interface HeaderProps {
   onOpenAdmin?: () => void;
   onOpenDownloader?: () => void;
   onOpenThumbnailStudio?: () => void;
+  activeTab?: string;
+  onSelectTab?: (tab: string) => void;
+  videoCount?: number;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -63,6 +70,9 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenAdmin,
   onOpenDownloader,
   onOpenThumbnailStudio,
+  activeTab = 'media',
+  onSelectTab,
+  videoCount = 0,
 }) => {
   const rawTitle = activeProjectTitle || 'Perfect World EP145.mp4';
   const cleanName = rawTitle.replace(/\.(mp4|mkv|mov|avi|webm)$/i, '');
@@ -71,7 +81,9 @@ export const Header: React.FC<HeaderProps> = ({
   const displayTitle = cleanName.replace(epLabel, '').trim() || cleanName;
 
   return (
-    <header className="header-root h-[52px] px-3.5 flex items-center justify-between select-none">
+    <header className="header-root flex flex-col select-none">
+      {/* Row 1: Brand + Project + Actions */}
+      <div className="h-[52px] px-3.5 flex items-center justify-between border-b border-white/[0.06]">
       {/* ── Left: Brand ── */}
       <div className="flex items-center gap-2.5">
         {/* Logo mark */}
@@ -455,6 +467,69 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="relative z-10">ចូលប្រើ</span>
           </button>
         )}
+      </div>
+      </div>
+
+      {/* Row 2: Tab Navigation */}
+      <div className="h-[42px] px-3.5 flex items-center gap-0.5 border-b border-white/[0.04] bg-[#08090b]/60 backdrop-blur-sm">
+        <button
+          onClick={() => onSelectTab?.('tab-dashboard')}
+          className={`tab-btn ${(activeTab === 'tab-dashboard' || activeTab === 'media') ? 'active' : ''}`}
+        >
+          <Film className="w-3.5 h-3.5" />
+          <span>Media</span>
+        </button>
+
+        <button
+          onClick={() => onSelectTab?.('tab-dubbing')}
+          className={`tab-btn ${(activeTab === 'tab-dubbing' || activeTab === 'dubbing') ? 'active' : ''}`}
+        >
+          <Mic2 className="w-3.5 h-3.5" />
+          <span>Dubbing</span>
+        </button>
+
+        <button
+          onClick={() => onSelectTab?.('tab-translator')}
+          className={`tab-btn ${(activeTab === 'tab-translator' || activeTab === 'translation') ? 'active' : ''}`}
+        >
+          <Languages className="w-3.5 h-3.5" />
+          <span>Translation</span>
+        </button>
+
+        <button
+          onClick={() => onSelectTab?.('tab-workflow')}
+          className={`tab-btn ${(activeTab === 'tab-workflow' || activeTab === 'videos') ? 'active' : ''}`}
+        >
+          <Film className="w-3.5 h-3.5" />
+          <span>Videos</span>
+          {videoCount > 0 && (
+            <span className="badge badge-sky text-[9px] py-0">{videoCount}</span>
+          )}
+        </button>
+
+        <button
+          onClick={() => onSelectTab?.('tab-subtitles')}
+          className={`tab-btn ${(activeTab === 'tab-subtitles' || activeTab === 'subtitles') ? 'active' : ''}`}
+        >
+          <Subtitles className="w-3.5 h-3.5" />
+          <span>Subtitles</span>
+        </button>
+
+        <button
+          onClick={() => onSelectTab?.('tab-mixer')}
+          className={`tab-btn ${(activeTab === 'tab-mixer' || activeTab === 'audio') ? 'active' : ''}`}
+        >
+          <Volume2 className="w-3.5 h-3.5" />
+          <span>Audio</span>
+        </button>
+
+        <button
+          onClick={onOpenExport}
+          className={`tab-btn ${activeTab === 'export' ? 'active' : ''}`}
+        >
+          <UploadCloud className="w-3.5 h-3.5" />
+          <span>Export</span>
+        </button>
       </div>
     </header>
   );
