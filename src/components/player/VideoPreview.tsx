@@ -28,7 +28,8 @@ import { VideoEffects, SubtitleStyle } from '../../types';
 import { LUT_PRESETS, EFFECT_3D_PRESETS } from '../effects/effectsLibrary';
 
 interface VideoPreviewProps {
-  src: string;
+  videoSrc?: string; // Made optional for when no video loaded
+  src?: string; // Deprecated, use videoSrc
   currentTime: number;
   duration: number;
   isPlaying: boolean;
@@ -43,13 +44,26 @@ interface VideoPreviewProps {
   videoRef?: React.RefObject<HTMLVideoElement>;
   onTimeUpdate: (time: number) => void;
   onDurationChange: (dur: number) => void;
-  onTogglePlay: () => void;
-  onToggleMute: () => void;
-  onRateChange: (rate: number) => void;
-  onStep: (delta: number) => void;
+  onTogglePlay?: () => void;
+  onPlayPause?: () => void; // Alternative naming
+  onToggleMute?: () => void;
+  onMuteToggle?: () => void; // Alternative naming
+  onRateChange?: (rate: number) => void;
+  onPlaybackRateChange?: (rate: number) => void; // Alternative naming
+  onStep?: (delta: number) => void;
   onOpenThumbnailStudio?: () => void;
   onShowToast?: (msg: string, type: 'success' | 'error' | 'info') => void;
   onToggleStyleText?: () => void;
+  // Upload props
+  uploadedFile?: any;
+  isUploadingFile?: boolean;
+  uploadProgress?: number;
+  uploadInfo?: { loadedMb: string; totalMb: string } | null;
+  onUploadFile?: (file: File) => void;
+  onRemoveFile?: () => void;
+  videoSourceMode?: 'original' | 'dubbed';
+  onVideoSourceModeChange?: (mode: 'original' | 'dubbed') => void;
+  dubbingOutputVideo?: string | null;
 }
 
 
@@ -64,6 +78,7 @@ function formatTimecode(seconds: number): string {
 
 export const VideoPreview: React.FC<VideoPreviewProps> = ({
   src,
+  videoSrc,
   currentTime,
   duration,
   isPlaying,
@@ -79,17 +94,39 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
   onTimeUpdate,
   onDurationChange,
   onTogglePlay,
+  onPlayPause,
   onToggleMute,
+  onMuteToggle,
   onRateChange,
+  onPlaybackRateChange,
   onStep,
   onOpenThumbnailStudio,
   onShowToast,
   onToggleStyleText,
+  // Upload props
+  uploadedFile,
+  isUploadingFile = false,
+  uploadProgress = 0,
+  uploadInfo,
+  onUploadFile,
+  onRemoveFile,
+  videoSourceMode = 'original',
+  onVideoSourceModeChange,
+  dubbingOutputVideo,
 }) => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const videoRef = externalVideoRef || localVideoRef;
   const frameRef = useRef<HTMLDivElement>(null);
   const [capturedFeedback, setCapturedFeedback] = useState(false);
+
+  // Use videoSrc if provided, fallback to src
+  const actualSrc = videoSrc || src || '';
+  const hasVideo = !!actualSrc;
+
+  // Unified handlers
+  const handlePlayPause = onPlayPause || onTogglePlay || (() => {});
+  const handleMuteToggle = onMuteToggle || onToggleMute || (() => {});
+  const handleRateChange = onPlaybackRateChange || onRateChange || (() => {});
 
   // Interactive 3D Text Dragging, Scaling, and Editing State
   const [isDraggingTitle, setIsDraggingTitle] = useState(false);
@@ -471,7 +508,59 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
 
   return (
     <div className="flex-1 bg-[#05070c] flex flex-col items-center justify-center p-3 relative overflow-hidden">
-      {/* Screen Frame */}
+      {/* Upload UI when no video */}
+      {!hasVideo && (
+        <div className="flex flex-col items-center justify-center gap-6 text-center p-12">
+          <div className="w-24 h-24 rounded-full bg-gradient-to-br from-sky-500/20 to-indigo-600/20 border-2 border-sky-500/30 flex items-center justify-center animate-pulse">
+            <Film className="w-12 h-12 text-sky-400" />
+          </div>
+          
+          <div>
+            <h3 className="text-2xl font-bold text-white mb-2">
+              No Video Loaded
+            </h3>
+            <p className="text-slate-400 mb-6">
+              Upload a video file to start dubbing
+            </p>
+          </div>
+
+          <label className="cursor-pointer">
+            <input
+              type="file"
+              accept="video/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file && onUploadFile) {
+                  onUploadFile(file);
+                }
+              }}
+            />
+            <div className="flex items-center gap-3 px-8 py-4 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:brightness-110 text-white font-bold text-lg transition-all shadow-lg shadow-sky-600/30 active:scale-95">
+              <Download className="w-6 h-6" />
+              <span>Load Video</span>
+            </div>
+          </label>
+
+          {isUploadingFile && (
+            <div className="mt-4 w-64">
+              <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-sky-500 to-indigo-600 transition-all duration-300"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+              <p className="text-sm text-slate-400 mt-2">
+                Uploading... {uploadProgress}%
+                {uploadInfo && ` (${uploadInfo.loadedMb} / ${uploadInfo.totalMb})`}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Screen Frame - Only show when video exists */}
+      {hasVideo && (
       <div
         ref={frameRef}
         className={`relative ${aspectClass} max-h-[calc(100%-48px)] bg-black rounded-lg shadow-2xl flex items-center justify-center overflow-hidden border border-white/[0.06] transition-all group`}
@@ -486,9 +575,9 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
           }}
         >
           <video
-            key={src}
+            key={actualSrc}
             ref={videoRef}
-            src={src}
+            src={actualSrc}
             playsInline
             crossOrigin="anonymous"
             preload="auto"
@@ -929,6 +1018,7 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
           />
         </div>
       </div>
+      )}
 
       {/* Professional Bottom Transport Bar */}
       <div className="w-full max-w-2xl bg-[#0a0e17] border border-white/[0.08] rounded-xl px-4 py-2 mt-2.5 flex items-center justify-between text-xs select-none shadow-xl">
