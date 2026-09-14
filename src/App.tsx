@@ -11,6 +11,7 @@ import { VoiceTunerLab } from './components/tuner/VoiceTunerLab';
 import { ThumbnailGenerator } from './components/thumbnail/ThumbnailGenerator';
 import { VideoDownloaderModal } from './components/downloader/VideoDownloaderModal';
 import { ToastContainer, ToastMessage } from './components/ui/Toast';
+import { WorkflowView } from './components/workflow/WorkflowView';
 
 import { AuthModal } from './components/modals/AuthModal';
 import { SettingsModal } from './components/modals/SettingsModal';
@@ -34,7 +35,7 @@ const DEFAULT_PRESET_TIMELINE_SEGMENTS: TimelineSegment[] = [
 
 export const App: React.FC = () => {
   // Navigation & Shell
-  const [activeTab, setActiveTab] = useState<TabId>('tab-dubbing');
+  const [activeTab, setActiveTab] = useState<TabId>('tab-workflow');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
@@ -750,7 +751,7 @@ export const App: React.FC = () => {
             setOutputAudio(null);
             localStorage.removeItem('CHEATAZ_DABBER_PROJECT_STATE');
             api.clearProject().catch(() => {});
-            setActiveTab('tab-dubbing');
+            setActiveTab('tab-workflow');
             showToast('✨ បានបង្កើតគម្រោងថ្មីរួចរាល់', 'info');
           }}
           onOpenExport={() => setIsExportOpen(true)}
@@ -780,22 +781,66 @@ export const App: React.FC = () => {
                 setOutputAudio(null);
                 localStorage.removeItem('CHEATAZ_DABBER_PROJECT_STATE');
                 api.clearProject().catch(() => {});
-                setActiveTab('tab-dubbing');
+                setActiveTab('tab-workflow');
                 showToast('✨ បានបង្កើតគម្រោងថ្មីរួចរាល់', 'info');
               }}
-              onOpenStudio={() => setActiveTab('tab-dubbing')}
+              onOpenStudio={() => setActiveTab('tab-workflow')}
               onSelectProject={(f) => {
                 setUploadedFile(f);
                 setOutputVideo(null);
                 setOutputAudio(null);
                 setCleanBgmUrl(null);
                 setSegments([]);
-                setActiveTab('tab-dubbing');
+                setActiveTab('tab-workflow');
               }}
               onRefresh={loadFiles}
               onDeleteProject={handleDeleteProject}
               onClearAllProjects={handleClearAllProjects}
             />
+          )}
+
+          {/* 6-Step Workflow View */}
+          {activeTab === 'tab-workflow' && (
+            <div className="flex-1 flex flex-col h-full overflow-hidden">
+              <WorkflowView
+                uploadedFile={uploadedFile}
+                onUploadFile={handleUploadFile}
+                onRemoveFile={() => {
+                  setUploadedFile(null);
+                  setOutputVideo(null);
+                  setOutputAudio(null);
+                  setCleanBgmUrl(null);
+                  setSegments([]);
+                }}
+                isUploadingFile={isUploadingFile}
+                uploadProgress={uploadProgress}
+                uploadInfo={uploadInfo}
+                voiceMode={voiceMode}
+                onVoiceModeChange={setVoiceMode}
+                dubbingScope={dubbingScope}
+                onDubbingScopeChange={setDubbingScope}
+                geminiModel={geminiModel}
+                onGeminiModelChange={setGeminiModel}
+                isDubbing={isDubbing}
+                dubbingProgress={dubbingProgress}
+                dubbingMessage={dubbingMessage}
+                dubbingOutputVideo={outputVideo}
+                dubbingOutputAudio={outputAudio}
+                onStartDubbing={handleStartDubbing}
+                segments={segments}
+                onChangeSegments={setSegments}
+                characters={characters}
+                onPreviewVoice={(filename) => {
+                  const a = new Audio(`/media/samples/${filename}`);
+                  a.play().catch(() => {});
+                }}
+                onScanTimeline={handleScanTimeline}
+                isScanningTimeline={isScanningTimeline}
+                onShowToast={showToast}
+                onOpenExportModal={() => setIsExportOpen(true)}
+                onOpenStudioMode={() => setActiveTab('tab-dubbing')}
+              />
+            </div>
           )}
 
           {/* Persistent Dubbing Studio so Video DOM is never destroyed when switching tabs */}

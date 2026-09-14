@@ -23,6 +23,7 @@ import {
   RotateCw,
   X,
   Layers,
+  Film,
 } from 'lucide-react';
 import { VideoEffects, SubtitleStyle } from '../../types';
 import { LUT_PRESETS, EFFECT_3D_PRESETS } from '../effects/effectsLibrary';

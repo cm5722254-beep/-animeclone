@@ -214,6 +214,7 @@ export interface VideoDownloadResult {
 
 export type TabId =
   | 'tab-dashboard'
+  | 'tab-workflow'
   | 'tab-dubbing'
   | 'tab-manual'
   | 'tab-character'

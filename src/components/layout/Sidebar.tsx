@@ -109,13 +109,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
           />
 
           <SidebarNavItem
-            icon={<Clapperboard className="w-4 h-4 text-sky-400" />}
-            label="Studio"
-            active={activeTab === 'tab-dubbing'}
-            onClick={() => onSelectTab('tab-dubbing')}
+            icon={<Sparkles className="w-4 h-4 text-emerald-400" />}
+            label="Dubbing Studio"
+            active={activeTab === 'tab-workflow'}
+            onClick={() => onSelectTab('tab-workflow')}
             isCollapsed={isCollapsed}
             badge="AI"
             badgeVariant="sky"
+          />
+
+          <SidebarNavItem
+            icon={<Clapperboard className="w-4 h-4" />}
+            label="Studio Mode (Advanced)"
+            active={activeTab === 'tab-dubbing'}
+            onClick={() => onSelectTab('tab-dubbing')}
+            isCollapsed={isCollapsed}
           />
 
           <button
@@ -138,7 +146,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           <SidebarNavItem
             icon={<Mic2 className="w-4 h-4" />}
-            label="Dubbing"
+            label="Timeline"
             active={activeTab === 'tab-dubbing'}
             onClick={() => onSelectTab('tab-dubbing')}
             isCollapsed={isCollapsed}

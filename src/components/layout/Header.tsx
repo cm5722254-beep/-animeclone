@@ -96,8 +96,11 @@ export const Header: React.FC<HeaderProps> = ({
               PRO v3
             </span>
           </div>
+          <span className="text-[11px] font-khmer text-slate-300 font-bold tracking-wide">
+            ស្ទូឌីយោដាក់សំឡេងខ្មែរ
+          </span>
           <span className="text-[9.5px] text-slate-500 font-normal tracking-wide">
-            AI Dubbing Studio
+            ស្ទូឌីយោដាក់សំឡេងខ្មែរ (Anime & Donghua)
           </span>
         </div>
       </div>
