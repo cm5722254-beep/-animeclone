@@ -7,6 +7,8 @@ import { VideoEffectsPanel } from '../effects/VideoEffectsPanel';
 import { CharacterCastDrawer } from './CharacterCastDrawer';
 import { PremiumBanner } from '../ui/PremiumBanner';
 import { StudioSidebar } from '../navigation/StudioSidebar';
+import { TopNavBar } from '../navigation/TopNavBar';
+import { DialoguePanel } from '../dialogue/DialoguePanel';
 import { ProjectFile, TimelineSegment, VideoEffects, SubtitleStyle, CharacterVoice } from '../../types';
 import { Sliders, X, Film, Mic2, Languages, Volume2, Subtitles, Share2, Sparkles, Video, Users, Wand2, CheckCircle2, Download } from 'lucide-react';
 
@@ -266,255 +268,90 @@ export const DubbingStudio: React.FC<DubbingStudioProps> = ({
   ];
 
   return (
-    <div className="flex h-full overflow-hidden relative bg-[#07090e]">
-      {/* Left Sidebar Navigation */}
-      <StudioSidebar activeTab={sidebarTab} onTabChange={setSidebarTab} />
+    <div className="flex flex-col h-full overflow-hidden relative bg-[#07090e]">
+      {/* Top Navigation Bar */}
+      <TopNavBar
+        projectName="Khmer dub"
+        language="Khmer (Cambodia)"
+        onSettingsClick={() => onOpenTab?.('tab-settings')}
+        onTranscribeClick={onScanTimeline}
+      />
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden relative">
-      {/* Sub-Navigation Tabs matching Image 3 */}
-      <div className="h-11 px-4 border-b border-white/[0.08] bg-[#0a0e17] flex items-center justify-between select-none">
-        <div className="flex items-center gap-1.5">
-          {subNavItems.map((item) => {
-            const isActive = subTab === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={item.action}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  isActive
-                    ? 'bg-gradient-to-r from-sky-600/40 to-indigo-600/40 text-sky-300 border border-sky-500/40 shadow-sm shadow-sky-500/10'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
-                }`}
-              >
-                {item.icon}
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
-        </div>
+      {/* Main Content Area: Sidebar + Video + Dialogue Panel */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left Sidebar Navigation */}
+        <StudioSidebar activeTab={sidebarTab} onTabChange={setSidebarTab} />
 
-        {/* Video Effects & 3D Title Trigger */}
-        <button
-          onClick={() => setShowEffectsDrawer(!showEffectsDrawer)}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all ${
-            showEffectsDrawer
-              ? 'bg-sky-500/20 border-sky-400 text-sky-200'
-              : 'bg-white/[0.04] border-white/[0.08] text-slate-300 hover:text-white hover:bg-white/[0.08]'
-          }`}
-          title="Video Effects & 3D Typography"
-        >
-          <Sliders className="w-3.5 h-3.5 text-sky-400" />
-          <span>Effects & 3D Text</span>
-        </button>
-      </div>
-
-      {/* Upper Half: 3-Column Studio Layout (Video Canvas + Workflow Stepper + Contextual Inspector) */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden border-b border-white/[0.08] relative">
-        {/* Left Column: 16:9 Video Canvas */}
-        <div className="flex-1 flex flex-col items-center justify-between p-2.5 relative overflow-hidden bg-black/40">
-          {/* Quick Action Floating Bar for fast user workflow */}
-          <div className="w-full mb-2 px-3 py-1.5 rounded-xl bg-[#090d18]/90 border border-white/[0.08] backdrop-blur-md flex items-center justify-between gap-2 overflow-x-auto select-none shadow-lg shadow-black/40">
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={onScanTimeline}
-                disabled={isScanningTimeline || !uploadedFile}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  isScanningTimeline
-                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse'
-                    : 'bg-gradient-to-r from-sky-500 to-indigo-600 hover:brightness-110 text-white shadow-sm shadow-sky-500/20 hover:scale-[1.02] active:scale-[0.98]'
-                } disabled:opacity-50 disabled:cursor-not-allowed`}
-                title="ស្កេនសំឡេងសន្ទនា និងបកប្រែជាអក្សររត់ស្វ័យប្រវត្តិ"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>{isScanningTimeline ? 'កំពុងស្កេន...' : '🔍 ស្កេន AI & Subtitle'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowCharacterCastDrawer(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.1] text-slate-200 text-xs font-semibold transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
-                title="ចាត់ចែង និងជ្រើសរើសសំឡេងតួអង្គខ្មែរ"
-              >
-                <Users className="w-3.5 h-3.5 text-indigo-400" />
-                <span>🎭 តួអង្គ ({uniqueCharsCount})</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setAutoEmotionDetection(!autoEmotionDetection)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${
-                  autoEmotionDetection
-                    ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300 shadow-sm shadow-emerald-500/20'
-                    : 'bg-white/[0.06] border-white/[0.1] text-slate-400 hover:bg-white/[0.12] hover:text-slate-200'
-                }`}
-                title={autoEmotionDetection ? 'បិទការស្វែងយល់អារម្មណ៍ដោយស្វ័យប្រវត្តិ' : 'បើកការស្វែងយល់អារម្មណ៍ដោយស្វ័យប្រវត្តិ'}
-              >
-                {autoEmotionDetection ? (
-                  <>
-                    <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>🎭 AUTO អារម្មណ៍</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>🎭 អារម្មណ៍ធម្មតា</span>
-                  </>
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onOpenTab?.('tab-subtitles')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.1] text-slate-200 text-xs font-semibold transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
-                title="បើកផ្ទាំងកាត់តអក្សររត់ និងទាញយក SRT"
-              >
-                <Subtitles className="w-3.5 h-3.5 text-rose-400" />
-                <span>📝 អក្សររត់ ({segments.length})</span>
-              </button>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {dubbingOutputVideo && (
-                <div className="flex items-center gap-1 bg-black/50 p-0.5 rounded-lg border border-white/[0.1]">
-                  <button
-                    type="button"
-                    onClick={() => setVideoSourceMode('original')}
-                    className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
-                      videoSourceMode === 'original'
-                        ? 'bg-sky-500/30 text-sky-300 border border-sky-400/40 shadow-sm'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    🎥 វីដេអូដើម
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setVideoSourceMode('dubbed')}
-                    className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
-                      videoSourceMode === 'dubbed'
-                        ? 'bg-amber-500/30 text-amber-300 border border-amber-400/40 shadow-sm'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    ⚡ បាន Dub
-                  </button>
-                </div>
-              )}
-
-              <button
-                type="button"
-                onClick={onStartDubbing}
-                disabled={isDubbing || !uploadedFile}
-                className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:brightness-110 text-black font-extrabold text-xs transition-all shadow-md shadow-amber-500/25 hover:scale-[1.02] active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                title="ចាប់ផ្តើមបញ្ចូលសំឡេងរឿងខ្មែរ Hi-Fi"
-              >
-                <Wand2 className="w-3.5 h-3.5" />
-                <span>{isDubbing ? `Dubbing (${dubbingProgress}%)` : '⚡ បញ្ចូលសំឡេងភ្លាមៗ'}</span>
-              </button>
-            </div>
-          </div>
-
+        {/* Center: Video Preview Area */}
+        <div className="flex-1 flex flex-col items-center justify-center p-4 relative overflow-hidden bg-black/40">
           <VideoPreview
-            src={activeVideoSrc}
+            videoRef={videoRef}
+            videoSrc={activeVideoSrc}
             currentTime={currentTime}
             duration={duration}
             isPlaying={isPlaying}
-            isMuted={isMuted}
-            playbackRate={playbackRate}
-            currentSubtitle={currentSubtitle}
-            showSubtitles={showSubtitles}
-            onToggleSubtitles={() => setShowSubtitles((prev) => !prev)}
-            videoEffects={videoEffects}
-            onChangeEffects={onChangeEffects}
-            subtitleStyle={subtitleStyle}
-            videoRef={videoRef}
             onTimeUpdate={setCurrentTime}
             onDurationChange={setDuration}
-            onTogglePlay={() => setIsPlaying(!isPlaying)}
-            onToggleMute={() => setIsMuted(!isMuted)}
-            onRateChange={setPlaybackRate}
-            onStep={(delta) => setCurrentTime(Math.max(0, Math.min(duration, currentTime + delta)))}
-            onOpenThumbnailStudio={onOpenThumbnailStudio}
-            onShowToast={onShowToast}
+            onPlayPause={() => setIsPlaying(!isPlaying)}
+            playbackRate={playbackRate}
+            onPlaybackRateChange={setPlaybackRate}
+            isMuted={isMuted}
+            onMuteToggle={() => setIsMuted(!isMuted)}
+            showSubtitles={showSubtitles}
+            currentSubtitle={currentSubtitle}
+            subtitleStyle={subtitleStyle}
+            videoEffects={videoEffects}
+            uploadedFile={uploadedFile}
+            isUploadingFile={isUploadingFile}
+            uploadProgress={uploadProgress}
+            uploadInfo={uploadInfo}
+            onUploadFile={onUploadFile}
+            onRemoveFile={onRemoveFile}
+            videoSourceMode={videoSourceMode}
+            onVideoSourceModeChange={setVideoSourceMode}
+            dubbingOutputVideo={dubbingOutputVideo}
           />
-
-          {/* Slide-over Effects Panel */}
-          {showEffectsDrawer && (
-            <div className="absolute top-3 right-3 z-30 w-96 max-h-[90%] overflow-y-auto rounded-2xl shadow-2xl animate-in fade-in zoom-in-95 duration-150 border border-white/[0.1] bg-[#0c101c]">
-              <div className="relative">
-                <button
-                  onClick={() => setShowEffectsDrawer(false)}
-                  className="absolute top-4 right-4 z-40 p-1.5 rounded-lg text-slate-400 hover:text-white bg-black/50 hover:bg-black/80"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-                <VideoEffectsPanel
-                  effects={videoEffects}
-                  onChangeEffects={onChangeEffects}
-                  subtitleStyle={subtitleStyle}
-                  onChangeSubtitleStyle={onChangeSubtitleStyle}
-                  onShowToast={onShowToast}
-                />
-              </div>
-            </div>
-          )}
         </div>
 
-        {/* Middle Column: AI Dubbing Workflow Stepper (Matching Image 3) */}
-        <AiDubbingWorkflow
-          hasVideo={Boolean(uploadedFile)}
-          characterCount={characters.length || 5}
-          hasTranslation={segments.some((s) => Boolean(s.khmer_translation))}
-          hasVoiceCasting={segments.some((s) => Boolean(s.voiceId))}
-          isDubbing={isDubbing}
-          dubbingProgress={dubbingProgress}
-          hasDubbedOutput={Boolean(dubbingOutputVideo || dubbingOutputAudio)}
-          dubbingScope={dubbingScope}
-          onDubbingScopeChange={onDubbingScopeChange}
-          onStartDubbing={onStartDubbing}
-          onScanTimeline={onScanTimeline}
-        />
-
-        {/* Right Column: Contextual Inspector */}
-        <ContextualInspector
-          uploadedFile={uploadedFile}
-          isUploadingFile={isUploadingFile}
-          uploadProgress={uploadProgress}
-          uploadInfo={uploadInfo}
-          onUploadFile={onUploadFile}
-          onRemoveFile={onRemoveFile}
-          voiceMode={voiceMode}
-          onVoiceModeChange={onVoiceModeChange}
-          dubbingScope={dubbingScope}
-          onDubbingScopeChange={onDubbingScopeChange}
-          geminiModel={geminiModel}
-          onGeminiModelChange={onGeminiModelChange}
-          isDubbing={isDubbing}
-          dubbingProgress={dubbingProgress}
-          dubbingMessage={dubbingMessage}
-          dubbingOutputVideo={dubbingOutputVideo}
-          dubbingOutputAudio={dubbingOutputAudio}
-          onStartDubbing={onStartDubbing}
-          onPreviewVoice={onPreviewVoice}
+        {/* Right: Dialogue Panel */}
+        <DialoguePanel
           segments={segments}
-          selectedSegmentIndex={selectedSegmentIndex}
-          onSelectSegment={onSelectSegment}
-          characters={characters}
-          onSelectCharacterVoice={(vId) => {
-            const curSeg = segments[selectedSegmentIndex];
-            if (curSeg) {
-              handleChangeVoiceForCharacter(curSeg.speaker_name || curSeg.speaker_id || 'តួអង្គ', vId);
+          selectedIndex={selectedSegmentIndex}
+          onSelectSegment={(idx) => {
+            onSelectSegment(idx);
+            const seg = segments[idx];
+            if (seg) {
+              setCurrentTime(seg.start_time || 0);
             }
           }}
-          onOpenCharacterCast={() => setShowCharacterCastDrawer(true)}
-          videoEffects={videoEffects}
-          onChangeEffects={onChangeEffects}
+          onPlaySegment={(idx) => {
+            onSelectSegment(idx);
+            const seg = segments[idx];
+            if (seg) {
+              setCurrentTime(seg.start_time || 0);
+              setIsPlaying(true);
+            }
+          }}
+          onVoiceChange={(idx, voiceId) => {
+            if (onChangeSegments) {
+              const updated = [...segments];
+              const clean = voiceId.replace('voxcpm:', '');
+              const matched = characters.find((c) => c.id === voiceId || c.filename === clean);
+              updated[idx] = {
+                ...updated[idx],
+                voiceId,
+                voiceFilename: clean,
+                voiceLabel: matched ? matched.label : clean,
+                gender: matched ? matched.gender : updated[idx].gender,
+              };
+              onChangeSegments(updated);
+            }
+          }}
+          voices={characters}
         />
       </div>
 
-      {/* Lower Half: Multi-Track Timeline */}
+      {/* Bottom: Timeline */}
       <MultiTrackTimeline
         duration={duration}
         currentTime={currentTime}
@@ -533,12 +370,7 @@ export const DubbingStudio: React.FC<DubbingStudioProps> = ({
         onShowToast={onShowToast}
       />
 
-      {/* Premium Banner - Below Timeline */}
-      <div className="px-3 pb-2">
-        <PremiumBanner />
-      </div>
-
-      {/* 1:1 Unique Character Voice Casting Drawer / Modal */}
+      {/* Character Voice Casting Drawer */}
       <CharacterCastDrawer
         isOpen={showCharacterCastDrawer}
         onClose={() => setShowCharacterCastDrawer(false)}
@@ -549,7 +381,15 @@ export const DubbingStudio: React.FC<DubbingStudioProps> = ({
         onPreviewVoice={onPreviewVoice}
         onShowToast={onShowToast}
       />
-      </div>
+
+      {/* Video Effects Panel Drawer */}
+      {showEffectsDrawer && (
+        <VideoEffectsPanel
+          videoEffects={videoEffects}
+          onChangeEffects={onChangeEffects}
+          onClose={() => setShowEffectsDrawer(false)}
+        />
+      )}
     </div>
   );
 };
