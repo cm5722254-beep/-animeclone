@@ -313,8 +313,100 @@ export const DubbingStudio: React.FC<DubbingStudioProps> = ({
           />
         </div>
 
-        {/* Right: Dialogue Panel */}
-        <DialoguePanel
+        {/* Right: Context Panel - changes based on sidebarTab */}
+        {sidebarTab === 'audio' ? (
+          <div className="w-80 bg-[#0a0e1a] border-l border-white/[0.06] p-4 overflow-y-auto">
+            <h3 className="text-lg font-bold text-white mb-4">🎵 Audio Editor</h3>
+            <p className="text-sm text-slate-400 mb-4">កែសម្រួលសំឡេង BGM និង Audio tracks</p>
+            <button 
+              onClick={() => onOpenTab('tab-mixer')}
+              className="w-full px-4 py-2 rounded-lg bg-sky-500 hover:bg-sky-400 text-black font-semibold text-sm"
+            >
+              បើក Audio Mixer Console
+            </button>
+          </div>
+        ) : sidebarTab === 'subtitle' ? (
+          <div className="w-80 bg-[#0a0e1a] border-l border-white/[0.06] p-4 overflow-y-auto">
+            <h3 className="text-lg font-bold text-white mb-4">📝 Subtitle Editor</h3>
+            <p className="text-sm text-slate-400 mb-4">កែសម្រួល Subtitle styling និង timing</p>
+            <button 
+              onClick={() => onOpenTab('tab-subtitles')}
+              className="w-full px-4 py-2 rounded-lg bg-sky-500 hover:bg-sky-400 text-black font-semibold text-sm"
+            >
+              បើក Subtitle Studio
+            </button>
+          </div>
+        ) : sidebarTab === 'translate' ? (
+          <div className="w-80 bg-[#0a0e1a] border-l border-white/[0.06] p-4 overflow-y-auto">
+            <h3 className="text-lg font-bold text-white mb-4">🌐 Translation</h3>
+            <p className="text-sm text-slate-400 mb-4">បកប្រែអត្ថបទដោយ Gemini AI</p>
+            <button 
+              onClick={() => onOpenTab('tab-translator')}
+              className="w-full px-4 py-2 rounded-lg bg-sky-500 hover:bg-sky-400 text-black font-semibold text-sm"
+            >
+              បើក Translation Desk
+            </button>
+          </div>
+        ) : sidebarTab === 'ai-voice' ? (
+          <div className="w-80 bg-[#0a0e1a] border-l border-white/[0.06] p-4 overflow-y-auto">
+            <h3 className="text-lg font-bold text-white mb-4">🎤 AI Voice</h3>
+            <p className="text-sm text-slate-400 mb-4">ជ្រើសរើសសំឡេងតួអង្គ AI</p>
+            <button 
+              onClick={() => onOpenTab('tab-character')}
+              className="w-full px-4 py-2 rounded-lg bg-sky-500 hover:bg-sky-400 text-black font-semibold text-sm"
+            >
+              បើក Character Library
+            </button>
+          </div>
+        ) : sidebarTab === 'watermark' ? (
+          <div className="w-80 bg-[#0a0e1a] border-l border-white/[0.06] p-4 overflow-y-auto">
+            <h3 className="text-lg font-bold text-white mb-4">✨ Watermark & Effects</h3>
+            <p className="text-sm text-slate-400 mb-4">កែសម្រួល Watermark និង Video effects</p>
+            <div className="space-y-3">
+              <label className="block">
+                <span className="text-xs text-slate-400 mb-1 block">Watermark Text:</span>
+                <input 
+                  type="text" 
+                  value={videoEffects.watermark.text}
+                  onChange={(e) => onChangeEffects({
+                    ...videoEffects,
+                    watermark: { ...videoEffects.watermark, text: e.target.value }
+                  })}
+                  className="w-full px-3 py-2 rounded-lg bg-[#07090e] border border-white/10 text-white text-sm"
+                  placeholder="Enter watermark text..."
+                />
+              </label>
+              <label className="block">
+                <span className="text-xs text-slate-400 mb-1 block">Position:</span>
+                <select
+                  value={videoEffects.watermark.position}
+                  onChange={(e) => onChangeEffects({
+                    ...videoEffects,
+                    watermark: { ...videoEffects.watermark, position: e.target.value as any }
+                  })}
+                  className="w-full px-3 py-2 rounded-lg bg-[#07090e] border border-white/10 text-white text-sm"
+                >
+                  <option value="top-left">Top Left</option>
+                  <option value="top-right">Top Right</option>
+                  <option value="bottom-left">Bottom Left</option>
+                  <option value="bottom-right">Bottom Right</option>
+                </select>
+              </label>
+            </div>
+          </div>
+        ) : sidebarTab === 'export-video' ? (
+          <div className="w-80 bg-[#0a0e1a] border-l border-white/[0.06] p-4 overflow-y-auto">
+            <h3 className="text-lg font-bold text-white mb-4">📥 Export Video</h3>
+            <p className="text-sm text-slate-400 mb-4">ទាញយកវីដេអូដែលបានដាក់សំឡេង</p>
+            <button 
+              onClick={onOpenExport}
+              className="w-full px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-sm"
+            >
+              បើក Export Modal
+            </button>
+          </div>
+        ) : (
+          <DialoguePanel
           segments={segments}
           selectedIndex={selectedSegmentIndex}
           onSelectSegment={(idx) => {
@@ -349,6 +441,7 @@ export const DubbingStudio: React.FC<DubbingStudioProps> = ({
           }}
           voices={characters}
         />
+        )}
       </div>
 
       {/* Bottom: Timeline */}

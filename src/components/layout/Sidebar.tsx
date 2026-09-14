@@ -86,7 +86,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       }`}
     >
       {/* ── Nav Sections ── */}
-      <div className="py-2.5 px-1.5 flex-1 overflow-y-auto flex flex-col gap-3">
+      <div className="py-2.5 px-1.5 flex-1 overflow-y-auto overflow-x-hidden flex flex-col gap-3" style={{ maxHeight: '100%' }}>
 
         {/* Dashboard */}
         <SidebarNavItem
