@@ -433,11 +433,6 @@ export const DubbingStudio: React.FC<DubbingStudioProps> = ({
             onShowToast={onShowToast}
           />
 
-          {/* Premium Banner */}
-          <div className="w-full mt-2">
-            <PremiumBanner />
-          </div>
-
           {/* Slide-over Effects Panel */}
           {showEffectsDrawer && (
             <div className="absolute top-3 right-3 z-30 w-96 max-h-[90%] overflow-y-auto rounded-2xl shadow-2xl animate-in fade-in zoom-in-95 duration-150 border border-white/[0.1] bg-[#0c101c]">
@@ -530,6 +525,11 @@ export const DubbingStudio: React.FC<DubbingStudioProps> = ({
         onZoomChange={setZoom}
         onShowToast={onShowToast}
       />
+
+      {/* Premium Banner - Below Timeline */}
+      <div className="px-3 pb-2">
+        <PremiumBanner />
+      </div>
 
       {/* 1:1 Unique Character Voice Casting Drawer / Modal */}
       <CharacterCastDrawer

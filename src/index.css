@@ -2,8 +2,6 @@
    FONT IMPORTS — must be before @tailwind
    ================================================================ */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Khmer:wght@300;400;500;600;700;800;900&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Battambang:wght@400;700;900&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -21,14 +19,12 @@
     --bg-workspace:  #080b14;
     --bg-panel:      #0c0f1e;
     --bg-card:       rgba(10,13,26,0.9);
-    --bg-glass:      rgba(12,16,36,0.65);
-    --bg-glass-light: rgba(20,25,50,0.45);
+    --bg-glass:      rgba(12,16,36,0.55);
 
     /* Borders */
     --border-subtle: rgba(255,255,255,0.055);
     --border-mid:    rgba(255,255,255,0.09);
     --border-strong: rgba(255,255,255,0.14);
-    --border-glow:   rgba(56,189,248,0.25);
 
     /* Brand Colors - refined palette */
     --brand-primary:   #38bdf8;
@@ -38,26 +34,20 @@
     --brand-warning:   #fbbf24;
     --brand-danger:    #f87171;
     --brand-gold:      #f59e0b;
-    --brand-amber:     #fb923c;
 
-    /* Vibrant gradients - DubberBang style */
+    /* Vibrant gradients */
     --grad-primary:   linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #a855f7 100%);
     --grad-gold:      linear-gradient(135deg, #fbbf24 0%, #f97316 100%);
-    --grad-amber:     linear-gradient(135deg, #fb923c 0%, #f59e0b 100%);
     --grad-success:   linear-gradient(135deg, #10b981 0%, #059669 100%);
     --grad-danger:    linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-    --grad-purple:    linear-gradient(135deg, #a855f7 0%, #6366f1 100%);
-    --grad-pink:      linear-gradient(135deg, #ec4899 0%, #a855f7 100%);
     --grad-sidebar:   linear-gradient(180deg, #05070d 0%, #040608 100%);
-    --grad-premium:   linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #ea580c 100%);
 
-    /* Glow Effects - Enhanced */
-    --glow-primary:   0 0 24px rgba(56,189,248,0.5), 0 0 48px rgba(56,189,248,0.2);
-    --glow-secondary: 0 0 24px rgba(129,140,248,0.5), 0 0 48px rgba(129,140,248,0.2);
-    --glow-success:   0 0 16px rgba(52,211,153,0.6), 0 0 32px rgba(52,211,153,0.3);
-    --glow-danger:    0 0 16px rgba(248,113,113,0.6), 0 0 32px rgba(248,113,113,0.3);
-    --glow-gold:      0 0 24px rgba(251,191,36,0.6), 0 0 48px rgba(251,191,36,0.3);
-    --glow-purple:    0 0 24px rgba(168,85,247,0.5), 0 0 48px rgba(168,85,247,0.2);
+    /* Glow Effects */
+    --glow-primary:   0 0 24px rgba(56,189,248,0.4);
+    --glow-secondary: 0 0 24px rgba(129,140,248,0.4);
+    --glow-success:   0 0 14px rgba(52,211,153,0.45);
+    --glow-danger:    0 0 14px rgba(248,113,113,0.45);
+    --glow-gold:      0 0 20px rgba(251,191,36,0.4);
 
     /* Transitions */
     --transition-fast: 110ms cubic-bezier(0.4,0,0.2,1);
@@ -89,7 +79,7 @@
   body {
     background-color: var(--bg-app);
     color: #f1f5f9;
-    font-family: 'Noto Sans Khmer', 'Battambang', 'Inter', sans-serif;
+    font-family: 'Kantumruy Pro','Inter','Outfit',sans-serif;
     overflow: hidden;
     user-select: none;
   }
@@ -1104,184 +1094,3 @@
   box-shadow: 0 0 16px rgba(56,189,248,0.25);
 }
 
-
-
-/* ================================================================
-   DUBBER BANG STYLE UTILITIES
-   ================================================================ */
-@layer utilities {
-  /* Glass Morphism */
-  .glass-card {
-    @apply bg-white/[0.04] backdrop-blur-xl border border-white/[0.08];
-    @apply shadow-[0_8px_32px_rgba(0,0,0,0.4),0_1px_0_rgba(255,255,255,0.04)_inset];
-  }
-
-  .glass-strong {
-    @apply bg-white/[0.08] backdrop-blur-2xl border border-white/[0.12];
-  }
-
-  /* Gradient Buttons - DubberBang Style */
-  .btn-premium {
-    @apply bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600;
-    @apply text-black font-black text-sm px-6 py-2.5 rounded-xl;
-    @apply shadow-[0_0_24px_rgba(251,191,36,0.5),0_4px_12px_rgba(0,0,0,0.3)];
-    @apply hover:brightness-110 hover:scale-[1.02] active:scale-[0.98];
-    @apply transition-all duration-200;
-  }
-
-  .btn-primary {
-    @apply bg-gradient-to-r from-sky-500 to-indigo-600;
-    @apply text-white font-bold text-sm px-5 py-2 rounded-lg;
-    @apply shadow-[0_0_20px_rgba(56,189,248,0.4)];
-    @apply hover:brightness-110 hover:scale-[1.02] active:scale-[0.98];
-    @apply transition-all duration-200;
-  }
-
-  .btn-success {
-    @apply bg-gradient-to-r from-emerald-500 to-green-600;
-    @apply text-white font-bold text-sm px-5 py-2 rounded-lg;
-    @apply shadow-[0_0_16px_rgba(52,211,153,0.4)];
-    @apply hover:brightness-110 hover:scale-[1.02] active:scale-[0.98];
-    @apply transition-all duration-200;
-  }
-
-  /* Glow Effects */
-  .glow-primary {
-    box-shadow: var(--glow-primary);
-  }
-
-  .glow-gold {
-    box-shadow: var(--glow-gold);
-  }
-
-  .glow-success {
-    box-shadow: var(--glow-success);
-  }
-
-  /* Khmer Text Styles */
-  .text-khmer {
-    font-family: 'Noto Sans Khmer', 'Battambang', sans-serif;
-    letter-spacing: 0.01em;
-  }
-
-  .text-khmer-bold {
-    font-family: 'Battambang', 'Noto Sans Khmer', sans-serif;
-    font-weight: 700;
-  }
-
-  .text-khmer-black {
-    font-family: 'Battambang', 'Noto Sans Khmer', sans-serif;
-    font-weight: 900;
-  }
-
-  /* Animated Badge */
-  .badge-animated {
-    @apply relative overflow-hidden;
-    animation: shimmer 2.5s infinite linear;
-  }
-
-  @keyframes shimmer {
-    0% {
-      background-position: -200% center;
-    }
-    100% {
-      background-position: 200% center;
-    }
-  }
-
-  .badge-premium {
-    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full;
-    @apply bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500;
-    @apply text-black font-black text-xs;
-    @apply shadow-[0_0_20px_rgba(251,191,36,0.6)];
-    background-size: 200% auto;
-  }
-
-  .badge-vip {
-    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full;
-    @apply bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600;
-    @apply text-white font-black text-xs;
-    @apply shadow-[0_0_20px_rgba(168,85,247,0.6)];
-    background-size: 200% auto;
-  }
-
-  /* Pill Buttons */
-  .pill-button {
-    @apply inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full;
-    @apply bg-white/[0.06] border border-white/[0.1];
-    @apply text-slate-200 text-xs font-semibold;
-    @apply hover:bg-white/[0.12] hover:border-white/[0.15];
-    @apply transition-all duration-200 cursor-pointer;
-  }
-
-  .pill-button.active {
-    @apply bg-gradient-to-r from-sky-600/40 to-indigo-600/40;
-    @apply border-sky-500/50 text-sky-300;
-    @apply shadow-[0_0_16px_rgba(56,189,248,0.3)];
-  }
-
-  /* Timeline Badge */
-  .timeline-badge {
-    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-md;
-    @apply bg-gradient-to-r text-xs font-bold;
-    @apply shadow-sm;
-  }
-
-  .timeline-badge.speaker-1 {
-    @apply from-sky-600/30 to-blue-600/30 text-sky-300 border border-sky-500/30;
-  }
-
-  .timeline-badge.speaker-2 {
-    @apply from-pink-600/30 to-rose-600/30 text-pink-300 border border-pink-500/30;
-  }
-
-  .timeline-badge.speaker-3 {
-    @apply from-emerald-600/30 to-green-600/30 text-emerald-300 border border-emerald-500/30;
-  }
-
-  .timeline-badge.speaker-4 {
-    @apply from-amber-600/30 to-orange-600/30 text-amber-300 border border-amber-500/30;
-  }
-
-  /* Modern Input */
-  .input-modern {
-    @apply w-full bg-[#07090e] border border-white/[0.12];
-    @apply text-slate-100 text-sm rounded-lg px-3 py-2;
-    @apply focus:border-sky-400 focus:ring-2 focus:ring-sky-400/20;
-    @apply outline-none transition-all duration-200;
-  }
-
-  /* Card Hover Effect */
-  .card-hover {
-    @apply transition-all duration-300;
-    @apply hover:translate-y-[-2px] hover:shadow-[0_12px_48px_rgba(0,0,0,0.5)];
-  }
-
-  /* Floating Animation */
-  @keyframes float {
-    0%, 100% {
-      transform: translateY(0px);
-    }
-    50% {
-      transform: translateY(-10px);
-    }
-  }
-
-  .animate-float {
-    animation: float 3s ease-in-out infinite;
-  }
-
-  /* Pulse Glow */
-  @keyframes pulse-glow {
-    0%, 100% {
-      box-shadow: 0 0 20px rgba(251, 191, 36, 0.4);
-    }
-    50% {
-      box-shadow: 0 0 40px rgba(251, 191, 36, 0.8);
-    }
-  }
-
-  .animate-pulse-glow {
-    animation: pulse-glow 2s ease-in-out infinite;
-  }
-}
