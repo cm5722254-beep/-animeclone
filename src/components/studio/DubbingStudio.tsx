@@ -6,6 +6,7 @@ import { AiDubbingWorkflow } from './AiDubbingWorkflow';
 import { VideoEffectsPanel } from '../effects/VideoEffectsPanel';
 import { CharacterCastDrawer } from './CharacterCastDrawer';
 import { PremiumBanner } from '../ui/PremiumBanner';
+import { StudioSidebar } from '../navigation/StudioSidebar';
 import { ProjectFile, TimelineSegment, VideoEffects, SubtitleStyle, CharacterVoice } from '../../types';
 import { Sliders, X, Film, Mic2, Languages, Volume2, Subtitles, Share2, Sparkles, Video, Users, Wand2, CheckCircle2, Download } from 'lucide-react';
 
@@ -104,6 +105,7 @@ export const DubbingStudio: React.FC<DubbingStudioProps> = ({
   const [showCharacterCastDrawer, setShowCharacterCastDrawer] = useState(false);
   const [showSubtitles, setShowSubtitles] = useState(true);
   const [subTab, setSubTab] = useState<'media' | 'dubbing' | 'translation' | 'voices' | 'subtitles' | 'audio' | 'export'>('dubbing');
+  const [sidebarTab, setSidebarTab] = useState('video');
 
   const [videoSourceMode, setVideoSourceMode] = useState<'original' | 'dubbed'>('original');
   const [autoEmotionDetection, setAutoEmotionDetection] = useState(true); // 🎭 Auto detect emotions
@@ -264,7 +266,12 @@ export const DubbingStudio: React.FC<DubbingStudioProps> = ({
   ];
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden relative bg-[#07090e]">
+    <div className="flex h-full overflow-hidden relative bg-[#07090e]">
+      {/* Left Sidebar Navigation */}
+      <StudioSidebar activeTab={sidebarTab} onTabChange={setSidebarTab} />
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden relative">
       {/* Sub-Navigation Tabs matching Image 3 */}
       <div className="h-11 px-4 border-b border-white/[0.08] bg-[#0a0e17] flex items-center justify-between select-none">
         <div className="flex items-center gap-1.5">
@@ -542,6 +549,7 @@ export const DubbingStudio: React.FC<DubbingStudioProps> = ({
         onPreviewVoice={onPreviewVoice}
         onShowToast={onShowToast}
       />
+      </div>
     </div>
   );
 };

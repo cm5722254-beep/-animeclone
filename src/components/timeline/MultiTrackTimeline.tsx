@@ -343,15 +343,14 @@ export const MultiTrackTimeline: React.FC<TimelineProps> = ({
   };
 
   return (
-    <div className="h-68 bg-[#07090e] border-t border-white/[0.08] flex flex-col overflow-hidden select-none">
+    <div className="h-68 bg-[#0a0e17] border-t border-sky-500/10 flex flex-col overflow-hidden select-none shadow-2xl shadow-black/50">
       {/* Pro NLE Timeline Toolbar */}
-      <div className="h-10 px-3 bg-[#0a0e17] border-b border-white/[0.08] flex items-center justify-between text-xs">
+      <div className="h-10 px-3 bg-[#0d1219] border-b border-white/[0.08] flex items-center justify-between text-xs">
         {/* Left Controls: Transport & Pro Editing Tools matching Image 3 */}
-        <div className="flex items-center gap-2">
-          {/* Split (Cut) Button */}
+        <div className="flex items-center gap-2">{/* Split (Cut) Button */}
           <button
             onClick={handleSplitClip}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-slate-300 hover:text-white text-xs font-medium transition-all"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-slate-300 hover:text-white text-xs font-medium transition-all hover:border-sky-500/30"
             title="Split Clip at Playhead"
           >
             <Scissors className="w-3.5 h-3.5 text-sky-400" />
@@ -430,8 +429,8 @@ export const MultiTrackTimeline: React.FC<TimelineProps> = ({
       {/* Multi-Track Stage */}
       <div className="flex-1 flex overflow-x-auto overflow-y-hidden relative">
         {/* Left Track Headers (Sticky) */}
-        <div className="w-40 shrink-0 bg-[#080c14] border-r border-white/[0.08] sticky left-0 z-30 flex flex-col shadow-xl">
-          <div className="h-7 bg-[#060910] border-b border-white/[0.08] flex items-center px-2.5 justify-between">
+        <div className="w-40 shrink-0 bg-[#0a0e17] border-r border-sky-500/10 sticky left-0 z-30 flex flex-col shadow-2xl shadow-black/30">
+          <div className="h-7 bg-[#0d1219] border-b border-white/[0.08] flex items-center px-2.5 justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">
               TRACKS
             </span>
@@ -439,9 +438,9 @@ export const MultiTrackTimeline: React.FC<TimelineProps> = ({
           </div>
 
           {/* V1 Header */}
-          <div className="h-11 px-2.5 border-b border-white/[0.06] flex items-center justify-between bg-[#080c14]">
+          <div className="h-11 px-2.5 border-b border-white/[0.06] flex items-center justify-between bg-[#0a0e17]">
             <div className="flex items-center gap-1.5">
-              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-400 font-mono">
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 font-mono border border-sky-500/30">
                 V1
               </span>
               <span className="text-xs font-medium text-slate-200 truncate">Video Track</span>
@@ -609,14 +608,14 @@ export const MultiTrackTimeline: React.FC<TimelineProps> = ({
                       initialEnd: end,
                     });
                   }}
-                  className={`group absolute top-1 bottom-1 rounded-md px-2 flex items-center text-[11px] font-medium text-white shadow cursor-grab active:cursor-grabbing truncate transition-all select-none ${
+                  className={`group absolute top-1 bottom-1 rounded-lg px-2 flex items-center text-[11px] font-medium text-white shadow-lg cursor-grab active:cursor-grabbing truncate transition-all select-none ${
                     isFemale
-                      ? 'bg-gradient-to-r from-pink-600/90 to-rose-500/90 border border-pink-400/60'
-                      : 'bg-gradient-to-r from-indigo-600/90 to-sky-500/90 border border-indigo-400/60'
+                      ? 'bg-gradient-to-r from-pink-600/90 to-rose-500/90 border border-pink-400/40 hover:border-pink-300/60'
+                      : 'bg-gradient-to-r from-indigo-600/90 to-sky-500/90 border border-sky-400/40 hover:border-sky-300/60'
                   } ${
                     isSelected
-                      ? 'ring-2 ring-white shadow-[0_0_12px_rgba(255,255,255,0.4)] brightness-125 z-20'
-                      : 'hover:brightness-115 z-10'
+                      ? 'ring-2 ring-sky-400 shadow-[0_0_16px_rgba(56,189,248,0.6)] brightness-125 z-20 scale-[1.02]'
+                      : 'hover:brightness-115 hover:scale-[1.01] z-10'
                   }`}
                   style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
                   title={`${seg.speaker_name || 'តួអង្គ'}: "${seg.khmer_translation || seg.chinese_text || ''}" (${start}s - ${end}s)`}
@@ -643,10 +642,10 @@ export const MultiTrackTimeline: React.FC<TimelineProps> = ({
 
                   {/* Clip Label & Dialogue Text */}
                   <div className="flex items-center gap-1.5 truncate pointer-events-none px-1">
-                    <span className="font-bold text-[10px] px-1 rounded bg-black/30 text-white shrink-0">
+                    <span className="font-bold text-[10px] px-1.5 py-0.5 rounded-md bg-black/40 text-white shrink-0 border border-white/20">
                       #{idx + 1}
                     </span>
-                    <span className="truncate font-medium text-white">
+                    <span className="truncate font-medium text-white drop-shadow-sm">
                       {seg.khmer_translation || seg.chinese_text || 'សំឡេង'}
                     </span>
                   </div>
