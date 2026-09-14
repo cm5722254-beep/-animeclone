@@ -349,6 +349,33 @@ export const DubbingStudio: React.FC<DubbingStudioProps> = ({
           }}
           voices={characters}
         />
+
+        {/* Right Panel: Inspector & Voice Studio (from screenshot) */}
+        <ContextualInspector
+          uploadedFile={uploadedFile}
+          isUploadingFile={isUploadingFile}
+          uploadProgress={uploadProgress}
+          uploadInfo={uploadInfo}
+          onUploadFile={onUploadFile}
+          onRemoveFile={onRemoveFile}
+          voiceMode={voiceMode}
+          onVoiceModeChange={onVoiceModeChange}
+          dubbingScope={dubbingScope}
+          onDubbingScopeChange={onDubbingScopeChange}
+          geminiModel={geminiModel}
+          onGeminiModelChange={onGeminiModelChange}
+          isDubbing={isDubbing}
+          dubbingProgress={dubbingProgress}
+          dubbingMessage={dubbingMessage}
+          dubbingOutputVideo={dubbingOutputVideo}
+          dubbingOutputAudio={dubbingOutputAudio}
+          onStartDubbing={onStartDubbing}
+          onPreviewVoice={onPreviewVoice}
+          segments={segments}
+          selectedSegmentIndex={selectedSegmentIndex}
+          onSelectSegment={onSelectSegment}
+          characters={characters}
+        />
       </div>
 
       {/* Bottom: Timeline */}
