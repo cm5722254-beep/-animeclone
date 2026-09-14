@@ -35,8 +35,8 @@ const DEFAULT_PRESET_TIMELINE_SEGMENTS: TimelineSegment[] = [
 
 export const App: React.FC = () => {
   // Navigation & Shell
-  const [activeTab, setActiveTab] = useState<TabId>('tab-workflow');
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true); // Default: collapsed/slim mode
+  const [activeTab, setActiveTab] = useState<TabId>('tab-dubbing');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   // User & Auth

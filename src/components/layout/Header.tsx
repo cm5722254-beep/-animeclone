@@ -1,31 +1,20 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
-  Sparkles,
-  Undo2,
-  Redo2,
+  Film,
+  Save,
+  RotateCcw,
+  RotateCw,
   Play,
-  UploadCloud,
-  Download,
+  Share2,
   Settings,
   User as UserIcon,
-  Film,
-  CheckCircle2,
-  LogOut,
-  HelpCircle,
-  CloudLightning,
-  Laptop,
-  ShieldCheck,
-  Smartphone,
-  Save,
+  Check,
   Loader2,
-  Zap,
-  Mic2,
-  Languages,
-  Subtitles,
-  Volume2,
+  LogOut,
+  ChevronDown,
+  Sparkles,
 } from 'lucide-react';
 import { User, VoxcpmStatus } from '../../types';
-import { getSubscriptionInfo } from '../../utils/subscription';
 
 interface HeaderProps {
   activeProjectTitle: string;
@@ -63,17 +52,11 @@ export const Header: React.FC<HeaderProps> = ({
   onRedo,
   onPreview,
   onOpenAuthModal,
-  engineMode = 'cloud',
-  onSwitchEngine,
-  voxStatus,
-  onOpenVoxModal,
   onOpenAdmin,
-  onOpenDownloader,
-  onOpenThumbnailStudio,
-  activeTab = 'media',
-  onSelectTab,
-  videoCount = 0,
 }) => {
+  const [showUserMenu, setShowUserMenu] = useState(false);
+
+  // Extract clean project and episode names
   const rawTitle = activeProjectTitle || 'Perfect World EP145.mp4';
   const cleanName = rawTitle.replace(/\.(mp4|mkv|mov|avi|webm)$/i, '');
   const epMatch = cleanName.match(/(EP\s*\d+|ភាគ\s*\d+|Episode\s*\d+|\b\d+\b)/i);
@@ -81,455 +64,188 @@ export const Header: React.FC<HeaderProps> = ({
   const displayTitle = cleanName.replace(epLabel, '').trim() || cleanName;
 
   return (
-    <header className="header-root flex flex-col select-none">
-      {/* Row 1: Brand + Project + Actions */}
-      <div className="h-[52px] px-3.5 flex items-center justify-between border-b border-white/[0.06]">
-      {/* ── Left: Brand ── */}
-      <div className="flex items-center gap-2.5">
-        {/* Logo mark */}
-        <div className="brand-logo">
-          <Sparkles className="w-3.5 h-3.5 text-white relative z-10" />
-        </div>
-
-        {/* Brand text */}
-        <div className="flex flex-col leading-none gap-0.5">
+    <header className="h-12 bg-[#090b10] border-b border-white/[0.08] flex items-center justify-between px-3.5 select-none text-slate-100 flex-shrink-0 z-30">
+      {/* ── Left: Professional Branding ── */}
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center shadow-md shadow-sky-500/20 border border-sky-400/30">
+            <Film className="w-4 h-4 text-white" />
+          </div>
           <div className="flex items-center gap-1.5">
-            <span className="font-bold text-[13px] tracking-wide text-white">
+            <span className="font-bold text-[13px] tracking-wide text-white font-ui">
               CHEATZ DABBER
             </span>
-            <span
-              className="text-[10px] font-black"
-              style={{
-                background: 'linear-gradient(135deg, #fcd34d, #f97316)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-              }}
-            >
-              PRO v3
+            <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-400 border border-sky-500/30 tracking-wider">
+              v3 PRO
             </span>
           </div>
-          <span className="text-[11px] font-khmer text-slate-300 font-bold tracking-wide">
-            ស្ទូឌីយោដាក់សំឡេងខ្មែរ
-          </span>
-          <span className="text-[9.5px] text-slate-500 font-normal tracking-wide">
-            ស្ទូឌីយោដាក់សំឡេងខ្មែរ (Anime & Donghua)
-          </span>
         </div>
       </div>
 
-      {/* ── Center: Project info + tools ── */}
-      <div className="hidden md:flex items-center gap-2">
-        {/* Active project capsule */}
-        <div
-          className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs"
-          style={{
-            background: 'rgba(10,14,28,0.85)',
-            border: '1px solid rgba(255,255,255,0.07)',
-          }}
-        >
-          <Film className="w-3.5 h-3.5 text-sky-400 shrink-0" />
-          <span className="font-semibold text-slate-100 max-w-[130px] truncate" title={rawTitle}>
-            {displayTitle || 'Perfect World'}
-          </span>
-          <span
-            className="text-[9.5px] font-bold px-1.5 py-0.5 rounded-md badge-sky"
-          >
-            {epLabel}
+      {/* ── Center: Project Context ── */}
+      <div className="hidden sm:flex items-center gap-2.5 px-3 py-1 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+        <div className="flex items-center gap-1.5 text-xs">
+          <span className="text-slate-400 font-medium">Project:</span>
+          <span className="font-semibold text-slate-200 max-w-[200px] truncate" title={displayTitle}>
+            {displayTitle}
           </span>
         </div>
 
-        {/* Language badge */}
-        <div
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs"
-          style={{
-            background: 'rgba(10,14,28,0.85)',
-            border: '1px solid rgba(255,255,255,0.07)',
-          }}
-        >
-          <span className="font-semibold text-slate-200 font-mono text-[11px]">CN → KH</span>
-          <span
-            className="status-dot online"
-            style={{ width: '6px', height: '6px' }}
-          />
-        </div>
+        <span className="text-[11px] font-mono font-bold px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-300 border border-indigo-500/25">
+          {epLabel}
+        </span>
 
-        {/* Engine switcher */}
-        <div
-          className="hidden xl:flex items-center gap-0.5 p-0.5 rounded-xl"
-          style={{
-            background: 'rgba(7,9,15,0.85)',
-            border: '1px solid rgba(255,255,255,0.07)',
-          }}
-        >
-          <button
-            onClick={() => onSwitchEngine?.('cloud')}
-            className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[11px] font-semibold transition-all ${
-              engineMode === 'cloud'
-                ? 'bg-sky-500/18 text-sky-300 border border-sky-500/28'
-                : 'text-slate-500 hover:text-slate-300'
-            }`}
-            title="VoxCPM2 Cloud GPU"
-          >
-            <CloudLightning className={`w-3 h-3 ${engineMode === 'cloud' ? 'text-sky-400' : ''}`} />
-            <span>Cloud GPU</span>
-            <span className={`w-1.5 h-1.5 rounded-full ${engineMode === 'cloud' ? 'bg-emerald-400' : 'bg-slate-600'}`} />
-          </button>
+        <div className="h-3 w-px bg-white/10" />
 
-          <button
-            onClick={() => onSwitchEngine?.('local')}
-            className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[11px] font-semibold transition-all ${
-              engineMode === 'local'
-                ? 'bg-emerald-500/18 text-emerald-300 border border-emerald-500/28'
-                : 'text-slate-500 hover:text-slate-300'
-            }`}
-            title="VoxCPM2 Local Port 8000"
-          >
-            <Laptop className={`w-3 h-3 ${engineMode === 'local' ? 'text-emerald-400' : ''}`} />
-            <span>Port 8000</span>
-            <span className={`w-1.5 h-1.5 rounded-full ${engineMode === 'local' ? 'bg-emerald-400' : 'bg-slate-600'}`} />
-          </button>
-
-          {onOpenVoxModal && (
-            <button
-              onClick={onOpenVoxModal}
-              className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] transition-colors ${
-                voxStatus?.online ? 'text-emerald-300' : 'text-rose-300'
-              }`}
-              style={{
-                background: voxStatus?.online ? 'rgba(52,211,153,0.1)' : 'rgba(248,113,113,0.1)',
-              }}
-              title="VoxCPM2 Server Status"
-            >
-              <span
-                className={`w-1.5 h-1.5 rounded-full ${
-                  voxStatus?.online ? 'bg-emerald-400' : 'bg-rose-400'
-                }`}
-                style={voxStatus?.online ? { boxShadow: '0 0 6px #34d399' } : undefined}
-              />
-              <span>{voxStatus?.online ? 'GPU' : 'Offline'}</span>
-            </button>
-          )}
-        </div>
-
-        {/* Quick tools */}
-        <div className="flex items-center gap-1.5">
-          {onOpenDownloader && (
-            <button
-              onClick={onOpenDownloader}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold transition-all active:scale-95"
-              style={{
-                background: 'rgba(248,113,113,0.09)',
-                border: '1px solid rgba(248,113,113,0.22)',
-                color: '#fca5a5',
-              }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(248,113,113,0.17)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(248,113,113,0.09)'; }}
-              title="ទាញយកវីដេអូ YouTube, TikTok, Facebook"
-            >
-              <Download className="w-3.5 h-3.5" style={{ color: '#f87171' }} />
-              <span className="hidden lg:inline">Download</span>
-            </button>
-          )}
-
-          {onOpenThumbnailStudio && (
-            <button
-              onClick={onOpenThumbnailStudio}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold transition-all active:scale-95"
-              style={{
-                background: 'rgba(251,191,36,0.09)',
-                border: '1px solid rgba(251,191,36,0.22)',
-                color: '#fcd34d',
-              }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(251,191,36,0.17)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(251,191,36,0.09)'; }}
-              title="Thumbnail Studio 3D"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              <span className="hidden lg:inline">Thumbnail</span>
-            </button>
-          )}
-
-          <a
-            href="/mobile"
-            className="hidden xl:flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-medium transition-all"
-            style={{
-              background: 'rgba(56,189,248,0.08)',
-              border: '1px solid rgba(56,189,248,0.17)',
-              color: '#7dd3fc',
-            }}
-            title="Android App"
-          >
-            <Smartphone className="w-3.5 h-3.5" />
-            <span>Android</span>
-          </a>
-
-          {user?.role === 'admin' && onOpenAdmin && (
-            <button
-              onClick={onOpenAdmin}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-medium transition-all"
-              style={{
-                background: 'rgba(52,211,153,0.08)',
-                border: '1px solid rgba(52,211,153,0.22)',
-                color: '#6ee7b7',
-              }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(52,211,153,0.15)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(52,211,153,0.08)'; }}
-              title="Admin Console"
-            >
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span className="hidden xl:inline">Admin</span>
-            </button>
-          )}
+        <div className="flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">
+          <span>CN</span>
+          <span className="text-amber-400/60">→</span>
+          <span>KH</span>
         </div>
       </div>
 
-      {/* ── Right: Master Controls ── */}
+      {/* ── Right: Standard Workstation Actions ── */}
       <div className="flex items-center gap-1.5">
-        {/* Undo/Redo */}
-        <div
-          className="flex items-center rounded-lg p-0.5 gap-0.5"
-          style={{
-            background: 'rgba(10,14,28,0.85)',
-            border: '1px solid rgba(255,255,255,0.07)',
-          }}
-        >
-          <button
-            onClick={onUndo}
-            className="p-1.5 rounded text-slate-500 hover:text-white hover:bg-white/[0.06] transition-all"
-            title="Undo (Ctrl+Z)"
-          >
-            <Undo2 className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={onRedo}
-            className="p-1.5 rounded text-slate-500 hover:text-white hover:bg-white/[0.06] transition-all"
-            title="Redo (Ctrl+Shift+Z)"
-          >
-            <Redo2 className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        {/* Save */}
+        {/* Save Status Button */}
         <button
           onClick={onSaveProject}
           disabled={isSaving}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all active:scale-95"
-          style={{
-            background: 'rgba(10,14,28,0.85)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            color: '#e2e8f0',
-          }}
-          onMouseEnter={e => {
-            (e.currentTarget as HTMLElement).style.borderColor = 'rgba(52,211,153,0.36)';
-          }}
-          onMouseLeave={e => {
-            (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)';
-          }}
-          title="រក្សាទុកគម្រោង (Ctrl+S)"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-white border border-white/[0.08] transition-colors disabled:opacity-60"
+          title="Save Project (Ctrl+S)"
         >
           {isSaving ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" />
+            <>
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-sky-400" />
+              <span className="hidden md:inline text-[11px]">Saving...</span>
+            </>
           ) : (
-            <Save className="w-3.5 h-3.5 text-emerald-400" />
+            <>
+              <Save className="w-3.5 h-3.5 text-slate-400" />
+              <span className="hidden md:inline text-[11px]">Save</span>
+            </>
           )}
-          <span>រក្សាទុក</span>
-          <span className="hidden xl:inline text-[9px] text-emerald-400/65 font-mono">✓ Auto</span>
         </button>
 
-        {/* Preview */}
+        {/* Undo */}
+        <button
+          onClick={onUndo}
+          className="p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors"
+          title="Undo (Ctrl+Z)"
+        >
+          <RotateCcw className="w-3.5 h-3.5" />
+        </button>
+
+        {/* Redo */}
+        <button
+          onClick={onRedo}
+          className="p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors"
+          title="Redo (Ctrl+Y / Ctrl+Shift+Z)"
+        >
+          <RotateCw className="w-3.5 h-3.5" />
+        </button>
+
+        {/* Preview Play/Pause Toggle */}
         <button
           onClick={onPreview}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all active:scale-95"
-          style={{
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            color: '#e2e8f0',
-          }}
-          onMouseEnter={e => {
-            (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.08)';
-          }}
-          onMouseLeave={e => {
-            (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)';
-          }}
-          title="Preview"
+          className="p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors"
+          title="Play / Pause Preview (Space)"
         >
-          <Play className="w-3.5 h-3.5 text-sky-400 fill-sky-400" />
-          <span>Preview</span>
+          <Play className="w-3.5 h-3.5" />
         </button>
 
-        {/* Export CTA */}
+        <div className="h-4 w-px bg-white/10 mx-0.5" />
+
+        {/* Primary Export Action */}
         <button
           onClick={onOpenExport}
-          className="btn-primary flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-400 hover:to-sky-500 text-black shadow-lg shadow-sky-500/20 transition-all active:scale-95"
+          title="Export Dubbed Video"
         >
-          <UploadCloud className="w-3.5 h-3.5 relative z-10" />
-          <span className="relative z-10">Export</span>
+          <Share2 className="w-3.5 h-3.5" />
+          <span>Export</span>
         </button>
-
-        {/* Divider */}
-        <div className="h-4 w-px mx-0.5" style={{ background: 'rgba(255,255,255,0.08)' }} />
 
         {/* Settings */}
         <button
           onClick={onOpenSettings}
-          className="p-1.5 rounded-xl text-slate-500 hover:text-white transition-all"
-          style={{ border: '1px solid transparent' }}
-          onMouseEnter={e => {
-            (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)';
-            (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)';
-          }}
-          onMouseLeave={e => {
-            (e.currentTarget as HTMLElement).style.background = 'transparent';
-            (e.currentTarget as HTMLElement).style.borderColor = 'transparent';
-          }}
+          className="p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors"
           title="Studio Settings"
         >
           <Settings className="w-4 h-4" />
         </button>
 
         {/* User Profile / Auth */}
-        {user ? (() => {
-          const subInfo = getSubscriptionInfo(user);
-          return (
-            <div className="flex items-center gap-1.5">
-              {/* User pill */}
-              <button
-                onClick={onOpenSettings}
-                className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-all group"
-                style={{
-                  background: 'rgba(10,14,28,0.85)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  color: '#e2e8f0',
-                }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLElement).style.borderColor = 'rgba(56,189,248,0.35)';
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)';
-                }}
-                title={`${subInfo.title} | ${subInfo.expiryText}`}
-              >
-                <div
-                  className="w-6 h-6 rounded-lg flex items-center justify-center text-white font-bold text-xs shrink-0"
-                  style={{
-                    background: 'linear-gradient(135deg, #6366f1, #38bdf8)',
-                    boxShadow: '0 0 8px rgba(99,102,241,0.4)',
-                  }}
-                >
-                  {user.username.charAt(0).toUpperCase()}
-                </div>
+        <div className="relative ml-0.5">
+          {user ? (
+            <button
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              className="flex items-center gap-1.5 p-1 rounded-md hover:bg-white/[0.06] transition-colors"
+            >
+              <div className="w-6 h-6 rounded-full bg-slate-800 border border-white/20 flex items-center justify-center text-[10px] font-bold text-sky-400">
+                {user.username.slice(0, 2).toUpperCase()}
+              </div>
+              <ChevronDown className="w-3 h-3 text-slate-500" />
+            </button>
+          ) : (
+            <button
+              onClick={onOpenAuthModal}
+              className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-sky-400 hover:bg-sky-500/10 border border-sky-500/30 transition-colors"
+            >
+              <UserIcon className="w-3.5 h-3.5" />
+              <span>Login</span>
+            </button>
+          )}
 
-                <div className="flex flex-col items-start leading-tight">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-xs max-w-[80px] truncate text-slate-200">
-                      {user.username}
-                    </span>
-                    <span
-                      className={`badge ${
-                        subInfo.color === 'emerald' ? 'badge-success' :
-                        subInfo.color === 'amber' ? 'badge-warning' : 'badge-indigo'
-                      }`}
-                      style={{ fontSize: '9px', padding: '1px 5px' }}
-                    >
-                      {subInfo.badge}
-                    </span>
-                  </div>
-                  <span className="text-[9px] text-slate-500 group-hover:text-amber-300 transition-colors truncate max-w-[110px]">
-                    {subInfo.expiryText}
-                  </span>
+          {/* User Menu Dropdown */}
+          {showUserMenu && user && (
+            <div
+              className="absolute right-0 top-full mt-1 w-48 rounded-lg bg-[#0e1118] border border-white/10 shadow-2xl p-1 z-50 text-xs"
+              onMouseLeave={() => setShowUserMenu(false)}
+            >
+              <div className="px-2.5 py-2 border-b border-white/[0.06]">
+                <div className="font-semibold text-white truncate">{user.username}</div>
+                <div className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">
+                  Role: <span className="text-sky-400">{user.role}</span>
                 </div>
+              </div>
+
+              {user.role === 'admin' && onOpenAdmin && (
+                <button
+                  onClick={() => {
+                    setShowUserMenu(false);
+                    onOpenAdmin();
+                  }}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded hover:bg-white/[0.06] text-slate-300 hover:text-white transition-colors"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Admin User Manager</span>
+                </button>
+              )}
+
+              <button
+                onClick={() => {
+                  setShowUserMenu(false);
+                  onOpenSettings();
+                }}
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded hover:bg-white/[0.06] text-slate-300 hover:text-white transition-colors"
+              >
+                <Settings className="w-3.5 h-3.5" />
+                <span>Preferences</span>
               </button>
 
-              {/* Logout */}
               <button
-                onClick={onLogout}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95"
-                style={{
-                  background: 'rgba(248,113,113,0.09)',
-                  border: '1px solid rgba(248,113,113,0.25)',
-                  color: '#fca5a5',
+                onClick={() => {
+                  setShowUserMenu(false);
+                  onLogout();
                 }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(248,113,113,0.18)'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(248,113,113,0.09)'; }}
-                title="ចាកចេញ (Logout)"
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded hover:bg-red-500/10 text-red-400 transition-colors mt-0.5"
               >
-                <LogOut className="w-3.5 h-3.5 text-rose-400" />
-                <span>ចាកចេញ</span>
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Log Out</span>
               </button>
             </div>
-          );
-        })() : (
-          <button
-            onClick={onOpenAuthModal}
-            className="btn-primary flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs"
-          >
-            <UserIcon className="w-3.5 h-3.5 relative z-10" />
-            <span className="relative z-10">ចូលប្រើ</span>
-          </button>
-        )}
-      </div>
-      </div>
-
-      {/* Row 2: Tab Navigation */}
-      <div className="h-[42px] px-3.5 flex items-center gap-0.5 border-b border-white/[0.04] bg-[#08090b]/60 backdrop-blur-sm">
-        <button
-          onClick={() => onSelectTab?.('tab-dashboard')}
-          className={`tab-btn ${(activeTab === 'tab-dashboard' || activeTab === 'media') ? 'active' : ''}`}
-        >
-          <Film className="w-3.5 h-3.5" />
-          <span>Media</span>
-        </button>
-
-        <button
-          onClick={() => onSelectTab?.('tab-dubbing')}
-          className={`tab-btn ${(activeTab === 'tab-dubbing' || activeTab === 'dubbing') ? 'active' : ''}`}
-        >
-          <Mic2 className="w-3.5 h-3.5" />
-          <span>Dubbing</span>
-        </button>
-
-        <button
-          onClick={() => onSelectTab?.('tab-translator')}
-          className={`tab-btn ${(activeTab === 'tab-translator' || activeTab === 'translation') ? 'active' : ''}`}
-        >
-          <Languages className="w-3.5 h-3.5" />
-          <span>Translation</span>
-        </button>
-
-        <button
-          onClick={() => onSelectTab?.('tab-workflow')}
-          className={`tab-btn ${(activeTab === 'tab-workflow' || activeTab === 'videos') ? 'active' : ''}`}
-        >
-          <Film className="w-3.5 h-3.5" />
-          <span>Videos</span>
-          {videoCount > 0 && (
-            <span className="badge badge-sky text-[9px] py-0">{videoCount}</span>
           )}
-        </button>
-
-        <button
-          onClick={() => onSelectTab?.('tab-subtitles')}
-          className={`tab-btn ${(activeTab === 'tab-subtitles' || activeTab === 'subtitles') ? 'active' : ''}`}
-        >
-          <Subtitles className="w-3.5 h-3.5" />
-          <span>Subtitles</span>
-        </button>
-
-        <button
-          onClick={() => onSelectTab?.('tab-mixer')}
-          className={`tab-btn ${(activeTab === 'tab-mixer' || activeTab === 'audio') ? 'active' : ''}`}
-        >
-          <Volume2 className="w-3.5 h-3.5" />
-          <span>Audio</span>
-        </button>
-
-        <button
-          onClick={onOpenExport}
-          className={`tab-btn ${activeTab === 'export' ? 'active' : ''}`}
-        >
-          <UploadCloud className="w-3.5 h-3.5" />
-          <span>Export</span>
-        </button>
+        </div>
       </div>
     </header>
   );

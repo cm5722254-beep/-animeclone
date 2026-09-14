@@ -2,16 +2,16 @@ import React from 'react';
 import {
   LayoutDashboard,
   FolderKanban,
-  Clapperboard,
-  PlusCircle,
+  Film,
+  Users,
   Mic2,
-  Volume2,
-  Users2,
   Languages,
   Subtitles,
   SlidersHorizontal,
+  Image,
   Share2,
   History,
+  Link2,
   Cpu,
   HardDrive,
   Settings,
@@ -19,6 +19,7 @@ import {
   PanelLeftOpen,
   ChevronRight,
   Sparkles,
+  Smartphone,
 } from 'lucide-react';
 import { TabId, User } from '../../types';
 import { getSubscriptionInfo } from '../../utils/subscription';
@@ -43,24 +44,47 @@ interface NavItemProps {
   onClick: () => void;
   isCollapsed: boolean;
   badge?: string;
-  badgeVariant?: 'sky' | 'indigo' | 'success' | 'warning' | 'danger';
+  badgeVariant?: 'sky' | 'indigo' | 'emerald' | 'amber';
   title?: string;
 }
 
 const SidebarNavItem: React.FC<NavItemProps> = ({
-  icon, label, active, onClick, isCollapsed, badge, badgeVariant = 'sky', title,
+  icon,
+  label,
+  active,
+  onClick,
+  isCollapsed,
+  badge,
+  badgeVariant = 'sky',
+  title,
 }) => (
   <button
     onClick={onClick}
-    title={title || label}
-    className={`nav-item ${active ? 'active' : ''} ${isCollapsed ? 'justify-center px-0' : ''}`}
+    title={isCollapsed ? title || label : undefined}
+    className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-xs font-medium transition-all group relative ${
+      active
+        ? 'bg-sky-500/15 text-sky-400 font-semibold border-l-2 border-sky-400 rounded-l-none'
+        : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
+    } ${isCollapsed ? 'justify-center px-0' : ''}`}
   >
-    <span className="nav-icon w-4 h-4 shrink-0">{icon}</span>
+    <span className={`w-4 h-4 shrink-0 transition-colors ${active ? 'text-sky-400' : 'text-slate-400 group-hover:text-slate-200'}`}>
+      {icon}
+    </span>
     {!isCollapsed && (
       <>
         <span className="flex-1 text-left truncate">{label}</span>
         {badge && (
-          <span className={`badge badge-${badgeVariant} text-[9px] py-0`}>{badge}</span>
+          <span
+            className={`text-[9px] font-bold px-1.5 py-0.2 rounded font-mono ${
+              badgeVariant === 'emerald'
+                ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/25'
+                : badgeVariant === 'amber'
+                ? 'bg-amber-500/15 text-amber-300 border border-amber-500/25'
+                : 'bg-sky-500/15 text-sky-300 border border-sky-500/25'
+            }`}
+          >
+            {badge}
+          </span>
         )}
       </>
     )}
@@ -81,90 +105,56 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   return (
     <aside
-      className={`sidebar-root flex flex-col justify-between select-none transition-all duration-200 ${
-        isCollapsed ? 'w-[48px]' : 'w-[210px]'
+      className={`bg-[#080a0f] border-r border-white/[0.08] flex flex-col justify-between select-none transition-all duration-200 z-20 flex-shrink-0 ${
+        isCollapsed ? 'w-[52px]' : 'w-[210px]'
       }`}
     >
       {/* ── Nav Sections ── */}
-      <div className="py-2.5 px-1.5 flex-1 overflow-y-auto overflow-x-hidden flex flex-col gap-3" style={{ maxHeight: '100%' }}>
-
-        {/* Dashboard */}
-        <SidebarNavItem
-          icon={<LayoutDashboard className="w-4 h-4" />}
-          label="Dashboard"
-          active={activeTab === 'tab-dashboard'}
-          onClick={() => onSelectTab('tab-dashboard')}
-          isCollapsed={isCollapsed}
-        />
-
+      <div className="py-2.5 px-2 flex-1 overflow-y-auto overflow-x-hidden flex flex-col gap-3">
         {/* WORKSPACE */}
         <div className="flex flex-col gap-0.5">
-          {!isCollapsed && <div className="nav-category">Workspace</div>}
+          {!isCollapsed && (
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2.5 py-1">
+              WORKSPACE
+            </div>
+          )}
 
           <SidebarNavItem
-            icon={<FolderKanban className="w-4 h-4" />}
-            label="Projects"
+            icon={<LayoutDashboard className="w-4 h-4" />}
+            label="Dashboard"
+            active={activeTab === 'tab-dashboard'}
             onClick={() => onSelectTab('tab-dashboard')}
             isCollapsed={isCollapsed}
+            title="Project Dashboard"
           />
 
           <SidebarNavItem
-            icon={<Sparkles className="w-4 h-4 text-emerald-400" />}
+            icon={<Film className="w-4 h-4 text-sky-400" />}
             label="Dubbing Studio"
-            active={activeTab === 'tab-workflow'}
-            onClick={() => onSelectTab('tab-workflow')}
-            isCollapsed={isCollapsed}
-            badge="AI"
-            badgeVariant="sky"
-          />
-
-          <SidebarNavItem
-            icon={<Clapperboard className="w-4 h-4" />}
-            label="Studio Mode (Advanced)"
-            active={activeTab === 'tab-dubbing'}
+            active={activeTab === 'tab-dubbing' || activeTab === 'tab-workflow'}
             onClick={() => onSelectTab('tab-dubbing')}
             isCollapsed={isCollapsed}
+            badge="PRO"
+            badgeVariant="sky"
+            title="AI Dubbing Studio Workstation"
           />
-
-          <button
-            onClick={onNewProject}
-            title="+ New Project"
-            className={`nav-item group ${isCollapsed ? 'justify-center px-0' : ''}`}
-          >
-            <PlusCircle className="w-4 h-4 shrink-0 text-slate-500 group-hover:text-emerald-400 transition-colors" />
-            {!isCollapsed && (
-              <span className="text-slate-500 group-hover:text-emerald-400 transition-colors">
-                + New Project
-              </span>
-            )}
-          </button>
         </div>
 
         {/* PRODUCTION */}
         <div className="flex flex-col gap-0.5">
-          {!isCollapsed && <div className="nav-category">Production</div>}
+          {!isCollapsed && (
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2.5 py-1">
+              PRODUCTION
+            </div>
+          )}
 
           <SidebarNavItem
-            icon={<Mic2 className="w-4 h-4" />}
-            label="Timeline"
-            active={activeTab === 'tab-dubbing'}
-            onClick={() => onSelectTab('tab-dubbing')}
-            isCollapsed={isCollapsed}
-          />
-
-          <SidebarNavItem
-            icon={<Volume2 className="w-4 h-4" />}
-            label="AI Voices"
+            icon={<Users className="w-4 h-4" />}
+            label="AI Voices & Cast"
             active={activeTab === 'tab-character'}
             onClick={() => onSelectTab('tab-character')}
             isCollapsed={isCollapsed}
-          />
-
-          <SidebarNavItem
-            icon={<Users2 className="w-4 h-4" />}
-            label="Characters"
-            onClick={() => onSelectTab('tab-character')}
-            isCollapsed={isCollapsed}
+            title="Character Voice Casting & Library"
           />
 
           <SidebarNavItem
@@ -173,6 +163,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             active={activeTab === 'tab-translator'}
             onClick={() => onSelectTab('tab-translator')}
             isCollapsed={isCollapsed}
+            title="AI Script Translation"
           />
 
           <SidebarNavItem
@@ -181,6 +172,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             active={activeTab === 'tab-subtitles'}
             onClick={() => onSelectTab('tab-subtitles')}
             isCollapsed={isCollapsed}
+            title="Subtitle Editor & SRT"
           />
 
           <SidebarNavItem
@@ -189,37 +181,59 @@ export const Sidebar: React.FC<SidebarProps> = ({
             active={activeTab === 'tab-mixer'}
             onClick={() => onSelectTab('tab-mixer')}
             isCollapsed={isCollapsed}
+            title="Audio Mixer Console"
+          />
+
+          <SidebarNavItem
+            icon={<Image className="w-4 h-4" />}
+            label="Thumbnail Studio"
+            active={activeTab === 'tab-thumbnail'}
+            onClick={() => onSelectTab('tab-thumbnail')}
+            isCollapsed={isCollapsed}
+            title="AI Video Thumbnail Generator"
           />
         </div>
 
         {/* DELIVERY */}
         <div className="flex flex-col gap-0.5">
-          {!isCollapsed && <div className="nav-category">Delivery</div>}
+          {!isCollapsed && (
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2.5 py-1">
+              DELIVERY
+            </div>
+          )}
 
           <SidebarNavItem
             icon={<Share2 className="w-4 h-4 text-sky-400" />}
-            label="Export"
+            label="Export Video"
             onClick={onOpenExport}
             isCollapsed={isCollapsed}
+            title="Render & Export Video"
           />
 
           <SidebarNavItem
             icon={<History className="w-4 h-4" />}
             label="Render History"
+            active={false}
             onClick={() => onSelectTab('tab-dashboard')}
             isCollapsed={isCollapsed}
+            title="View Completed Renders"
           />
         </div>
 
         {/* SYSTEM */}
         <div className="flex flex-col gap-0.5">
-          {!isCollapsed && <div className="nav-category">System</div>}
+          {!isCollapsed && (
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2.5 py-1">
+              SYSTEM
+            </div>
+          )}
 
           <SidebarNavItem
             icon={<Cpu className="w-4 h-4" />}
             label="API & AI"
             onClick={onOpenSettings}
             isCollapsed={isCollapsed}
+            title="AI Model & Key Settings"
           />
 
           <SidebarNavItem
@@ -227,6 +241,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             label="Storage"
             onClick={onOpenSettings}
             isCollapsed={isCollapsed}
+            title="Storage & Disk Management"
           />
 
           <SidebarNavItem
@@ -234,101 +249,60 @@ export const Sidebar: React.FC<SidebarProps> = ({
             label="Settings"
             onClick={onOpenSettings}
             isCollapsed={isCollapsed}
+            title="Studio Preferences"
           />
         </div>
       </div>
 
-      {/* ── Bottom Panel ── */}
-      <div className="p-1.5 border-t border-white/[0.06] flex flex-col gap-1.5">
-
-        {/* Subscription info (expanded only) */}
+      {/* ── Sidebar Footer ── */}
+      <div className="p-2 border-t border-white/[0.08] flex flex-col gap-2">
+        {/* User Plan Info (if expanded) */}
         {!isCollapsed && user && (() => {
           const subInfo = getSubscriptionInfo(user);
           return (
             <div
               onClick={onOpenSettings}
-              className="p-2.5 rounded-xl cursor-pointer transition-all group"
-              style={{
-                background: 'rgba(10,14,28,0.9)',
-                border: '1px solid rgba(255,255,255,0.07)',
-              }}
-              onMouseEnter={e => {
-                (e.currentTarget as HTMLElement).style.borderColor = 'rgba(56,189,248,0.25)';
-              }}
-              onMouseLeave={e => {
-                (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.07)';
-              }}
-              title={`${subInfo.title} | ${subInfo.expiryText} (ចុចដើម្បីមើលលម្អិត)`}
+              className="p-2 rounded-lg bg-white/[0.03] border border-white/[0.06] hover:border-sky-500/30 cursor-pointer transition-all"
+              title={`${subInfo.title} | ${subInfo.expiryText}`}
             >
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] text-slate-500 font-semibold tracking-wide">PLAN</span>
-                <span
-                  className={`text-[9px] px-1.5 py-0.5 rounded-md font-bold font-mono border ${
-                    subInfo.color === 'emerald'
-                      ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/25'
-                      : subInfo.color === 'amber'
-                      ? 'bg-amber-500/15 text-amber-300 border-amber-500/25'
-                      : 'bg-slate-500/15 text-slate-400 border-slate-500/25'
-                  }`}
-                >
-                  {subInfo.badge}
-                </span>
+              <div className="flex items-center justify-between text-[10px]">
+                <span className="text-slate-400 font-semibold">PLAN</span>
+                <span className="text-sky-300 font-bold font-mono">{subInfo.badge}</span>
               </div>
-              <div className="text-[11px] font-bold text-slate-200 truncate group-hover:text-sky-300 transition-colors">
-                {subInfo.title}
-              </div>
-              <div className="text-[9.5px] text-amber-400/75 font-medium truncate mt-0.5">
-                {subInfo.expiryText}
-              </div>
+              <div className="text-[11px] font-bold text-slate-200 truncate mt-0.5">{subInfo.title}</div>
             </div>
           );
         })()}
 
-        {/* System Status */}
+        {/* Compact System Status Button */}
         {!isCollapsed ? (
           <button
             onClick={onOpenSystemStatus}
-            className="w-full p-2.5 rounded-xl flex items-center justify-between text-left transition-all group"
-            style={{
-              background: 'rgba(10,14,28,0.9)',
-              border: '1px solid rgba(255,255,255,0.07)',
-            }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLElement).style.borderColor = 'rgba(56,189,248,0.22)';
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.07)';
-            }}
-            title="Click to view System Status"
+            className="w-full p-2 rounded-lg bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.06] hover:border-sky-500/30 flex items-center justify-between text-left transition-all"
+            title="Click to view full System Status"
           >
             <div className="flex items-center gap-2">
               <span
                 className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                  isSystemOnline
-                    ? 'bg-emerald-400'
-                    : 'bg-amber-400'
+                  isSystemOnline ? 'bg-emerald-400' : 'bg-amber-400'
                 }`}
                 style={{
-                  boxShadow: isSystemOnline
-                    ? '0 0 0 2px rgba(52,211,153,0.15), 0 0 8px #34d399'
-                    : '0 0 8px #fbbf24',
-                  animation: isSystemOnline ? 'statusPulse 2.5s ease-in-out infinite' : undefined,
+                  boxShadow: isSystemOnline ? '0 0 8px #34d399' : '0 0 8px #fbbf24',
                 }}
               />
               <div className="flex flex-col leading-tight">
                 <span className="text-[11px] font-semibold text-slate-200">System Status</span>
-                <span className="text-[9px] text-slate-500 group-hover:text-sky-400 transition-colors">
-                  {isSystemOnline ? 'All Systems Online' : 'Check Engine'}
+                <span className="text-[9px] text-slate-400">
+                  {isSystemOnline ? 'All Systems Online' : 'Check Services'}
                 </span>
               </div>
             </div>
-            <ChevronRight className="w-3.5 h-3.5 text-slate-600 group-hover:text-sky-400 transition-all group-hover:translate-x-0.5" />
+            <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
           </button>
         ) : (
           <button
             onClick={onOpenSystemStatus}
-            className="w-full flex items-center justify-center p-2 rounded-xl hover:bg-white/[0.04] text-slate-400 transition-colors"
-            style={{ border: '1px solid rgba(255,255,255,0.06)' }}
+            className="w-full flex items-center justify-center p-2 rounded-lg hover:bg-white/[0.06] transition-colors"
             title="System Status"
           >
             <span
@@ -342,17 +316,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
         )}
 
-        {/* Collapse Toggle */}
+        {/* Collapse / Expand Toggle */}
         <button
           onClick={onToggleCollapse}
-          className="w-full flex items-center justify-center py-1.5 text-slate-600 hover:text-slate-300 rounded-lg hover:bg-white/[0.04] transition-all"
+          className="w-full flex items-center justify-center py-1.5 text-slate-400 hover:text-slate-200 rounded-md hover:bg-white/[0.04] transition-all"
           title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
         >
-          {isCollapsed ? (
-            <PanelLeftOpen className="w-4 h-4" />
-          ) : (
-            <PanelLeftClose className="w-4 h-4" />
-          )}
+          {isCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
         </button>
       </div>
     </aside>
