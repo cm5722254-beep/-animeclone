@@ -177,6 +177,62 @@ export const AiDubbingWorkflow: React.FC<AiWorkflowProps> = ({
 
       {/* Quick Action in Footer */}
       <div className="p-3 border-t border-white/[0.08] bg-[#070a12] flex flex-col gap-2">
+        {/* Voice Mode Selection (NEW!) */}
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center justify-between text-[10px]">
+            <span className="text-slate-400 font-medium">ជម្រើសសំឡេង:</span>
+          </div>
+          <div className="flex flex-col gap-1 bg-[#0d121f] p-1.5 rounded-xl border border-white/[0.06]">
+            <button
+              type="button"
+              onClick={() => onDubbingScopeChange?.('voice_mode:original_clone')}
+              className={`py-1.5 px-2 rounded-lg text-[10px] font-bold text-left transition-all cursor-pointer flex items-start gap-1.5 ${
+                dubbingScope?.includes('original_clone')
+                  ? 'bg-gradient-to-r from-emerald-500 to-emerald-400 text-black shadow-sm ring-1 ring-emerald-300'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.05]'
+              }`}
+            >
+              <span className="text-xs">①</span>
+              <div className="flex flex-col">
+                <span>Clone Original Voice</span>
+                <span className="text-[9px] opacity-75">(សំឡេងរឿងដើមផ្ទាល់)</span>
+              </div>
+            </button>
+            
+            <button
+              type="button"
+              onClick={() => onDubbingScopeChange?.('voice_mode:character_voice')}
+              className={`py-1.5 px-2 rounded-lg text-[10px] font-bold text-left transition-all cursor-pointer flex items-start gap-1.5 ${
+                dubbingScope?.includes('character_voice')
+                  ? 'bg-gradient-to-r from-sky-500 to-sky-400 text-black shadow-sm ring-1 ring-sky-300'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.05]'
+              }`}
+            >
+              <span className="text-xs">②</span>
+              <div className="flex flex-col">
+                <span>Character Voice</span>
+                <span className="text-[9px] opacity-75">(សំឡេងតួអង្គពីបណ្ណាល័យ)</span>
+              </div>
+            </button>
+            
+            <button
+              type="button"
+              onClick={() => onDubbingScopeChange?.('voice_mode:movie_clone_all')}
+              className={`py-1.5 px-2 rounded-lg text-[10px] font-bold text-left transition-all cursor-pointer flex items-start gap-1.5 ${
+                dubbingScope?.includes('movie_clone_all')
+                  ? 'bg-gradient-to-r from-purple-500 to-purple-400 text-black shadow-sm ring-1 ring-purple-300'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.05]'
+              }`}
+            >
+              <span className="text-xs">③</span>
+              <div className="flex-col">
+                <span>Movie Clone All</span>
+                <span className="text-[9px] opacity-75">(ជម្រើសចាស់)</span>
+              </div>
+            </button>
+          </div>
+        </div>
+
         {/* 4 Scope Selection Buttons */}
         <div className="flex flex-col gap-1">
           <div className="flex items-center justify-between text-[10px]">
