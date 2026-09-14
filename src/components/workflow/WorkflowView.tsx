@@ -45,6 +45,10 @@ interface WorkflowViewProps {
   onShowToast: (msg: string, type: 'success'|'error'|'info') => void;
   onOpenExportModal?: () => void;
   onOpenStudioMode?: () => void;
+  engineMode?: string;
+  onSwitchEngine?: (mode: string) => void;
+  voxStatus?: any;
+  onOpenVoxModal?: () => void;
 }
 
 export const WorkflowView: React.FC<WorkflowViewProps> = (props) => {
@@ -126,6 +130,10 @@ export const WorkflowView: React.FC<WorkflowViewProps> = (props) => {
             onScanTimeline={props.onScanTimeline}
             isScanningTimeline={props.isScanningTimeline}
             hasScannedSegments={hasScannedSegments}
+            engineMode={props.engineMode}
+            onSwitchEngine={props.onSwitchEngine}
+            voxStatus={props.voxStatus}
+            onOpenVoxModal={props.onOpenVoxModal}
             onBack={() => goToStep('import')}
             onNext={() => completeStep('content-language', 'translation')}
           />
@@ -148,6 +156,10 @@ export const WorkflowView: React.FC<WorkflowViewProps> = (props) => {
             onChangeSegments={props.onChangeSegments}
             onPreviewVoice={props.onPreviewVoice}
             onShowToast={props.onShowToast}
+            engineMode={props.engineMode}
+            onSwitchEngine={props.onSwitchEngine}
+            voxStatus={props.voxStatus}
+            onOpenVoxModal={props.onOpenVoxModal}
             onBack={() => goToStep('translation')}
             onNext={() => completeStep('voice-casting', 'generating')}
           />
@@ -181,7 +193,7 @@ export const WorkflowView: React.FC<WorkflowViewProps> = (props) => {
                 props.onStartDubbing();
               }, 100);
             }}
-            onBackToEdit={(step) => goToStep(step)}
+            onBackToEdit={(step) => goToStep(step === 'voice' ? 'voice-casting' : (step as any))}
             onOpenStudioMode={props.onOpenStudioMode}
             onShowToast={props.onShowToast}
             onOpenExportModal={props.onOpenExportModal}

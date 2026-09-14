@@ -5,6 +5,7 @@ import {
   Loader2, Globe2, Mic
 } from 'lucide-react';
 import { ProjectFile } from '../../../types';
+import { VoxCPM2OnlineToggle } from '../../ui/VoxCPM2OnlineToggle';
 
 interface Step2ContentLanguageProps {
   uploadedFile: ProjectFile | null;
@@ -25,6 +26,11 @@ interface Step2ContentLanguageProps {
   onScanTimeline: () => void;
   isScanningTimeline: boolean;
   hasScannedSegments: boolean;
+
+  engineMode?: string;
+  onSwitchEngine?: (mode: string) => void;
+  voxStatus?: any;
+  onOpenVoxModal?: () => void;
 }
 
 export const Step2ContentLanguage: React.FC<Step2ContentLanguageProps> = ({
@@ -43,7 +49,11 @@ export const Step2ContentLanguage: React.FC<Step2ContentLanguageProps> = ({
   onAiProviderChange,
   onScanTimeline,
   isScanningTimeline,
-  hasScannedSegments
+  hasScannedSegments,
+  engineMode = 'local',
+  onSwitchEngine,
+  voxStatus,
+  onOpenVoxModal,
 }) => {
   const [analysisProgress, setAnalysisProgress] = useState(0);
 
@@ -219,6 +229,18 @@ export const Step2ContentLanguage: React.FC<Step2ContentLanguageProps> = ({
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* VoxCPM2 Voice Cloning Mode: ONLINE vs COMPUTER Option Button */}
+            <div className="md:col-span-2">
+              <VoxCPM2OnlineToggle
+                engineMode={engineMode}
+                voxStatus={voxStatus}
+                onSwitchEngine={(m) => onSwitchEngine?.(m)}
+                onOpenVoxModal={onOpenVoxModal}
+                variant="card"
+                title="RUN VOXCPM2: CLONE VOICE CHARACTER (ONLINE / COMPUTER)"
+              />
             </div>
           </div>
         </div>

@@ -48,6 +48,10 @@ interface DubbingStudioProps {
   characters?: CharacterVoice[];
   onOpenTab?: (tabId: any) => void;
   onOpenExport?: () => void;
+  engineMode?: string;
+  onSwitchEngine?: (mode: string) => void;
+  voxStatus?: any;
+  onOpenVoxModal?: () => void;
 }
 
 export const DubbingStudio: React.FC<DubbingStudioProps> = ({
@@ -87,6 +91,10 @@ export const DubbingStudio: React.FC<DubbingStudioProps> = ({
   characters = [],
   onOpenTab,
   onOpenExport,
+  engineMode = 'local',
+  onSwitchEngine,
+  voxStatus,
+  onOpenVoxModal,
 }) => {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -303,6 +311,10 @@ export const DubbingStudio: React.FC<DubbingStudioProps> = ({
           onChangeSubtitleStyle={onChangeSubtitleStyle}
           onGenerateLineAudio={handleGenerateLineAudio}
           onShowToast={onShowToast}
+          engineMode={engineMode}
+          onSwitchEngine={onSwitchEngine}
+          voxStatus={voxStatus}
+          onOpenVoxModal={onOpenVoxModal}
         />
       </div>
 
@@ -342,15 +354,26 @@ export const DubbingStudio: React.FC<DubbingStudioProps> = ({
         onAutoCastUniqueVoices={handleAutoCastUniqueVoices}
         onPreviewVoice={onPreviewVoice}
         onShowToast={onShowToast}
+        engineMode={engineMode}
+        onSwitchEngine={onSwitchEngine}
+        voxStatus={voxStatus}
+        onOpenVoxModal={onOpenVoxModal}
       />
 
       {/* ── Video Effects Panel Drawer ── */}
       {showEffectsDrawer && (
-        <VideoEffectsPanel
-          videoEffects={videoEffects}
-          onChangeEffects={onChangeEffects}
-          onClose={() => setShowEffectsDrawer(false)}
-        />
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#0b0f19] border border-white/10 rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden relative shadow-2xl">
+            <VideoEffectsPanel
+              effects={videoEffects}
+              onChangeEffects={onChangeEffects}
+              subtitleStyle={subtitleStyle}
+              onChangeSubtitleStyle={onChangeSubtitleStyle}
+              onShowToast={onShowToast}
+              onClose={() => setShowEffectsDrawer(false)}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

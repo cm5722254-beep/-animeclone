@@ -38,6 +38,8 @@ export interface TimelineSegment {
   status?: string;
   // Emotional voice parameters
   emotion?: string;
+  emotionIntensity?: number;
+  emotionParams?: any;
   intensity?: number;
   volume?: number;
   speed?: number;

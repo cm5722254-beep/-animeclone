@@ -25,7 +25,8 @@ class KhmerDubbingService {
    * Synthesize using VoxCPM2 Zero-Shot Voice Cloning API
    */
   async synthesizeWithVoxCPM(text, outputPath, referenceAudioPath = null) {
-    const voxcpmUrl = process.env.VOXCPM_API_URL;
+    const engineMode = process.env.VOXCPM_ENGINE_MODE || 'local';
+    const voxcpmUrl = engineMode === 'cloud' ? process.env.VOXCPM_API_URL : 'http://127.0.0.1:8000';
     if (!voxcpmUrl) throw new Error('VOXCPM_API_URL not configured');
 
     const form = new FormData();
@@ -96,14 +97,16 @@ class KhmerDubbingService {
     }
 
     // 1. Try VoxCPM2 Zero-Shot Voice Cloning if configured
-    if (process.env.VOXCPM_API_URL) {
+    const engineMode = process.env.VOXCPM_ENGINE_MODE || 'local';
+    const effectiveVoxUrl = engineMode === 'cloud' ? process.env.VOXCPM_API_URL : 'http://127.0.0.1:8000';
+    if (effectiveVoxUrl) {
       try {
-        console.log(`Generating Zero-Shot Cloned Voice via VoxCPM2 (${process.env.VOXCPM_API_URL}) with ref: ${referenceAudioPath || 'none'}... [Emotion: ${emotion}]`);
+        console.log(`Generating Zero-Shot Cloned Voice via VoxCPM2 (${effectiveVoxUrl}) [Mode: ${engineMode}] with ref: ${referenceAudioPath || 'none'}... [Emotion: ${emotion}]`);
         await this.synthesizeWithVoxCPM(text, outputPath, referenceAudioPath);
         console.log(`VoxCPM2 48kHz voice generated successfully: ${outputPath}`);
         return outputPath;
       } catch (voxErr) {
-        console.warn('VoxCPM2 API error, falling back:', voxErr.message);
+        console.warn('VoxCPM2 API notice/fallback:', voxErr.message);
       }
     }
 

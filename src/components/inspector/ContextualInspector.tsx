@@ -19,6 +19,7 @@ import {
   Languages,
 } from 'lucide-react';
 import { ProjectFile, TimelineSegment, CharacterVoice, VideoEffects, SubtitleStyle } from '../../types';
+import { VoxCPM2OnlineToggle } from '../ui/VoxCPM2OnlineToggle';
 
 interface ContextualInspectorProps {
   uploadedFile: ProjectFile | null;
@@ -54,6 +55,10 @@ interface ContextualInspectorProps {
   onChangeSubtitleStyle?: (style: SubtitleStyle) => void;
   onGenerateLineAudio?: (idx: number) => void;
   onShowToast?: (msg: string, type: 'success' | 'error' | 'info' | 'warning') => void;
+  engineMode?: string;
+  onSwitchEngine?: (mode: string) => void;
+  voxStatus?: any;
+  onOpenVoxModal?: () => void;
 }
 
 type InspectorTab = 'workflow' | 'voice' | 'subtitle' | 'audio' | 'project' | 'video';
@@ -92,6 +97,10 @@ export const ContextualInspector: React.FC<ContextualInspectorProps> = ({
   onChangeSubtitleStyle,
   onGenerateLineAudio,
   onShowToast,
+  engineMode = 'local',
+  onSwitchEngine,
+  voxStatus,
+  onOpenVoxModal,
 }) => {
   const [activeTab, setActiveTab] = useState<InspectorTab>('workflow');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -356,6 +365,17 @@ export const ContextualInspector: React.FC<ContextualInspectorProps> = ({
         {/* ================================================================ */}
         {activeTab === 'voice' && (
           <div className="flex flex-col gap-3">
+            {/* VoxCPM2 Engine Option Button */}
+            <VoxCPM2OnlineToggle
+              engineMode={engineMode}
+              voxStatus={voxStatus}
+              onSwitchEngine={(m) => onSwitchEngine?.(m)}
+              onOpenVoxModal={onOpenVoxModal}
+              variant="card"
+              title="VOXCPM2: CLONE CHARACTER VOICE"
+              showDetails={false}
+            />
+
             {/* Active Character Profile */}
             <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.08] flex flex-col gap-2.5">
               <div className="flex items-center justify-between">

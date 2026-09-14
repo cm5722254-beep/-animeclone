@@ -93,8 +93,14 @@ app.get('/api/config', (req, res) => {
   res.json({
     hasElevenLabsKey: !!process.env.ELEVENLABS_API_KEY,
     hasGeminiKey: !!process.env.GEMINI_API_KEY,
+    hasElevenlabs: !!process.env.ELEVENLABS_API_KEY,
+    hasGemini: !!process.env.GEMINI_API_KEY,
     hasVoxcpmUrl: !!process.env.VOXCPM_API_URL,
     voxcpmUrl: process.env.VOXCPM_API_URL || '',
+    cloudUrl: process.env.VOXCPM_API_URL || '',
+    mode: process.env.VOXCPM_ENGINE_MODE || 'local',
+    geminiModel: process.env.GEMINI_MODEL || 'gemini-3.5-flash',
+    port: PORT,
     elevenLabsKeyMasked: process.env.ELEVENLABS_API_KEY
       ? `${process.env.ELEVENLABS_API_KEY.substring(0, 4)}...${process.env.ELEVENLABS_API_KEY.slice(-4)}`
       : '',
@@ -104,20 +110,51 @@ app.get('/api/config', (req, res) => {
   });
 });
 
-// Check VoxCPM2 Live Server Status (Cloudflare Tunnel Ping)
+// Check VoxCPM2 Live Server Status (Cloudflare Tunnel Ping or Local Computer Port 8000)
 app.get('/api/voxcpm/status', async (req, res) => {
-  const url = process.env.VOXCPM_API_URL;
-  if (!url || !url.trim()) {
-    return res.json({ online: false, configured: false, message: 'មិនទាន់កំណត់ Link VoxCPM2' });
+  const mode = process.env.VOXCPM_ENGINE_MODE || 'local';
+  const isCloud = mode === 'cloud';
+  const url = isCloud ? process.env.VOXCPM_API_URL : 'http://127.0.0.1:8000';
+
+  if (isCloud && (!url || !url.trim())) {
+    return res.json({ 
+      online: false, 
+      configured: false, 
+      mode: 'cloud',
+      device: 'Online Cloud GPU',
+      message: 'មិនទាន់កំណត់ Link VoxCPM2 Cloud' 
+    });
   }
+
   try {
-    const checkRes = await axios.get(url.trim(), { timeout: 20000 });
+    const checkRes = await axios.get(url.trim(), { timeout: isCloud ? 20000 : 3000 });
     if (checkRes.status === 200) {
-      return res.json({ online: true, configured: true, url: url.trim(), message: 'GPU Server កំពុងដំណើរការល្អ (200 OK)' });
+      return res.json({ 
+        online: true, 
+        configured: true, 
+        mode,
+        url: url.trim(), 
+        device: isCloud ? 'Cloud GPU (Kaggle/Colab)' : 'Local Computer (Port 8000)',
+        message: isCloud ? 'GPU Server កំពុងដំណើរការល្អ (200 OK)' : 'ម៉ាស៊ីនកុំព្យូទ័រ Local Server ដំណើរការល្អ (200 OK)' 
+      });
     }
-    res.json({ online: false, configured: true, url: url.trim(), message: `ឆ្លើយតបកូដ HTTP ${checkRes.status}` });
+    res.json({ 
+      online: false, 
+      configured: true, 
+      mode,
+      url: url.trim(), 
+      device: isCloud ? 'Cloud GPU' : 'Local Computer',
+      message: `ឆ្លើយតបកូដ HTTP ${checkRes.status}` 
+    });
   } catch (err) {
-    res.json({ online: false, configured: true, url: url.trim(), message: err.message });
+    res.json({ 
+      online: false, 
+      configured: !isCloud || Boolean(url && url.trim()), 
+      mode,
+      url: url ? url.trim() : '', 
+      device: isCloud ? 'Cloud GPU' : 'Local Computer',
+      message: isCloud ? err.message : 'Local VoxCPM2 (Port 8000) មិនទាន់បើក (សូមចុច Run START_LOCAL_VOXCPM.bat)' 
+    });
   }
 });
 
@@ -240,6 +277,271 @@ app.post('/api/outputs/clear', (req, res) => {
       formattedFreed: formatBytes(freedBytes),
       message: `បានលុបឯកសារ Output សរុប ${count} ឯកសារ (សន្សំទំហំបាន ${formatBytes(freedBytes)})`
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── AUTH STUBS ────────────────────────────────────────────────────────────────
+// Simple token-free auth so the frontend doesn't crash on startup
+const STUDIO_USERS_FILE = path.join(__dirname, 'data', 'studio_users.json');
+if (!fs.existsSync(path.join(__dirname, 'data'))) {
+  fs.mkdirSync(path.join(__dirname, 'data'), { recursive: true });
+}
+
+function loadUsers() {
+  try {
+    if (fs.existsSync(STUDIO_USERS_FILE)) return JSON.parse(fs.readFileSync(STUDIO_USERS_FILE, 'utf8'));
+  } catch (_) {}
+  // Default admin user
+  const defaults = [{ id: 1, username: 'admin', password: 'admin', role: 'admin', tier: 'premium' }];
+  fs.writeFileSync(STUDIO_USERS_FILE, JSON.stringify(defaults, null, 2));
+  return defaults;
+}
+function saveUsers(users) {
+  try { fs.writeFileSync(STUDIO_USERS_FILE, JSON.stringify(users, null, 2)); } catch (_) {}
+}
+
+app.post('/api/auth/login', (req, res) => {
+  const { username, password } = req.body || {};
+  const users = loadUsers();
+  const user = users.find(u => u.username === username && u.password === password);
+  if (!user) return res.status(401).json({ error: 'ឈ្មោះអ្នកប្រើ ឬលេខសំងាត់មិនត្រឹមត្រូវ!' });
+  const { password: _pw, ...safeUser } = user;
+  res.json({ token: `token_${user.id}_${Date.now()}`, user: safeUser });
+});
+
+app.post('/api/auth/register', (req, res) => {
+  const { username, password } = req.body || {};
+  if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
+  const users = loadUsers();
+  if (users.find(u => u.username === username)) return res.status(409).json({ error: 'ឈ្មោះ User នេះមានហើយ!' });
+  const newUser = { id: Date.now(), username, password, role: 'user', tier: 'free' };
+  users.push(newUser);
+  saveUsers(users);
+  const { password: _pw, ...safeUser } = newUser;
+  res.json({ token: `token_${newUser.id}_${Date.now()}`, user: safeUser });
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  res.json({ success: true });
+});
+
+app.get('/api/auth/me', (req, res) => {
+  // Accept any bearer token — validate user by token prefix
+  const auth = req.headers.authorization || '';
+  const token = auth.replace('Bearer ', '').trim();
+  if (!token || !token.startsWith('token_')) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  const userId = parseInt(token.split('_')[1], 10);
+  const users = loadUsers();
+  const user = users.find(u => u.id === userId);
+  if (!user) return res.status(401).json({ error: 'User not found' });
+  const { password: _pw, ...safeUser } = user;
+  res.json({ user: safeUser });
+});
+
+app.get('/api/admin/users', (req, res) => {
+  const users = loadUsers().map(({ password: _pw, ...u }) => u);
+  res.json({ users });
+});
+
+app.post('/api/admin/set-premium', (req, res) => {
+  const { userId, days } = req.body || {};
+  const users = loadUsers();
+  const user = users.find(u => u.id === userId);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  user.tier = 'premium';
+  const exp = new Date(Date.now() + days * 86400000).toISOString();
+  user.premium_expires_at = exp;
+  saveUsers(users);
+  const { password: _pw, ...safeUser } = user;
+  res.json({ success: true, user: safeUser });
+});
+
+// ─── FILE MANAGEMENT ROUTES ────────────────────────────────────────────────────
+app.get('/api/files', (req, res) => {
+  try {
+    const files = [];
+    if (fs.existsSync(UPLOADS_DIR)) {
+      const entries = fs.readdirSync(UPLOADS_DIR);
+      for (const f of entries) {
+        if (f === '.gitkeep') continue;
+        try {
+          const p = path.join(UPLOADS_DIR, f);
+          const stat = fs.statSync(p);
+          if (!stat.isFile()) continue;
+          const isVideo = /\.(mp4|mkv|mov|avi|webm|flv|wmv)$/i.test(f);
+          const isAudio = /\.(mp3|wav|aac|m4a|ogg|flac)$/i.test(f);
+          files.push({
+            filename: f,
+            originalName: f,
+            size: stat.size,
+            type: isVideo ? 'video' : isAudio ? 'audio' : 'video',
+            created: stat.ctimeMs,
+            url: `/media/uploads/${f}`,
+          });
+        } catch (_) {}
+      }
+    }
+    files.sort((a, b) => b.created - a.created);
+    res.json(files);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/files/:filename', (req, res) => {
+  try {
+    const filename = decodeURIComponent(req.params.filename);
+    const filePath = path.join(UPLOADS_DIR, path.basename(filename));
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+      res.json({ success: true, message: `បានលុបឯកសារ "${filename}" ដោយជោគជ័យ!` });
+    } else {
+      res.json({ success: true, message: 'File not found (already deleted)' });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/files/clear', (req, res) => {
+  try {
+    let count = 0;
+    let freedBytes = 0;
+    if (fs.existsSync(UPLOADS_DIR)) {
+      for (const f of fs.readdirSync(UPLOADS_DIR)) {
+        if (f === '.gitkeep') continue;
+        try {
+          const p = path.join(UPLOADS_DIR, f);
+          const stat = fs.statSync(p);
+          if (stat.isFile()) { freedBytes += stat.size; fs.unlinkSync(p); count++; }
+        } catch (_) {}
+      }
+    }
+    res.json({ success: true, count, formattedFreed: formatBytes(freedBytes), message: `បានលុបឯកសារ ${count} ចោល (${formatBytes(freedBytes)} freed)` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── PROJECT PERSISTENCE ───────────────────────────────────────────────────────
+const PROJECT_FILE = path.join(__dirname, 'data', 'studio_project.json');
+
+app.post('/api/project/save', (req, res) => {
+  try {
+    fs.writeFileSync(PROJECT_FILE, JSON.stringify(req.body, null, 2));
+    res.json({ success: true, message: 'Project saved' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/project/load', (req, res) => {
+  try {
+    if (!fs.existsSync(PROJECT_FILE)) return res.json({ success: false, project: null });
+    const project = JSON.parse(fs.readFileSync(PROJECT_FILE, 'utf8'));
+    res.json({ success: true, project });
+  } catch (err) {
+    res.json({ success: false, project: null });
+  }
+});
+
+app.post('/api/project/clear', (req, res) => {
+  try {
+    if (fs.existsSync(PROJECT_FILE)) fs.unlinkSync(PROJECT_FILE);
+    res.json({ success: true, message: 'Project cleared' });
+  } catch (err) {
+    res.json({ success: true });
+  }
+});
+
+// ─── VOXCPM2 ENGINE MODE SWITCH (Cloud Online / Local GPU / Local CPU) ─────────
+let currentEngineMode = process.env.VOXCPM_ENGINE_MODE || 'local'; // 'cloud' | 'local_gpu' | 'local'
+
+app.post('/api/voxcpm/switch-mode', (req, res) => {
+  const { mode, cloudUrl } = req.body || {};
+  const validModes = ['cloud', 'local_gpu', 'local'];
+  if (!validModes.includes(mode)) {
+    return res.status(400).json({ error: `Invalid mode. Choose: ${validModes.join(', ')}` });
+  }
+  currentEngineMode = mode;
+  process.env.VOXCPM_ENGINE_MODE = mode;
+
+  if (mode === 'cloud' && cloudUrl && cloudUrl.trim().startsWith('http')) {
+    process.env.VOXCPM_API_URL = cloudUrl.trim();
+    try {
+      const envContent = `PORT=${PORT}\nELEVENLABS_API_KEY=${process.env.ELEVENLABS_API_KEY || ''}\nGEMINI_API_KEY=${process.env.GEMINI_API_KEY || ''}\nVOXCPM_API_URL=${process.env.VOXCPM_API_URL || ''}\nVOXCPM_ENGINE_MODE=${mode}\n`;
+      fs.writeFileSync(path.join(__dirname, '.env'), envContent);
+    } catch (_) {}
+  } else {
+    try {
+      const envContent = `PORT=${PORT}\nELEVENLABS_API_KEY=${process.env.ELEVENLABS_API_KEY || ''}\nGEMINI_API_KEY=${process.env.GEMINI_API_KEY || ''}\nVOXCPM_API_URL=${process.env.VOXCPM_API_URL || ''}\nVOXCPM_ENGINE_MODE=${mode}\n`;
+      fs.writeFileSync(path.join(__dirname, '.env'), envContent);
+    } catch (_) {}
+  }
+
+  const modeLabels = { cloud: 'Online Cloud GPU (Kaggle/Colab)', local_gpu: 'Local Computer GPU', local: 'Local Computer CPU' };
+  res.json({ success: true, mode, label: modeLabels[mode] || mode, message: `Switched to ${modeLabels[mode] || mode}` });
+});
+
+// Patch /api/config to include mode field
+app.get('/api/config/mode', (req, res) => {
+  res.json({ mode: currentEngineMode });
+});
+
+// ─── VIDEO RENDER & EXPORT ────────────────────────────────────────────────────
+app.post('/api/video/render-export', async (req, res) => {
+  const { filename, inputVideo, resolution = '1080p', format = 'mp4', bitrate = '4M' } = req.body || {};
+  try {
+    const src = inputVideo || filename;
+    const srcPath = path.join(OUTPUTS_DIR, path.basename(src || ''));
+    const srcUploadPath = path.join(UPLOADS_DIR, path.basename(src || ''));
+    const actualSrc = fs.existsSync(srcPath) ? srcPath : fs.existsSync(srcUploadPath) ? srcUploadPath : null;
+    if (!actualSrc) return res.status(400).json({ error: `Source video "${src}" not found` });
+    const outFilename = `exported_${Date.now()}.mp4`;
+    const outPath = path.join(OUTPUTS_DIR, outFilename);
+    // Simple passthrough copy (ffmpeg re-encode optional)
+    fs.copyFileSync(actualSrc, outPath);
+    res.json({ success: true, outputVideo: `/media/outputs/${outFilename}`, filename: outFilename, hasOverlay: false, hasSubtitles: false });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── VIDEO DOWNLOAD ───────────────────────────────────────────────────────────
+app.post('/api/video/download', async (req, res) => {
+  res.status(501).json({ error: 'Video downloader requires yt-dlp. Please install yt-dlp to use this feature.' });
+});
+
+// ─── ELEVENLABS STATUS / VOICES STUBS ─────────────────────────────────────────
+app.get('/api/elevenlabs/status', (req, res) => {
+  const hasKey = !!process.env.ELEVENLABS_API_KEY;
+  res.json({ configured: hasKey, online: hasKey, message: hasKey ? 'ElevenLabs key configured' : 'No ElevenLabs API key set' });
+});
+
+app.get('/api/elevenlabs/voices', (req, res) => {
+  res.json({ voices: [] });
+});
+
+app.post('/api/elevenlabs/clone', async (req, res) => {
+  res.status(501).json({ error: 'ElevenLabs voice cloning not configured. Add ELEVENLABS_API_KEY to .env' });
+});
+
+// ─── AUDIO SEPARATE ───────────────────────────────────────────────────────────
+app.post('/api/audio/separate', async (req, res) => {
+  const { filename } = req.body || {};
+  try {
+    const srcPath = path.join(UPLOADS_DIR, path.basename(filename || ''));
+    if (!fs.existsSync(srcPath)) return res.status(400).json({ error: 'Source file not found' });
+    // Fallback: return the original as both vocals and bgm until spleeter is available
+    const vocalsName = `vocals_${Date.now()}.wav`;
+    const bgmName = `bgm_${Date.now()}.wav`;
+    fs.copyFileSync(srcPath, path.join(OUTPUTS_DIR, vocalsName));
+    fs.copyFileSync(srcPath, path.join(OUTPUTS_DIR, bgmName));
+    res.json({ success: true, engine: 'passthrough', vocalsUrl: `/media/outputs/${vocalsName}`, bgmUrl: `/media/outputs/${bgmName}` });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

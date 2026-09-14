@@ -61,15 +61,23 @@ app.add_middleware(
 )
 
 # Cross-platform Device detection (CUDA on PC/Linux, Metal/MPS on Apple Silicon Mac, or CPU)
-if torch.cuda.is_available():
+force_cpu = os.getenv("FORCE_CPU", "").lower() in ("1", "true", "yes") or "--cpu" in sys.argv or os.getenv("VOXCPM_DEVICE", "").lower() == "cpu"
+
+if not force_cpu and torch.cuda.is_available():
     device = "cuda"
     gpu_name = torch.cuda.get_device_name(0)
-elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+elif not force_cpu and hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
     device = "mps"
     gpu_name = "Apple Silicon GPU (Metal / MPS)"
 else:
     device = "cpu"
     gpu_name = "Local Computer (CPU Mode)"
+    # Optimize CPU multi-threading
+    try:
+        cpu_threads = max(1, (os.cpu_count() or 4) - 1)
+        torch.set_num_threads(cpu_threads)
+    except Exception:
+        pass
 
 model = None
 model_loading = False

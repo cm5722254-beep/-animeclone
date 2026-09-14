@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { TimelineSegment } from '../../../types';
-import { ChevronRight, FileText, CheckCircle2, AlertCircle, Save, Clock, Undo, Redo, Translate } from 'lucide-react';
+import { ChevronRight, FileText, CheckCircle2, AlertCircle, Save, Clock, Undo, Redo, Languages } from 'lucide-react';
 
 interface Step3TranslationReviewProps {
   segments: TimelineSegment[];

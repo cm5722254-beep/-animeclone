@@ -34,6 +34,7 @@ interface VideoEffectsPanelProps {
   subtitleStyle: SubtitleStyle;
   onChangeSubtitleStyle: (style: SubtitleStyle) => void;
   onShowToast: (msg: string, type: 'success' | 'error' | 'info') => void;
+  onClose?: () => void;
 }
 
 export const VideoEffectsPanel: React.FC<VideoEffectsPanelProps> = ({

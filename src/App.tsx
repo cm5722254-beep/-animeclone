@@ -698,6 +698,18 @@ export const App: React.FC = () => {
     setActiveTab('tab-thumbnail');
   };
 
+  const handleSwitchEngine = async (m: string) => {
+    setEngineMode(m);
+    await api.switchMode(m).catch(() => {});
+    loadConfigAndStatus();
+    showToast(
+      m === 'cloud'
+        ? '⚡ បានបើក RUN VOXCPM2: ONLINE MODE (Cloud GPU)'
+        : '💻 បានប្ដូរទៅ RUN VOXCPM2: COMPUTER MODE (Local Machine)',
+      'success'
+    );
+  };
+
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#040608] text-slate-100 font-khmer">
       {/* Header Bar */}
@@ -719,11 +731,7 @@ export const App: React.FC = () => {
         }}
         onOpenAuthModal={() => setIsAuthModalOpen(true)}
         engineMode={engineMode}
-        onSwitchEngine={async (m) => {
-          setEngineMode(m);
-          await api.switchMode(m).catch(() => {});
-          loadConfigAndStatus();
-        }}
+        onSwitchEngine={handleSwitchEngine}
         voxStatus={voxStatus}
         onOpenVoxModal={() => setIsVoxModalOpen(true)}
         onOpenAdmin={() => setIsAdminOpen(true)}
@@ -842,6 +850,10 @@ export const App: React.FC = () => {
                 onShowToast={showToast}
                 onOpenExportModal={() => setIsExportOpen(true)}
                 onOpenStudioMode={() => setActiveTab('tab-dubbing')}
+                engineMode={engineMode}
+                onSwitchEngine={handleSwitchEngine}
+                voxStatus={voxStatus}
+                onOpenVoxModal={() => setIsVoxModalOpen(true)}
               />
             </div>
           )}
@@ -898,6 +910,10 @@ export const App: React.FC = () => {
               characters={characters}
               onOpenTab={setActiveTab}
               onOpenExport={() => setIsExportOpen(true)}
+              engineMode={engineMode}
+              onSwitchEngine={handleSwitchEngine}
+              voxStatus={voxStatus}
+              onOpenVoxModal={() => setIsVoxModalOpen(true)}
             />
           </div>
 

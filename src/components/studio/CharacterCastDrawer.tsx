@@ -11,8 +11,11 @@ import {
   Mic2,
   Film,
   RefreshCw,
+  CloudLightning,
+  Laptop,
 } from 'lucide-react';
 import { TimelineSegment, CharacterVoice } from '../../types';
+import { VoxCPM2OnlineToggle } from '../ui/VoxCPM2OnlineToggle';
 
 interface CharacterCastDrawerProps {
   isOpen: boolean;
@@ -23,6 +26,10 @@ interface CharacterCastDrawerProps {
   onAutoCastUniqueVoices: () => void;
   onPreviewVoice: (voiceIdOrFilename: string) => void;
   onShowToast: (msg: string, type: 'success' | 'error' | 'info') => void;
+  engineMode?: string;
+  onSwitchEngine?: (mode: string) => void;
+  voxStatus?: any;
+  onOpenVoxModal?: () => void;
 }
 
 export const CharacterCastDrawer: React.FC<CharacterCastDrawerProps> = ({
@@ -34,6 +41,10 @@ export const CharacterCastDrawer: React.FC<CharacterCastDrawerProps> = ({
   onAutoCastUniqueVoices,
   onPreviewVoice,
   onShowToast,
+  engineMode = 'local',
+  onSwitchEngine,
+  voxStatus,
+  onOpenVoxModal,
 }) => {
   const [playingAudio, setPlayingAudio] = useState<string | null>(null);
   const [audioElem, setAudioElem] = useState<HTMLAudioElement | null>(null);
@@ -213,6 +224,18 @@ export const CharacterCastDrawer: React.FC<CharacterCastDrawerProps> = ({
           </button>
         </div>
 
+        {/* RUN VOXCPM2 MODE: ONLINE vs COMPUTER Option Section */}
+        <div className="px-6 py-3 bg-[#080c16] border-b border-white/[0.08]">
+          <VoxCPM2OnlineToggle
+            engineMode={engineMode}
+            voxStatus={voxStatus}
+            onSwitchEngine={(m) => onSwitchEngine?.(m)}
+            onOpenVoxModal={onOpenVoxModal}
+            variant="card"
+            title="RUN VOXCPM2 MODE: CLONE VOICE CHARACTER ONLINE / COMPUTER"
+          />
+        </div>
+
         {/* Character List Grid */}
         <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-3">
           {uniqueCharacters.map((char, index) => {
@@ -286,7 +309,48 @@ export const CharacterCastDrawer: React.FC<CharacterCastDrawerProps> = ({
                 </div>
 
                 {/* Right: Assigned Voice & Controls */}
-                <div className="flex items-center gap-2.5 w-full md:w-auto shrink-0 justify-between md:justify-end">
+                <div className="flex items-center gap-2.5 w-full md:w-auto shrink-0 justify-between md:justify-end flex-wrap">
+                  {/* Option Button: RUN VOXCPM2 CLONE VOICE (ONLINE / COMPUTER) for this Character */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextMode = engineMode === 'cloud' ? 'local' : 'cloud';
+                      onSwitchEngine?.(nextMode);
+                      onShowToast?.(
+                        nextMode === 'cloud'
+                          ? `⚡ តួអង្គ "${char.name}" ដំណើរការ VOXCPM2: ONLINE (Cloud GPU)`
+                          : `💻 តួអង្គ "${char.name}" ដំណើរការ VOXCPM2: COMPUTER (Local)`,
+                        'info'
+                      );
+                    }}
+                    title={
+                      engineMode === 'cloud'
+                        ? 'RUN VOXCPM2: ONLINE [ON] — ចុចដើម្បីប្តូរទៅ COMPUTER (Local Machine)'
+                        : 'RUN VOXCPM2: COMPUTER [ON] — ចុចដើម្បីប្តូរទៅ ONLINE (Cloud GPU)'
+                    }
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-bold border transition-all active:scale-95 shrink-0 cursor-pointer ${
+                      engineMode === 'cloud'
+                        ? 'bg-sky-500/20 text-sky-300 border-sky-400/50 hover:bg-sky-500/30 shadow-[0_0_10px_rgba(56,189,248,0.2)]'
+                        : 'bg-indigo-500/20 text-indigo-300 border-indigo-400/50 hover:bg-indigo-500/30 shadow-[0_0_10px_rgba(99,102,241,0.2)]'
+                    }`}
+                  >
+                    {engineMode === 'cloud' ? (
+                      <>
+                        <CloudLightning className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                        <span className="hidden sm:inline">VOXCPM2:</span>
+                        <span className="text-sky-200">ONLINE</span>
+                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-sky-400/30 text-sky-200 font-black border border-sky-400/50">ON</span>
+                      </>
+                    ) : (
+                      <>
+                        <Laptop className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                        <span className="hidden sm:inline">VOXCPM2:</span>
+                        <span className="text-indigo-200">COMPUTER</span>
+                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-indigo-400/30 text-indigo-200 font-black border border-indigo-400/50">ON</span>
+                      </>
+                    )}
+                  </button>
+
                   {/* Play / Preview Voice */}
                   <button
                     onClick={() => handlePlayPreview(char.currentVoiceId)}

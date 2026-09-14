@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { TimelineSegment, CharacterVoice } from '../../../types';
 import { ChevronRight, Mic2, Play, Users, Settings2, CheckCircle2 } from 'lucide-react';
+import { VoxCPM2OnlineToggle } from '../../ui/VoxCPM2OnlineToggle';
 
 interface Step4VoiceCastingProps {
   segments: TimelineSegment[];
@@ -10,6 +11,10 @@ interface Step4VoiceCastingProps {
   onNext: () => void;
   onBack: () => void;
   onShowToast: (msg: string, type: 'success'|'error'|'info') => void;
+  engineMode?: string;
+  onSwitchEngine?: (mode: string) => void;
+  voxStatus?: any;
+  onOpenVoxModal?: () => void;
 }
 
 export const Step4VoiceCasting: React.FC<Step4VoiceCastingProps> = ({
@@ -19,7 +24,11 @@ export const Step4VoiceCasting: React.FC<Step4VoiceCastingProps> = ({
   onPreviewVoice,
   onNext,
   onBack,
-  onShowToast
+  onShowToast,
+  engineMode = 'local',
+  onSwitchEngine,
+  voxStatus,
+  onOpenVoxModal,
 }) => {
   const [selectedCharId, setSelectedCharId] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all'|'male'|'female'>('all');
@@ -79,14 +88,25 @@ export const Step4VoiceCasting: React.FC<Step4VoiceCastingProps> = ({
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="px-8 pt-8 pb-4 shrink-0">
-        <div className="flex items-center gap-2 text-xs text-slate-500 mb-2">
+      <div className="px-8 pt-6 pb-4 shrink-0">
+        <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
           <span className="font-mono font-bold text-indigo-400">ជំហានទី ៤ នៃ ៦</span>
         </div>
-        <h2 className="text-2xl font-bold text-white mb-1">ជ្រើសសំឡេង</h2>
-        <p className="text-sm text-slate-400 max-w-xl leading-relaxed">
-          ស្តាប់សំឡេងគំរូ (▶) មុននឹងជ្រើសរើសសម្រាប់តួនីមួយៗ។
-        </p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-white mb-1">ជ្រើសសំឡេង & ក្លូនសំឡេងតួអង្គ (Voice Casting)</h2>
+            <p className="text-sm text-slate-400 max-w-xl leading-relaxed">
+              ស្តាប់សំឡេងគំរូ (▶) មុននឹងជ្រើសរើស ឬក្លូនសំឡេងតួអង្គនីមួយៗ (1 Character = 1 Voice)។
+            </p>
+          </div>
+          <VoxCPM2OnlineToggle
+            engineMode={engineMode}
+            voxStatus={voxStatus}
+            onSwitchEngine={(m) => onSwitchEngine?.(m)}
+            onOpenVoxModal={onOpenVoxModal}
+            variant="compact"
+          />
+        </div>
       </div>
 
       <div className="flex-1 px-8 pb-4 min-h-0 overflow-hidden flex flex-col lg:flex-row gap-6">

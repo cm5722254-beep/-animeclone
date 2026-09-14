@@ -8,13 +8,13 @@ import {
   Share2,
   Settings,
   User as UserIcon,
-  Check,
   Loader2,
   LogOut,
   ChevronDown,
   Sparkles,
 } from 'lucide-react';
 import { User, VoxcpmStatus } from '../../types';
+import { VoxCPM2OnlineToggle } from '../ui/VoxCPM2OnlineToggle';
 
 interface HeaderProps {
   activeProjectTitle: string;
@@ -36,7 +36,7 @@ interface HeaderProps {
   onOpenDownloader?: () => void;
   onOpenThumbnailStudio?: () => void;
   activeTab?: string;
-  onSelectTab?: (tab: string) => void;
+  onSelectTab?: (tab: any) => void;
   videoCount?: number;
 }
 
@@ -53,6 +53,10 @@ export const Header: React.FC<HeaderProps> = ({
   onPreview,
   onOpenAuthModal,
   onOpenAdmin,
+  engineMode = 'local',
+  onSwitchEngine,
+  voxStatus,
+  onOpenVoxModal,
 }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
 
@@ -62,6 +66,8 @@ export const Header: React.FC<HeaderProps> = ({
   const epMatch = cleanName.match(/(EP\s*\d+|ភាគ\s*\d+|Episode\s*\d+|\b\d+\b)/i);
   const epLabel = epMatch ? epMatch[0].toUpperCase() : 'EP 145';
   const displayTitle = cleanName.replace(epLabel, '').trim() || cleanName;
+
+  const isCloud = engineMode === 'cloud';
 
   return (
     <header className="h-12 bg-[#090b10] border-b border-white/[0.08] flex items-center justify-between px-3.5 select-none text-slate-100 flex-shrink-0 z-30">
@@ -82,26 +88,37 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* ── Center: Project Context ── */}
-      <div className="hidden sm:flex items-center gap-2.5 px-3 py-1 rounded-lg bg-white/[0.03] border border-white/[0.06]">
-        <div className="flex items-center gap-1.5 text-xs">
-          <span className="text-slate-400 font-medium">Project:</span>
-          <span className="font-semibold text-slate-200 max-w-[200px] truncate" title={displayTitle}>
-            {displayTitle}
+      {/* ── Center: Project Context & VoxCPM2 Online/Local Switch ── */}
+      <div className="hidden sm:flex items-center gap-2.5">
+        <div className="flex items-center gap-2.5 px-3 py-1 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+          <div className="flex items-center gap-1.5 text-xs">
+            <span className="text-slate-400 font-medium">Project:</span>
+            <span className="font-semibold text-slate-200 max-w-[180px] truncate" title={displayTitle}>
+              {displayTitle}
+            </span>
+          </div>
+
+          <span className="text-[11px] font-mono font-bold px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-300 border border-indigo-500/25">
+            {epLabel}
           </span>
+
+          <div className="h-3 w-px bg-white/10" />
+
+          <div className="flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">
+            <span>CN</span>
+            <span className="text-amber-400/60">→</span>
+            <span>KH</span>
+          </div>
         </div>
 
-        <span className="text-[11px] font-mono font-bold px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-300 border border-indigo-500/25">
-          {epLabel}
-        </span>
-
-        <div className="h-3 w-px bg-white/10" />
-
-        <div className="flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">
-          <span>CN</span>
-          <span className="text-amber-400/60">→</span>
-          <span>KH</span>
-        </div>
+        {/* ── VoxCPM2 ON/OFF Engine Switch: Online Cloud GPU vs Local Computer ── */}
+        <VoxCPM2OnlineToggle
+          engineMode={engineMode}
+          voxStatus={voxStatus}
+          onSwitchEngine={(m) => onSwitchEngine?.(m)}
+          onOpenVoxModal={onOpenVoxModal}
+          compact
+        />
       </div>
 
       {/* ── Right: Standard Workstation Actions ── */}
