@@ -36,6 +36,15 @@ export interface TimelineSegment {
   audioUrl?: string | null;
   movieVoiceSample?: string | null;
   status?: string;
+  // Emotional voice parameters
+  emotion?: string;
+  intensity?: number;
+  volume?: number;
+  speed?: number;
+  pitch?: number;
+  breathiness?: number;
+  raspiness?: number;
+  vibrato?: number;
 }
 
 export interface ProjectFile {

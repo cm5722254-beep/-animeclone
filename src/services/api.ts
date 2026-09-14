@@ -213,7 +213,22 @@ export const api = {
       body: JSON.stringify({ filename, scope, voiceMode }),
     }),
 
-  generateLine: (body: { text: string; lineIndex?: number; gender?: string; voiceId?: string; speakerId?: string; emotion?: string }) =>
+  generateLine: (body: { 
+    text: string; 
+    lineIndex?: number; 
+    gender?: string; 
+    voiceId?: string; 
+    speakerId?: string; 
+    emotion?: string;
+    // Advanced emotional voice parameters
+    intensity?: number;
+    volume?: number;
+    speed?: number;
+    pitch?: number;
+    breathiness?: number;
+    raspiness?: number;
+    vibrato?: number;
+  }) =>
     request<{ success: boolean; lineIndex: number; audioUrl: string }>('/api/dubbing/generate-line', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
