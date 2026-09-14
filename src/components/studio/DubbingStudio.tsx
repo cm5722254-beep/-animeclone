@@ -5,6 +5,7 @@ import { MultiTrackTimeline } from '../timeline/MultiTrackTimeline';
 import { AiDubbingWorkflow } from './AiDubbingWorkflow';
 import { VideoEffectsPanel } from '../effects/VideoEffectsPanel';
 import { CharacterCastDrawer } from './CharacterCastDrawer';
+import { PremiumBanner } from '../ui/PremiumBanner';
 import { ProjectFile, TimelineSegment, VideoEffects, SubtitleStyle, CharacterVoice } from '../../types';
 import { Sliders, X, Film, Mic2, Languages, Volume2, Subtitles, Share2, Sparkles, Video, Users, Wand2, CheckCircle2, Download } from 'lucide-react';
 
@@ -431,6 +432,11 @@ export const DubbingStudio: React.FC<DubbingStudioProps> = ({
             onOpenThumbnailStudio={onOpenThumbnailStudio}
             onShowToast={onShowToast}
           />
+
+          {/* Premium Banner */}
+          <div className="w-full mt-2">
+            <PremiumBanner />
+          </div>
 
           {/* Slide-over Effects Panel */}
           {showEffectsDrawer && (
