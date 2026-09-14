@@ -1190,18 +1190,6 @@ async def detect_emotion_from_audio(body: EmotionDetectionRequest):
                 'energy': 50
             }
         }
-        out_path,
-        body.voiceId,
-        studio_ref if os.path.exists(studio_ref) else None,
-        {'gender': body.gender, 'emotion': body.emotion, 'role': body.speakerId}
-    )
-
-    return {
-        'success': True,
-        'lineIndex': body.lineIndex,
-        'audioUrl': f"/media/outputs/{out_name}",
-        'filename': out_name
-    }
 
 @app.post('/api/dubbing/assemble-custom')
 async def assemble_custom(body: AssembleCustomRequest):
