@@ -315,6 +315,23 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
     v.playbackRate = playbackRate;
   }, [playbackRate]);
 
+  // Keyboard shortcuts (Space bar for play/pause)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle Space if not typing in input/textarea
+      if (e.code === 'Space' && e.target instanceof HTMLElement) {
+        const tagName = e.target.tagName.toLowerCase();
+        if (tagName !== 'input' && tagName !== 'textarea') {
+          e.preventDefault();
+          handlePlayPause();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handlePlayPause]);
+
   const handleFullscreen = () => {
     if (!document.fullscreenElement) {
       frameRef.current?.requestFullscreen?.();
@@ -627,7 +644,7 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
           {/* Center Play Overlay Icon when paused */}
           {!isPlaying && src && (
             <div
-              onClick={onTogglePlay}
+              onClick={handlePlayPause}
               className="absolute inset-0 flex items-center justify-center cursor-pointer z-15 group/playbtn transition-all"
             >
               <div className="w-16 h-16 rounded-full bg-sky-500/90 hover:bg-sky-400 text-black flex items-center justify-center shadow-[0_0_25px_rgba(56,189,248,0.6)] transform group-hover/playbtn:scale-110 active:scale-95 transition-all">
@@ -1033,7 +1050,7 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
           </button>
 
           <button
-            onClick={onTogglePlay}
+            onClick={handlePlayPause}
             className="w-9 h-9 rounded-full bg-sky-500 hover:bg-sky-400 text-black flex items-center justify-center transition-transform active:scale-95 shadow-md shadow-sky-500/30"
             title="Play / Pause (Space)"
           >
