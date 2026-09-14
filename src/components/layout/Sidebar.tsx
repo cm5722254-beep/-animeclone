@@ -82,7 +82,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <aside
       className={`sidebar-root flex flex-col justify-between select-none transition-all duration-200 ${
-        isCollapsed ? 'w-[54px]' : 'w-[210px]'
+        isCollapsed ? 'w-[48px]' : 'w-[210px]'
       }`}
     >
       {/* ── Nav Sections ── */}
